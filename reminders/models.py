@@ -31,17 +31,17 @@ class Reminder(models.Model):
 	)
 
 	prescription = models.ForeignKey(Prescription, blank=False)
-	repeat = models.CharField(max_length=2,
-							  choices=REPEAT_CHOICES,
-							  default=DAILY)
-	send_time = models.DateTimeField(blank=False)
+	repeat       = models.CharField(max_length=2,
+							        choices=REPEAT_CHOICES,
+							        default=DAILY)
+	send_time    = models.DateTimeField(blank=False)
 	reminder_num = models.PositiveIntegerField(blank=False)
 
 class LiveReminder(models.Model):
 	"""Model for live reminders that have been sent and that
 	are not yet ACKed or expired"""
 	prescription = models.ForeignKey(Prescription, blank=False)
-	time_sent = models.DateTimeField(auto_now_add=True)
+	time_sent    = models.DateTimeField(auto_now_add=True)
 	# set this equal to the reminder_num of corresponding Reminder
 	reminder_num = models.PositiveIntegerField(blank=False)
 
@@ -50,8 +50,8 @@ class CompletedReminder(models.Model):
 	"""Model for completed reminders that have been sent and
 	ACKed or expired"""
 	prescription = models.ForeignKey(Prescription, blank=False)
-	time_sent = models.DateTimeField(blank=False)
-	ack = models.BooleanField(default=False)
+	time_sent    = models.DateTimeField(blank=False)
+	ack          = models.BooleanField(default=False)
 
 	# set this equal to the reminder_num of corresponding Reminder
 	reminder_num = models.PositiveIntegerField(blank=False)
