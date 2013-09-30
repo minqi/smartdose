@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 class Country(models.Model):
 	"""Model for countries"""
 	iso_code = models.CharField(max_length=2, primary_key=True)
-	name = models.CharField(max_length=64, blank=False)
+	name     = models.CharField(max_length=64, blank=False)
 
 	def __unicode__(self):
 		return self.name
@@ -15,12 +15,12 @@ class Country(models.Model):
 
 class Address(models.Model):
 	"""Model for addresses"""
-	address_line1 = models.CharField(max_length=64)
-	address_line2 = models.CharField(max_length=64)
-	postal_code = models.CharField(max_length=10)
-	city = models.CharField(max_length=64)
+	address_line1  = models.CharField(max_length=64)
+	address_line2  = models.CharField(max_length=64)
+	postal_code    = models.CharField(max_length=10)
+	city           = models.CharField(max_length=64)
 	state_province = models.CharField(max_length=64)
-	country = models.ForeignKey(Country, to_field="iso_code")
+	country        = models.ForeignKey(Country, to_field="iso_code")
 
 	def __unicode__(self):
 		return "%s, %s, %s" % (self.city, self.state_province, str(self.country))
@@ -33,16 +33,16 @@ class Address(models.Model):
 class UserProfile(models.Model):
 	"""Model for extending default User model with some common fields"""
 	# user types
-	DOCTOR = 'd'
+	DOCTOR  = 'd'
 	PATIENT = 'p'
 	USER_TYPE_CHOICES = (
 		(DOCTOR, 'Doctor'),
 		(PATIENT, 'Patient'),
 	)
 
-	user = models.OneToOneField(User)
+	user            = models.OneToOneField(User)
 	primary_contact = models.CharField(max_length=32, blank=False)
-	user_type = models.CharField(max_length=32, 
+	user_type       = models.CharField(max_length=32, 
 								 choices=USER_TYPE_CHOICES,
 								 default=PATIENT)
 	address = models.ForeignKey(Address)

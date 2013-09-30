@@ -1,4 +1,6 @@
 # Django settings for smartdose project.
+import djcelery
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -115,6 +117,7 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = (
+    # django apps
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -131,9 +134,24 @@ INSTALLED_APPS = (
     'doctors',
     'patients',
     'reminders',
+
+    # external apps
+    'djcelery',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
+
+# Account Sid and Auth Token from twilio.com/user/account
+TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
+TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
+TWILIO_NUMBER =  "+16179368157"
+
+# Celery settings
+djcelery.setup_loader() 
+# Celery message broker identifying URL
+# TODO(mgaba) Setup appropriate URL for server and figure out how 
+#   the server stuff will work in productiion
+BROKER_URL = 'amqp://guest:guest@localhost' 
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
