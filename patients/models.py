@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class PatientProfile(models.Model):
 	"""Model for patient-specific information"""
@@ -31,7 +32,7 @@ class PatientProfile(models.Model):
 	user = models.OneToOneField(User)
 	age = models.PositiveIntegerField(default=0)
 	gender = models.CharField(max_length=1,
-							  choices=GENDER_CHOICES
+							  choices=GENDER_CHOICES,
 							  default=UNKNOWN)
 	height = models.PositiveIntegerField(default=0)
 	height_unit = models.CharField(max_length=2,
@@ -39,5 +40,5 @@ class PatientProfile(models.Model):
 								   default=POUNDS)
 	weight = models.PositiveIntegerField(default=0)
 	weight_unit = models.CharField(max_length=2,
-									choices=HEIGHT_UNIT_CHOICES),
+									choices=HEIGHT_UNIT_CHOICES,
 									default=METERS)

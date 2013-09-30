@@ -1,21 +1,17 @@
 from django.db import models
+from django.contrib.auth.models import User
 
-class UserProfile(models.Model):
-	"""Model for extending default User model with some common fields"""
-	# user types
-	DOCTOR = 'd'
-	PATIENT = 'p'
-	USER_TYPE_CHOICES = (
-		(DOCTOR, 'Doctor'),
-		(PATIENT, 'Patient'),
-	)
+class Country(models.Model):
+	"""Model for countries"""
+	iso_code = models.CharField(max_length=2, primary_key=True)
+	name = models.CharField(max_length=64, blank=False)
 
-	user = models.OneToOneField(User)
-	primary_contact = models.CharField(max_length=32, blank=False)
-	user_type = models.CharField(max_length=32, 
-								 choices=USER_TYPE_CHOICES,
-								 default=PATIENT)
-	address = models.ForeignKey(Address)
+	def __unicode__(self):
+		return self.name
+
+	class Meta:
+		verbose_name_plural = "countries"
+		ordering = ["name", "iso_code"]
 
 class Address(models.Model):
 	"""Model for addresses"""
@@ -34,17 +30,22 @@ class Address(models.Model):
 		unique_together = ("address_line1", "address_line2", "postal_code",
 						   "city", "state_province", "country")
 
-class Country(models.Model):
-	"""Model for countries"""
-	iso_code = models.CharField(max_length=2, primary_key=True)
-	name = models.CharField(max_length=64, blank=False)
+class UserProfile(models.Model):
+	"""Model for extending default User model with some common fields"""
+	# user types
+	DOCTOR = 'd'
+	PATIENT = 'p'
+	USER_TYPE_CHOICES = (
+		(DOCTOR, 'Doctor'),
+		(PATIENT, 'Patient'),
+	)
 
-	def __unicode__(self):
-		return self.name
-
-	class Meta:
-		verbose_name_plural = "countries"
-		ordering = ["name", "iso_code"]
+	user = models.OneToOneField(User)
+	primary_contact = models.CharField(max_length=32, blank=False)
+	user_type = models.CharField(max_length=32, 
+								 choices=USER_TYPE_CHOICES,
+								 default=PATIENT)
+	address = models.ForeignKey(Address)
 
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
