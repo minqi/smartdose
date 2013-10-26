@@ -28,10 +28,6 @@ class Address(models.Model):
 
 	class Meta:
 		verbose_name_plural = "addresses"
-		# Two users can share an address. I'm going to comment this out. We can decide to
-		# remove later.
-		# unique_together = ("address_line1", "address_line2", "postal_code",
-		#				   "city", "state_province", "country")
 
 class UserManager(models.Manager):
 	"""Manager for performing operations on UserProfile records"""
