@@ -14,19 +14,19 @@ class PatientProfile(models.Model):
 	)
 
 	# height units
-	KILOGRAMS = 'kg'
-	POUNDS = 'lb'
+	INCHES = 'in'
+	METERS = 'm'
 	HEIGHT_UNIT_CHOICES = (
-		(KILOGRAMS, 'kg'),
-		(POUNDS, 'lb'),
+		(INCHES, 'in'),
+		(METERS, 'm'),
 	)
 
 	# weight units
-	INCHES = 'in'
-	METERS = 'm'
+	KILOGRAMS = 'kg'
+	POUNDS = 'lb'
 	WEIGHT_UNIT_CHOICES = (
-		(INCHES, 'in'),
-		(METERS, 'm'),
+		(KILOGRAMS, 'kg'),
+		(POUNDS, 'lb'),
 	)
 
 	user = models.OneToOneField(User)
@@ -37,8 +37,8 @@ class PatientProfile(models.Model):
 	height = models.PositiveIntegerField(default=0)
 	height_unit = models.CharField(max_length=2,
 								   choices=HEIGHT_UNIT_CHOICES,
-								   default=POUNDS)
+								   default=INCHES)
 	weight = models.PositiveIntegerField(default=0)
 	weight_unit = models.CharField(max_length=2,
 									choices=HEIGHT_UNIT_CHOICES,
-									default=METERS)
+									default=POUNDS)
