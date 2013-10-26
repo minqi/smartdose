@@ -34,6 +34,7 @@ class Address(models.Model):
 		#				   "city", "state_province", "country")
 
 class UserManager(models.Manager):
+	"""Manager for performing operations on UserProfile records"""
 	# Do not call directly, instead call corresponding method from a user type. For example,
 	# call patients.models.patientprofile.objects.addPatient()
 	@transaction.commit_on_success

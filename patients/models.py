@@ -4,6 +4,7 @@ from common.models import UserProfile
 
 
 class PatientManager(models.Manager):
+	"""Manager for performing operations on PatientProfile records"""
 	@transaction.commit_on_success
 	def addPatient(self, phone_number, first_name, last_name, primary_contact,
 				address_line1, address_line2, postal_code, city, state_province, country_iso_code,
@@ -13,7 +14,7 @@ class PatientManager(models.Manager):
 		#TODO(mgaba): Figure out what happens when something fails validation
 		#TODO(mgaba): Add logging for when a transaction fails
 		user_profile = UserProfile.objects.addUser(phone_number, first_name, last_name, 
-										   primary_contact, 'p', #'p' is the user_type
+										   primary_contact, 'p', #'p' is the user_type for patient
 										   address_line1, address_line2, postal_code, 
 										   city, state_province, country_iso_code, 
 										   email, password)
