@@ -9,7 +9,7 @@ class DoctorProfileManager(models.Manager):
 				address_line1, address_line2, postal_code, city, state_province, country_iso_code,
 				email="", password=""):
 		user_profile = UserProfile.objects.addUser(phone_number, first_name, last_name, 
-										   primary_contact, 'd', #'d' is the user_type for doctor
+										   primary_contact, UserProfile.DOCTOR,
 										   address_line1, address_line2, postal_code, 
 										   city, state_province, country_iso_code, 
 										   email, password)

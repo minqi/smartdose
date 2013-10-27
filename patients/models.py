@@ -14,7 +14,7 @@ class PatientManager(models.Manager):
 		#TODO(mgaba): Figure out what happens when something fails validation
 		#TODO(mgaba): Add logging for when a transaction fails
 		user_profile = UserProfile.objects.addUser(phone_number, first_name, last_name, 
-										   primary_contact, 'p', #'p' is the user_type for patient
+										   primary_contact, UserProfile.PATIENT,
 										   address_line1, address_line2, postal_code, 
 										   city, state_province, country_iso_code, 
 										   email, password)
