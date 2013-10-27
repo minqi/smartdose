@@ -3,19 +3,28 @@ from patients.models import PatientProfile
 from reminders.models import Prescription
 from reminders.models import Reminder
 from common.models import Drug
+from common.models import Country
 from datetime import datetime, date, time
 
 # Create a doctor named Bob
-bob = DoctorProfile.objects.addDoctor("2029163381", "Bob", "Watcher", "2029163381", "4262 Cesar Chavez", "",
-								   "94131", "San Francisco", "CA", "US")
+bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
+								   primary_phone_number="2029163381", 
+								   username="2029163381",
+								   address_line1="4262 Cesar Chavez", postal_code="94131", 
+								   city="San Francisco", state_province="CA", country_iso_code="US")
 
 # Create patient Minqi who takes a daily vitamin at 11pm o'clock
 
 # Create a vitamin
 vitamin = Drug.objects.create(name="Vitamin")
 
-minqi = PatientProfile.objects.addPatient("8569067308", "Minqi", "Jiang", "8569067308", "4266 Cesar Chavez", "",
-									 "94131", "San Francisco", "CA", "US", PatientProfile.MALE)
+minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+						 				  primary_phone_number="8569067308", 
+						 				  username="8569067308",
+						 				  gender=PatientProfile.MALE,
+						 				  address_line1="4266 Cesar Chavez",
+									 	  postal_code="94131", 
+									 	  city="San Francisco", state_province="CA", country_iso_code="US")
 minqi_prescription = Prescription.objects.create(prescriber=bob, patient=minqi, drug=vitamin,
 												 note="To make you strong", safety_net_on=True)
 
@@ -30,8 +39,13 @@ minqi_reminder = Reminder.objects.create(prescription=minqi_prescription, repeat
 # Create meditation
 meditation = Drug.objects.create(name="Meditation")
 
-matt = PatientProfile.objects.addPatient("2147094720", "Matthew", "Gaba", "2147094720", "4266 Cesar Chavez", "",
-									 "94131", "San Francisco", "CA", "US", PatientProfile.MALE)
+matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
+						 				  primary_phone_number="2147094720", 
+						 				  username="2147094720",
+						 				  gender=PatientProfile.MALE,
+						 				  address_line1="4266 Cesar Chavez",
+									 	  postal_code="94131",
+									 	  city="San Francisco", state_province="CA", country_iso_code="US")
 matt_prescription = Prescription.objects.create(prescriber=bob, patient=matt, drug=meditation,
 												 note="To make you stable", safety_net_on=True)
 
