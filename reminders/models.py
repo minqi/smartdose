@@ -2,7 +2,7 @@ from django.db import models
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from common.models import Drug
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Prescription(models.Model):
@@ -34,9 +34,9 @@ class RemindersForNowManager(models.Manager):
 								send_time < latest_reminder)
 """
 
-
-class Reminder(models.Model):
-	"""Model for reminders yet to be sent"""
+#TODO(mgaba): Write code that will create this next reminder pointer when a prescription is created
+class NextReminderPointer(models.Model):
+	"""Model for a pointer to the next reminder"""
 	# repeat choices
 	DAILY   = 'd'
 	WEEKLY  = 'w'
@@ -58,21 +58,35 @@ class Reminder(models.Model):
 	send_time    = models.DateTimeField(blank=False)
 	reminder_num = models.PositiveIntegerField(blank=False)
 
-class LiveReminder(models.Model):
-	"""Model for live reminders that have been sent and that
-	are not yet ACKed or expired"""
-	prescription = models.ForeignKey(Prescription, blank=False)
-	time_sent    = models.DateTimeField(auto_now_add=True)
+	def incrementSendTime(self):
+		current_send_time = self.send_time
+		if self.repeat == NextReminderPointer.DAILY:
+			self.send_time += timedelta(days=1)
+		elif self.repeat == NextReminderPointer.WEEKLY:
+			self.send_time += timedelta(days=7)
+		elif self.repeat == NextReminderPointer.MONTHLY:
+			self.send_time += timedelta(weeks=4)
+		elif self.repeat == NextReminderPointer.YEARLY:
+			#TODO(mgaba): Account for leap years
+			self.send_time += timedelta(days=365)
+		self.save()
+
+class SentReminder(models.Model):
+	"""Model for reminders that have been sent"""
+	prescription 			= models.ForeignKey(Prescription, blank=False)
+	time_sent    			= models.DateTimeField(auto_now_add=True)
 	# set this equal to the reminder_num of corresponding Reminder
-	reminder_num = models.PositiveIntegerField(blank=False)
+	reminder_num 			= models.PositiveIntegerField(blank=False)
+	ack 					= models.BooleanField(default=False)
+	contacted_safety_net 	= models.BooleanField(default=False)
 
+class Message(models.Model):
+	"""Model for messages that have been sent to users"""
+	patient 					= models.ForeignKey(PatientProfile, blank=False)
+	time_sent					= models.DateTimeField(auto_now_add=True)
 
-class CompletedReminder(models.Model):
-	"""Model for completed reminders that have been sent and
-	ACKed or expired"""
-	prescription = models.ForeignKey(Prescription, blank=False)
-	time_sent    = models.DateTimeField(blank=False)
-	ack          = models.BooleanField(default=False)
-
-	# set this equal to the reminder_num of corresponding Reminder
-	reminder_num = models.PositiveIntegerField(blank=False)
+class MessageReminderRelationship(models.Model):
+	"""Model that connects messages that have been sent to patients with the reminders"""
+	"""contained in that message. 													  """
+	sent_reminder			= models.ForeignKey(SentReminder, blank=False, null=False)
+	message 				= models.ForeignKey(Message, blank=False, null=False)

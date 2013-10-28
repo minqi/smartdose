@@ -1,0 +1,3 @@
+{% comment %} this is the standard text reminder that is sent to a user {% endcomment %}
+
+Time to take your {% for pill in pill_list %}{% if forloop.first %}{{ pill.name }}{% elif forloop.last %} and {{ pill.name }}{% else %}, {{ pill.name }}{% endif %}{% endfor %}. Reply 'done' when you finish.

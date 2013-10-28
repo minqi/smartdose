@@ -41,6 +41,9 @@ class UserProfile(User):
 	state_province 		= models.CharField(max_length=64)
 	country_iso_code	= models.CharField(max_length=2)
 
+	def __unicode__(self):
+		return self.primary_phone_number
+
 	# Manager fields
 	objects = UserManager()
 

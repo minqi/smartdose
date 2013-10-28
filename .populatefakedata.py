@@ -1,7 +1,7 @@
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from reminders.models import Prescription
-from reminders.models import Reminder
+from reminders.models import NextReminderPointer
 from common.models import Drug
 from common.models import Country
 from datetime import datetime, date, time
@@ -31,7 +31,7 @@ minqi_prescription = Prescription.objects.create(prescriber=bob, patient=minqi, 
 d = date.today()
 t = time(23, 00)
 send_time = datetime.combine(d,t)
-minqi_reminder = Reminder.objects.create(prescription=minqi_prescription, repeat=Reminder.DAILY,
+minqi_reminder = NextReminderPointer.objects.create(prescription=minqi_prescription, repeat=NextReminderPointer.DAILY,
 										 send_time=send_time, reminder_num=minqi_prescription.reminders_sent)
 
 # Create patient Matt who takes a daily meditation at 8 o'clock
@@ -52,7 +52,7 @@ matt_prescription = Prescription.objects.create(prescriber=bob, patient=matt, dr
 d = date.today()
 t = time(8, 00)
 send_time = datetime.combine(d,t)
-matt_reminder = Reminder.objects.create(prescription=matt_prescription, repeat=Reminder.DAILY,
+matt_reminder = NextReminderPointer.objects.create(prescription=matt_prescription, repeat=NextReminderPointer.DAILY,
 										 send_time=send_time, reminder_num=matt_prescription.reminders_sent)
 
 
