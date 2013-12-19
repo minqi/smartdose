@@ -1,6 +1,8 @@
 from django.db import models
 from django.db import transaction
+from django.template.loader import render_to_string
 from common.models import UserProfile
+from common.utilities import sendTextMessageToNumber
 
 
 class PatientManager(models.Manager):
@@ -35,6 +37,14 @@ class PatientProfile(UserProfile):
 		(POUNDS, 'lb'),
 	)
 
+	# status
+	ACTIVE	= 'a'
+	QUIT 	= 'q'
+	STATUS_CHOICES = (
+		(ACTIVE, 'a'),
+		(QUIT, 'q'),
+	)
+
 	# Patient specific fields
 	age = models.PositiveIntegerField(default=0)
 	gender = models.CharField(max_length=1,
@@ -48,6 +58,19 @@ class PatientProfile(UserProfile):
 	weight_unit = models.CharField(max_length=2,
 									choices=HEIGHT_UNIT_CHOICES,
 									default=POUNDS)
+	status = models.CharField(max_length=2,
+							  choices=STATUS_CHOICES,
+							  default=ACTIVE)
 
 	# Manager fields
 	objects = PatientManager()
+
+	def sendTextMessage(self, body):
+		if self.status == PatientProfile.ACTIVE:
+			sendTextMessageToNumber(body, self.primary_phone_number)
+			return True
+		else:
+			return False
+
+
+
