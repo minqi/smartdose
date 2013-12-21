@@ -2,7 +2,6 @@
 from django.conf import settings
 from reminders.models import Message
 from reminders.models import SentReminder
-from reminders.models import MessageReminderRelationship
 from patients.models import PatientProfile
 from datetime import datetime,timedelta
 from reminders.tasks import REMINDER_INTERVAL
@@ -11,9 +10,11 @@ from reminders.tasks import REMINDER_INTERVAL
 ACK_WINDOW = REMINDER_INTERVAL * 4
 
 def isDone(body):
-	if body.lower() == "d" or body.lower() == "done":
-		return True
-	else:
+	# Check to see if the body is a number.
+	try:
+		float(body)
+	 	return True
+	except ValueError:
 		return False
 
 def isQuit(body):
@@ -22,28 +23,28 @@ def isQuit(body):
 	else:
 		return False
 
-def processDone(number):
+
+def processDone(phone_number, message_number):
 	# Find all messages for the given number
-	messages = Message.objects.filter(patient__primary_phone_number=number).order_by('-time_sent')
+	messages = Message.objects.filter(patient__primary_phone_number=phone_number)
 	if not messages:
 		return False
 
-	# Select messages to ack. It is either all messages in the last hour OR the most recent message
-	recent_time = datetime.now() - timedelta(minutes=ACK_WINDOW)
-	recent_messages = messages.filter(time_sent__gte=recent_time)
+	# Select messages to ack. It is the message with the appropriate value
+	recent_messages = messages.filter(message_number=message_number, state=Message.UNACKED)
 	if not recent_messages:
-		recent_messages = messages[:1]
+		return False
 
 	for message in recent_messages:
-		sent_reminder_keys = MessageReminderRelationship.objects.filter(message=message)
-		for sent_reminder in sent_reminder_keys:
-			sent_reminder.sent_reminder.processAck()
+		message.processAck()
 
 	#TODO(mgaba): Send a response to patient to let them know what percentage compliance they are
 	return True
 
 def processQuit(number):
-	patient = PatientProfile.objects.get(primary_phone_number=number)
+	patient = PatientProfile.objects.filter(primary_phone_number=number)
+	if not patient:
+		return False
 	patient.quit()
 	return False
 
@@ -53,8 +54,9 @@ def processUnknown(number):
 
 def handle_text(request):
 	if isDone(request.GET['body']):
-		processDone(request.GET['from'])
+		processDone(request.GET['from'], request.GET['body'])
 	elif isQuit(request.GET['body']):
 		processQuit(request.GET['from'])
 	else:
 		processUnknown(request.GET['from'])
+

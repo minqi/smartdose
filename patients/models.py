@@ -72,5 +72,9 @@ class PatientProfile(UserProfile):
 		else:
 			return False
 
+	def quit(self):
+		self.status = PatientProfile.QUIT
+		self.save()
+		
 
 

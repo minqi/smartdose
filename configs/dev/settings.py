@@ -1,7 +1,10 @@
 # Django settings for smartdose project.
+from __future__ import absolute_import
 import djcelery
+from celery.schedules import crontab
 
-DEBUG = True
+
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 
@@ -50,7 +53,10 @@ USE_I18N = True
 USE_L10N = True
 
 # If you set this to False, Django will not use timezone-aware datetimes.
+
 USE_TZ = True
+if DEBUG == True:
+    USE_TZ = False;
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/var/www/example.com/media/"
@@ -116,7 +122,7 @@ TEMPLATE_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     #TODO(mgaba): How do we make this general?
-    "/Users/matthewgaba/smartdose/"
+    "/Users/matthewgaba/smartdose/smartdose"
 )
 
 INSTALLED_APPS = (
@@ -149,12 +155,31 @@ TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
 TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
 TWILIO_NUMBER =  "+16179368157"
 
+MESSAGE_LOG_FILENAME="message_output"
+
 # Celery settings
+# To get celery to work, you will need to install a Rabbitmq server: see http://docs.celeryproject.org/en/latest/getting-started/brokers/rabbitmq.html#installing-rabbitmq-on-os-x
+# After installing the rabbitmq server, begin running the server with the following command
+# >sudo rabbitmq-server
+# Now that rabbitmq-server is running, we'll need to setup our celery worker and celery scheduler.
+# To setup the celery worker, run the following command from the smartdose home directory
+# >manage celery worker
+# To setup the celery schedule, run the following command from the smartdose home directory
+# >manage celery beat
+# Now celery beat will schedule tasks that are consumed by the celery worker.
+
 djcelery.setup_loader() 
 # Celery message broker identifying URL
 # TODO(mgaba) Setup appropriate URL for server and figure out how 
 #   the server stuff will work in productiion
-BROKER_URL = 'amqp://guest:guest@localhost' 
+BROKER_URL = 'amqp://guest:guest@localhost:5672' 
+CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
+CELERYBEAT_SCHEDULE = {
+    'send-reminders': {
+        'task' : 'reminders.tasks.sendRemindersForNow',
+        'schedule': crontab(minute='0,15,30,45')
+    }
+}
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

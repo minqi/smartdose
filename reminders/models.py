@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models import Q
 from doctors.models import DoctorProfile
 from common.models import Drug
-from datetime import datetime, timedelta, time
+import datetime
 from common.utilities import weekOfMonth, lastWeekOfMonth
 
 
@@ -59,8 +59,8 @@ class ReminderManager(models.Manager):
 					reminders_at_time = reminders_at_time.exclude(repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=day_of_week)
 		else:
 			# If the offset causes wrapping, go query previous day and current day
-			midnight = time.min
-			dawn = time.max
+			midnight = datetime.time.min
+			dawn = datetime.time.max
 			reminders_at_time = super(ReminderManager, self).get_query_set().filter(
 				((Q(send_time__gte=midnight) & Q(send_time__lte=t)) &
 					((Q(repeat=ReminderTime.DAILY)) | 
@@ -127,25 +127,26 @@ class MessageManager(models.Manager):
 	That way the change is much more localised during your test.
 	"""
 	def create(self, patient):
-		new_message_number = 1
-		# Number of hours in the past to allow acking of messages
-		MESSAGE_CUTOFF = 24
-		now = datetime.now()
-		expired_time = datetime.now() - timedelta(hours=MESSAGE_CUTOFF)
+		# Number of hours in the past to allow acking of messages. (23 hours avoids rounding problems and still gives a full days time to ack)
+		MESSAGE_CUTOFF = 23 #hours
+		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
 		
-		# Get the unacked messages in reverse order
-		expired_unacked_messages = self.filter(state=Message.UNACKED, time_sent__lte=expired_time).reverse()
-		if expired_unacked_messages:
-			# Get the number from the oldest unacked message that has expired
-			new_message_number = expired_unacked_messages[0].message_number
-			expired_unacked_messages[0].state = Message.EXPIRED
-			expired_unacked_messages[0].save()
-		else:
-			unacked_messages = self.filter(state=Message.UNACKED)
-			if unacked_messages:
-				# Messages are sorted by time sent. So this is most recent unacked message
-				new_message_number = unacked_messages[0].message_number + 1
-
+		# Calculate the message number to assign to new message
+		new_message_number = 1
+		active_messages = self.filter(time_sent__gte=expired_time, patient=patient)
+		if active_messages:
+			# Loop through active messages to find the lowest non-active message number.
+			# There should never be too many active_messages for any person (no more than 4 or 5), so this is safe.
+			active_message_length = active_messages.count()
+			while new_message_number <= active_message_length:
+				# If there is no active message with the message_number, then give that message number to the message
+				# being created
+				if not active_messages.filter(message_number=new_message_number):
+					break
+				new_message_number += 1
+		# Mark all unacked messages with this number as expired
+		expired_messages = self.filter(message_number=new_message_number, state=Message.UNACKED)
+		expired_messages.update(state=Message.EXPIRED)
 		return super(MessageManager, self).create(patient=patient, message_number=new_message_number)
 
 class Message(models.Model):
@@ -169,13 +170,20 @@ class Message(models.Model):
 												   default=UNACKED)
 	objects						= MessageManager()
 
+	def processAck(self):
+		self.state = Message.ACKED
+		self.save()
+		sentreminders = SentReminder.objects.filter(message=self)
+		for sentreminder in sentreminders:
+			sentreminder.processAck()
+
+
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
 	prescription 			= models.ForeignKey(Prescription, blank=False)
+	reminder_time 			= models.ForeignKey(ReminderTime, blank=False)
 	message 				= models.ForeignKey(Message)
 	time_sent    			= models.DateTimeField(auto_now_add=True)
-	# set this equal to the reminder_num of corresponding Reminder
-	reminder_num 			= models.PositiveIntegerField(blank=False)
 	ack						= models.BooleanField(default=False)
 	contacted_safety_net 	= models.BooleanField(default=False)
 
