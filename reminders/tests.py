@@ -9,6 +9,7 @@ from django.test import TestCase
 
 from common.models import Drug
 from django.template.loader import render_to_string
+from django.test import Client
 from django.db.models import Q
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
@@ -21,6 +22,7 @@ from configs.dev import settings
 import os
 
 from datetime import datetime, timedelta, time
+
 
 class HandleResponseTest(TestCase):
 	def setUp(self):
@@ -39,6 +41,7 @@ class HandleResponseTest(TestCase):
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True)
+		reminder_tasks.datetime = DatetimeStub()
 
 
 	def test_is_done(self):
@@ -68,6 +71,33 @@ class HandleResponseTest(TestCase):
 
 		# What if we get a message from an unknown number?
 		self.assertEqual(reminder_views.processDone("2229392919", "9"), False)
+
+	def test_twilio_request(self):
+		# Set up a patient named matt who takes a vitamin at 9am
+		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
+								 				  primary_phone_number="2147094720", 
+								 				  username="2147094720",
+								 				  gender=PatientProfile.MALE,
+								 				  address_line1="4266 Cesar Chavez",
+											 	  postal_code="94131", 
+											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+		matt_prescription = Prescription.objects.create(prescriber=self.bob, patient=matt, drug=self.vitamin,
+														note="To make you strong", safety_net_on=True)
+		reminder = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=time(hour=9, minute=0))
+		# Set time to 9am and send messages
+		reminder_tasks.datetime.set_fixed_now(datetime(year=2013, month=12, day=26, hour=9, minute=0))
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.UNACKED)
+		message_number = Message.objects.get(sentreminder__prescription__id=matt_prescription.id).message_number
+		# Patient sends a bogus message
+		c = Client()
+		response = c.get('/textmessage_response/', {'from':matt.primary_phone_number, 'body':'bogus message'})
+		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.UNACKED)
+		self.assertEqual(response.content, "We did not understand your message. Reply 'help' for a list of available commands.")
+		# Patient sends the correct message
+		response = c.get('/textmessage_response/', {'from':matt.primary_phone_number, 'body':message_number})
+		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.ACKED)
+		self.assertEqual(response.content, "Be happy that you are taking care of your health!")
 
 
 class SendRemindersTest(TestCase):

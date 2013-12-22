@@ -24,7 +24,7 @@ class Prescription(models.Model):
 
 class ReminderManager(models.Manager):
 	def reminders_at_time(self, dt, offset):
-		"""Returns all reminders from (time - offset) to time
+		"""Returns all reminders from (dt - offset) to dt
 
 		Keyword arguments:
 		dt -- the datetime for which we care about reminders. datetime object
@@ -116,16 +116,6 @@ class ReminderTime(models.Model):
 	#TODO(mgaba): Write code to store an arbitrary function for "custom" types. Will involve serializing functions, etc.
 
 class MessageManager(models.Manager):
-	#TODO(mgaba): Figure out how to test by changing value of datetime.now
-	"""
-	From stackoverflow: http://stackoverflow.com/questions/1042900/django-unit-testing-with-date-time-based-objects
-	Slight variation to Steef's solution. Rather than replacing datetime globally instead you could just replace the datetime module in just the module you are testing, e.g.:
-		import models # your module with the Event model
-		import datetimestub
-
-		models.datetime = datetimestub.DatetimeStub()
-	That way the change is much more localised during your test.
-	"""
 	def create(self, patient):
 		# Number of hours in the past to allow acking of messages. (23 hours avoids rounding problems and still gives a full days time to ack)
 		MESSAGE_CUTOFF = 23 #hours

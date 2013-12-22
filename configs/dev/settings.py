@@ -4,7 +4,7 @@ import djcelery
 from celery.schedules import crontab
 
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 

@@ -13,7 +13,6 @@ import datetime
 REMINDER_INTERVAL = 15
 
 # Takes a patient and the reminders for which the patient will be receiving the text
-# TODO(mgaba): Logs and tests
 def sendOneReminder(patient, reminder_list):
 	# Update database to reflect state of messages and reminders
 	reminder_list = reminder_list.order_by("prescription__drug__name")
@@ -41,7 +40,3 @@ def sendRemindersForNow():
 		p = reminder.prescription.patient
 		p_reminders = reminders_for_now.filter(prescription__patient=p)
 		sendOneReminder(p, p_reminders)
-
-@shared_task()
-def printCeleryIsWorking():
-	print "Celery is working"
