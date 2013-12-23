@@ -11,6 +11,7 @@ from common.models import Drug
 from django.template.loader import render_to_string
 from django.test import Client
 from django.db.models import Q
+from django.http import HttpResponse, HttpResponseNotFound
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from reminders.models import ReminderTime, Prescription, Message, SentReminder
@@ -53,8 +54,9 @@ class HandleResponseTest(TestCase):
 		self.assertEqual(reminder_views.isDone("14201341204124"), True)
 
 	def test_process_done(self):
-		# Returns False when there's nothing to ack
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1"), False)
+		# Returns HttpResponseNotFound() when there's nothing to ack
+		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1").status_code, 404)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 0)
 		# Schedule a reminder and put database in state after sent message
 		send_time = time(hour=9, minute=0)
 		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
@@ -62,15 +64,20 @@ class HandleResponseTest(TestCase):
 		sent_reminder = SentReminder.objects.create(prescription = reminder1.prescription,
 													reminder_time = reminder1,
 													message=message)
+		# Check that prescription knows there was a sent reminder
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 0)
 		# If there is an ack with the wrong number, nothing should change.
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "2"), False)
+		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "2").content, "Whoops--there is no reminder with number '2' that needs a response.")
 		self.assertEqual(Message.objects.get(id=message.id).state, Message.UNACKED)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 0)
 		# Now, a proper ack with the correct number
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1"), True)
+		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1").content, "Be happy that you are taking care of your health!")
 		self.assertEqual(Message.objects.get(id=message.id).state, Message.ACKED)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 1)
 
 		# What if we get a message from an unknown number?
-		self.assertEqual(reminder_views.processDone("2229392919", "9"), False)
+		self.assertEqual(reminder_views.processDone("2229392919", "9").status_code, 404)
 
 	def test_twilio_request(self):
 		# Set up a patient named matt who takes a vitamin at 9am
@@ -316,6 +323,7 @@ class SendRemindersTest(TestCase):
 		# Entry should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
 		self.assertEqual(message.count(), 0)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 0)
 		# Send the message
 		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
 		# Did the message get sent correctly?
@@ -325,8 +333,9 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(message.count(), 1)
 		sentreminders = SentReminder.objects.filter(prescription=self.minqi_prescription, message=message[0])
 		self.assertEqual(sentreminders.count(), 1)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
 
-		# Now send a message with two preminders
+		# Now send a message with two reminders
 		meditation = Drug.objects.create(name="meditation")
 		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
 														 note="To make you strong", safety_net_on=True)
@@ -335,6 +344,8 @@ class SendRemindersTest(TestCase):
 		# Entry for message with second prescription should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 0)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
+		self.assertEqual(Prescription.objects.get(id=prescription2.id).total_reminders_sent, 0)
 		# Send the message
 		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
 		# Did the message get sent correctly?
@@ -346,6 +357,9 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(sentreminders.count(), 1)
 		sentreminders = SentReminder.objects.filter(prescription=prescription2, message=message[0])
 		self.assertEqual(sentreminders.count(), 1)
+		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 2)
+		self.assertEqual(Prescription.objects.get(id=prescription2.id).total_reminders_sent, 1)
+
 
 	def sendRemindersForNow_test(self):
 		# A few more pills, prescriptions

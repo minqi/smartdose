@@ -1,6 +1,6 @@
 # Create your views here.
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from reminders.models import Message
 from reminders.models import SentReminder
 from patients.models import PatientProfile

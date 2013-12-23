@@ -8,16 +8,28 @@ from common.utilities import weekOfMonth, lastWeekOfMonth
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
-	prescriber     		= models.ForeignKey(DoctorProfile, blank=False)
-	patient        		= models.ForeignKey('patients.PatientProfile', blank=False)
-	drug           		= models.ForeignKey(Drug, blank=False)
-	safety_net_on		= models.BooleanField(default=False)
+	prescriber     				= models.ForeignKey(DoctorProfile, blank=False)
+	patient        				= models.ForeignKey('patients.PatientProfile', blank=False)
+	drug           				= models.ForeignKey(Drug, blank=False)
+	safety_net_on				= models.BooleanField(default=False)
 	
 
-	with_food      		= models.BooleanField(default=False)
-	with_water     		= models.BooleanField(default=False)
-	last_edited    		= models.DateTimeField(auto_now=True)
-	note		  		= models.CharField(max_length=300)
+	with_food      				= models.BooleanField(default=False)
+	with_water     				= models.BooleanField(default=False)
+	last_edited    				= models.DateTimeField(auto_now=True)
+	note		  				= models.CharField(max_length=300)
+
+	total_reminders_sent		= models.PositiveIntegerField(null=False, blank=False, default=0)
+	total_reminders_acked		= models.PositiveIntegerField(null=False, blank=False, default=0)
+	last_contacted_safety_net 	= models.DateTimeField(null=True)
+
+	def reminderSent(self):
+		self.total_reminders_sent += 1
+		self.save()
+
+	def reminderAcked(self):
+		self.total_reminders_acked +=1
+		self.save()
 
 
 
@@ -168,6 +180,13 @@ class Message(models.Model):
 			sentreminder.processAck()
 
 
+class SentReminderManager(models.Manager):
+	def create(self, prescription, reminder_time, message):
+		prescription.reminderSent()
+		return super(SentReminderManager, self).create(prescription=prescription, reminder_time=reminder_time, message=message)
+
+
+
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
 	prescription 			= models.ForeignKey(Prescription, blank=False)
@@ -175,11 +194,11 @@ class SentReminder(models.Model):
 	message 				= models.ForeignKey(Message)
 	time_sent    			= models.DateTimeField(auto_now_add=True)
 	ack						= models.BooleanField(default=False)
-	contacted_safety_net 	= models.BooleanField(default=False)
-
+	objects					= SentReminderManager()
 
 	def processAck(self):
 		self.ack = True
 		self.save()
+		self.prescription.reminderAcked()
 
 
