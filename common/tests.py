@@ -8,9 +8,61 @@ Replace this with more appropriate tests for your application.
 import random
 import string
 from django.test import SimpleTestCase
+from django.template import Context, Template
 from configs.dev import settings
-from datetime import datetime
+from datetime import datetime, date
 from common.utilities import weekOfMonth, lastWeekOfMonth, DatetimeStub, sendTextMessageToNumber, getLastSentMessageContent, getLastNSentMessageContent
+from patients.models import PatientProfile
+from doctors.models import DoctorProfile
+from django.core.exceptions import ValidationError
+
+class baseUserTest(SimpleTestCase):
+	def test_create_user(self):
+		# UserProfile is abstract so we'll test creating patients and doctors
+		p = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
+		self.assertEqual(PatientProfile.objects.all().count(), 1) # Make sure record is added to database
+		self.assertNotEqual(p.username, "")
+		# Add a distinct user (doctor) with the same number and names. This can happen if this user is both a doctor and a patient. Also, if the hash in generateUsername() results in a collision, we still want to add the record and this tests for that case as well. Note that uniqueness is enforced at the doctor and patient model level.
+		d = DoctorProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
+		self.assertEqual(DoctorProfile.objects.all().count(), 1) # Make sure record is added to database
+		self.assertNotEqual(d.username, "")
+
+		# Creating another patient should yield a validation error
+		with self.assertRaises(ValidationError): 
+			PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
+
+		# Creating another doctor should yield a validation error
+		with self.assertRaises(ValidationError): 
+			DoctorProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
+
+class templateFilterTest(SimpleTestCase):
+	def test_divide_filter(self):
+		context = Context({'value':10 })
+		t = Template('{% load utilities %}{{ value|divide:20 }}')
+		self.assertEqual(t.render(context), '0.5')
+		
+		context = Context({'value':1 })
+		t = Template('{% load utilities %}{{ value|divide:7|floatformat:2 }}')
+		self.assertEqual(t.render(context), '0.14')
+
+		with self.assertRaises(ValueError):
+			context = Context({'value':'Hello' })
+			t = Template('{% load utilities %}{{ value|divide:20 }}')
+			t.render(context)
+
+	def test_multiply_filter(self): 
+		context = Context({'value':10 })
+		t = Template('{% load utilities %}{{ value|multiply:20 }}')
+		self.assertEqual(t.render(context), '200.0')
+		
+		context = Context({'value':1 })
+		t = Template('{% load utilities %}{{ value|multiply:.5 }}')
+		self.assertEqual(t.render(context), '0.5')
+
+		with self.assertRaises(ValueError):
+			context = Context({'value':'Hello' })
+			t = Template('{% load utilities %}{{ value|multiply:20 }}')
+			t.render(context)
 
 class messageUtilitiesTest(SimpleTestCase):
 	def setUp(self):
@@ -26,13 +78,17 @@ class messageUtilitiesTest(SimpleTestCase):
 		self.assertEqual(getLastSentMessageContent(), "")
 		message1 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8)) # a random message
 		sendTextMessageToNumber(message1, "2147094720")
-		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1 + "\n")
+		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1)
 		message2 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20)) # a random message
 		sendTextMessageToNumber(message2, "2147094720")
-		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message2 + "\n")
-		self.assertIn("2147094720: " + message1 + "\n", getLastNSentMessageContent(2))
-		self.assertIn("2147094720: " + message2 + "\n", getLastNSentMessageContent(2))
-		self.assertNotIn("2147094720: " + message1 + "\n", getLastNSentMessageContent(1))
+		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message2)
+		self.assertIn("2147094720: " + message1, getLastNSentMessageContent(2)) 
+		self.assertIn("2147094720: " + message2, getLastNSentMessageContent(2))
+		self.assertNotIn("2147094720: " + message1, getLastNSentMessageContent(1))
+
+		message3 = message1 + '\n' + message2 # a random message
+		sendTextMessageToNumber(message3, "2147094720")
+		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1 + '|' + message2)
 
 class datetimeUtilitiesTest(SimpleTestCase):
 	def test_week_of_month(self):

@@ -1,5 +1,6 @@
 # Django imports 
 from configs.dev import settings
+# Twilio imports
 from twilio.rest import TwilioRestClient
 # Python imports
 import datetime as datetime_orig
@@ -16,13 +17,15 @@ def sendTextMessageToNumber(body, to):
 	if not settings.DEBUG:
 		message = twilio_client.sms.messages.create(body=body, to=to, from_=twilio_number)
 
+	log_body = body.replace('\n', '|') # Replace '\n' with '|' in the logs so that '\n' will only be used to serialize messages
 	f = open(settings.MESSAGE_LOG_FILENAME, 'a')
-	f.write(to + ": " + body + "\n")
+	f.write(to + ": " + log_body + "\n")
 	f.close()
 	return True
 
 def getLastSentMessageContent():
-	"""Content in format "<number>: <message body>" """
+	"""Content in format "<number>: <message body>" 
+		Note: Newline (\n) are replaced with the '|' symbol """
 	if not settings.DEBUG:
 		raise Exception("getLastSentMessageContent should only be used in test setting")
 
@@ -31,18 +34,20 @@ def getLastSentMessageContent():
 	message = ""
 	for message in f:pass
 	f.close()
-	return message
+	return message.rstrip('\n')
 
 def getLastNSentMessageContent(n):
-	"""Content in format "<number>: <message body>" """
+	"""Content in format "<number>: <message body>"
+		Note: Newline (\n) are replaced with the '|' symbol """
+
 	if not settings.DEBUG:
 		raise Exception("getLastNSentMessageContent should only be used in test setting")
 	l = []
 	f = open(settings.MESSAGE_LOG_FILENAME, 'r')
 	# Iterate through file until we get to last line of file
-	for message in f: l.append(message)
+	for message in f: l.append(message.rstrip('\n'))
 	f.close()
-	l = l[-n:]
+	l = l[-n:] # reverse array so most recently sent message is first
 	return l
 
 

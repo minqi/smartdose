@@ -31,9 +31,6 @@ class Prescription(models.Model):
 		self.total_reminders_acked +=1
 		self.save()
 
-
-
-
 class ReminderManager(models.Manager):
 	def reminders_at_time(self, dt, offset):
 		"""Returns all reminders from (dt - offset) to dt
@@ -179,13 +176,10 @@ class Message(models.Model):
 		for sentreminder in sentreminders:
 			sentreminder.processAck()
 
-
 class SentReminderManager(models.Manager):
 	def create(self, prescription, reminder_time, message):
 		prescription.reminderSent()
 		return super(SentReminderManager, self).create(prescription=prescription, reminder_time=reminder_time, message=message)
-
-
 
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""

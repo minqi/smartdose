@@ -21,14 +21,13 @@ from reminders import views as reminder_views
 from common.utilities import DatetimeStub, getLastSentMessageContent, getLastNSentMessageContent
 from configs.dev import settings
 import os
+from datetime import datetime, timedelta, time, date
 
-from datetime import datetime, timedelta, time
-
-
-class HandleResponseTest(TestCase):
+class SafetyNetTest(TestCase):
 	def setUp(self):
 		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
 										   primary_phone_number="2029163381", 
+										   birthday=date(year=1960, month=10, day=20),
 										   username="2029163381",
 										   address_line1="4262 Cesar Chavez", postal_code="94131", 
 										   city="San Francisco", state_province="CA", country_iso_code="US")
@@ -36,6 +35,123 @@ class HandleResponseTest(TestCase):
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
 								 				  primary_phone_number="8569067308", 
 								 				  username="8569067308",
+								 				  birthday=date(year=1990, month=4, day=21),
+								 				  gender=PatientProfile.MALE,
+								 				  address_line1="4266 Cesar Chavez",
+											 	  postal_code="94131", 
+											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
+														 note="To make you strong", safety_net_on=True)
+		reminder_tasks.datetime = DatetimeStub()
+		settings.MESSAGE_LOG_FILENAME="test_message_output"
+		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
+		f.close() 
+
+	#def tearDown(self):
+		#f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file.
+		#f.close()  
+
+	def test_safety_net_template(self):
+		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+						 birthday=date(year=1989, month=10, day=13), 
+						 patient_relationship="friend")
+		# Minqi has only taken 50 / 100 vitamins from the time period 10/10/2013 to 10/17/2013
+		prescriptions = [(self.minqi_prescription, 50, 100)]
+		window_start = datetime(year=2013, month=10, day=10)
+		window_finish = datetime(year=2013, month=10, day=17)
+
+		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)"
+		self.assertEqual(message_body, correct_message)
+		self.assertTrue(message_body.__len__() < 160) # Less than text message length
+
+		# Try it with a second prescription
+		drug2 = Drug.objects.create(name="cocaine")
+		minqi_prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=drug2,
+														 note="To make you strong", safety_net_on=True)
+		# Minqi has only taken 50 / 100 vitamins and 1/3 cocaine from the time period 10/10/2013 to 10/17/2013
+		prescriptions = [(self.minqi_prescription, 50, 100), (minqi_prescription2, 1, 3)]
+		window_start = datetime(year=2013, month=10, day=10)
+		window_finish = datetime(year=2013, month=10, day=17)
+
+		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)"
+		self.assertEqual(message_body, correct_message)
+		self.assertTrue(message_body.__len__() < 160) # Less than text message length
+
+		# Try it with three prescriptions
+		drug3 = Drug.objects.create(name="vaccine")
+		minqi_prescription3 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=drug3,
+														 note="To make you strong", safety_net_on=True)
+		# Minqi has only taken 50 / 100 vitamins, 1/3 cocaine, 1/7 vaccine from the time period 10/10/2013 to 10/17/2013
+		prescriptions = [(self.minqi_prescription, 50, 100), (minqi_prescription2, 1, 3), (minqi_prescription3, 1, 7)]
+		window_start = datetime(year=2013, month=10, day=10)
+		window_finish = datetime(year=2013, month=10, day=17)
+
+		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)\nvaccine: 14% (1/7)"
+		self.assertEqual(message_body, correct_message)
+		self.assertTrue(message_body.__len__() < 160) # Less than text message length
+
+		# Test the alternative, adherent message
+		# Minqi has only taken 50 / 100 vitamins, 1/3 cocaine, 1/7 vaccine from the time period 10/10/2013 to 10/17/2013
+		prescriptions = [(self.minqi_prescription, 90, 100), (minqi_prescription2, 3, 3), (minqi_prescription3, 6, 7)]
+		window_start = datetime(year=2013, month=10, day=10)
+		window_finish = datetime(year=2013, month=10, day=17)
+
+		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		message_body = render_to_string('templates/safety_net_adherent_message.txt', dictionary)
+		correct_message = "Your friend, Minqi Jiang, successfully took the following medication from 10/10 to 10/17:\nvitamin: 90% (90/100)\ncocaine: 100% (3/3)\nvaccine: 86% (6/7)"
+		self.assertEqual(message_body, correct_message)
+		self.assertTrue(message_body.__len__() < 160) # Less than text message length
+
+	def test_contact_safety_net(self):
+		# Add a safety net member for Minqi
+		# TODO: test scenario where Minqi doesn't have a safety net
+		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+						 birthday=date(year=1989, month=10, day=13), 
+						 patient_relationship="friend")
+		self.minqi_prescription.safety_net_on = True
+		self.minqi_prescription.save()
+		# Construct a scenario where Minqi is sent three reminders over the course of a week and acks one of them.
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		send_time = time(hour=9, minute=0)
+		reminder = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
+		reminders = ReminderTime.objects.filter(id=reminder.id) #sendOneReminder needs a queryset, so get one here
+		reminder_tasks.sendOneReminder(self.minqi, reminders)
+		reminder_tasks.sendOneReminder(self.minqi, reminders)
+		reminder_tasks.sendOneReminder(self.minqi, reminders)
+		sent_reminders = SentReminder.objects.filter(reminder_time=reminder)
+		for sent_reminder in sent_reminders:
+			sent_reminder.time_sent = send_datetime
+			sent_reminder.save()
+		sent_reminders[0].processAck()
+
+		# Now contact safety net
+		contact_datetime = datetime(year=2013, month=4, day=18, hour=12, minute=0)
+		reminder_tasks.datetime.set_fixed_now(contact_datetime)
+		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
+
+		self.assertEqual(getLastSentMessageContent(), "2147094720: Your friend, Minqi Jiang, has had trouble taking the following medication from 04/11 to 04/18:|vitamin: 33% (1/3)")
+
+
+class HandleResponseTest(TestCase):
+	def setUp(self):
+		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
+										   primary_phone_number="2029163381", 
+										   birthday=date(year=1960, month=10, day=20),
+										   username="2029163381",
+										   address_line1="4262 Cesar Chavez", postal_code="94131", 
+										   city="San Francisco", state_province="CA", country_iso_code="US")
+		self.vitamin = Drug.objects.create(name="vitamin")
+		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+								 				  primary_phone_number="8569067308", 
+								 				  username="8569067308",
+								 				  birthday=date(year=1990, month=4, day=21),
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
@@ -84,6 +200,7 @@ class HandleResponseTest(TestCase):
 		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
 								 				  primary_phone_number="2147094720", 
 								 				  username="2147094720",
+								 				  birthday=date(year=1989, month=10, day=13),
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
@@ -114,12 +231,14 @@ class SendRemindersTest(TestCase):
 		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
 										   primary_phone_number="2029163381", 
 										   username="2029163381",
+										   birthday=date(year=1960, month=10, day=20),
 										   address_line1="4262 Cesar Chavez", postal_code="94131", 
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
 								 				  primary_phone_number="8569067308", 
 								 				  username="8569067308",
+								 				  birthday=date(year=1990, month=4, day=21),
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
@@ -395,6 +514,7 @@ class SendRemindersTest(TestCase):
 		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
 								 				  primary_phone_number="2147094720", 
 								 				  username="2147094720",
+								 				  birthday=date(year=1989, month=10, day=13),
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 

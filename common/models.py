@@ -14,24 +14,51 @@ class Country(models.Model):
 		verbose_name_plural = "countries"
 		ordering = ["name", "iso_code"]
 
-class UserManager(models.Manager):
+class UserProfileManager(models.Manager):
 	"""Manager for performing operations on UserProfile records"""
+	def generateUsername(self, phone_number, first_name, last_name, birthday):
+		original_username = str(hash(phone_number+first_name+last_name+str(birthday)))
+		username = original_username
+		for i in range(0, 10000): #aribtrarily choose max range to be 10000 on the assumption that there will not be more than 10,000 collisions.
+			try:
+				User.objects.get(username=username)
+				username = original_username+str(i) # If there's a collision, add another integeter and begin incrementing
+			except User.DoesNotExist:
+				return username
+		raise UsernameCollisionError
 
+	def create(self, **kwards):
+		kwards['username']=self.generateUsername(kwards['primary_phone_number'], kwards['first_name'], kwards['last_name'], kwards['birthday'])
+		return super(UserProfileManager, self).create(**kwards)
 
+	
 
 
 # Models that implement UserProfile
 # doctors.models.DoctorProfile
 # patients.models.PatientProfile
+# patients.models.SafetyNetMemberProfile
 class UserProfile(User):
 	"""Model for extending default User model with some common fields"""
 	
-	# Do not create a table for UserProfile. 
 	class Meta:
+		# Do not create a table for UserProfile. 
 		abstract = True
+
+	# status
+	ACTIVE	= 'a'
+	QUIT 	= 'q'
+	STATUS_CHOICES = (
+		(ACTIVE, 'a'),
+		(QUIT, 'q'),
+	)
+	status = models.CharField(max_length=2,
+						  choices=STATUS_CHOICES,
+						  default=ACTIVE)
 
 	# User specific fields
 	primary_phone_number 	= models.CharField(max_length=32, blank=False, null=False)
+	birthday = models.DateField(blank=False, null=False)
 
 	# Address fields
 	address_line1  		= models.CharField(max_length=64)
@@ -40,12 +67,10 @@ class UserProfile(User):
 	city          		= models.CharField(max_length=64)
 	state_province 		= models.CharField(max_length=64)
 	country_iso_code	= models.CharField(max_length=2)
+	objects				= UserProfileManager()
 
 	def __unicode__(self):
 		return self.primary_phone_number
-
-	# Manager fields
-	objects = UserManager()
 
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
