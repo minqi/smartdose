@@ -7,7 +7,7 @@ Replace this with more appropriate tests for your application.
 
 import random
 import string
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from django.template import Context, Template
 from configs.dev import settings
 from datetime import datetime, date
@@ -16,7 +16,7 @@ from patients.models import PatientProfile
 from doctors.models import DoctorProfile
 from django.core.exceptions import ValidationError
 
-class baseUserTest(SimpleTestCase):
+class baseUserTest(TestCase):
 	def test_create_user(self):
 		# UserProfile is abstract so we'll test creating patients and doctors
 		p = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
@@ -35,7 +35,7 @@ class baseUserTest(SimpleTestCase):
 		with self.assertRaises(ValidationError): 
 			DoctorProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=date(year=2013, month=10, day=13))
 
-class templateFilterTest(SimpleTestCase):
+class templateFilterTest(TestCase):
 	def test_divide_filter(self):
 		context = Context({'value':10 })
 		t = Template('{% load utilities %}{{ value|divide:20 }}')
@@ -64,7 +64,7 @@ class templateFilterTest(SimpleTestCase):
 			t = Template('{% load utilities %}{{ value|multiply:20 }}')
 			t.render(context)
 
-class messageUtilitiesTest(SimpleTestCase):
+class messageUtilitiesTest(TestCase):
 	def setUp(self):
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
@@ -90,7 +90,7 @@ class messageUtilitiesTest(SimpleTestCase):
 		sendTextMessageToNumber(message3, "2147094720")
 		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1 + '|' + message2)
 
-class datetimeUtilitiesTest(SimpleTestCase):
+class datetimeUtilitiesTest(TestCase):
 	def test_week_of_month(self):
 		testtime = datetime(year=2013, month=11, day=17)
 		# 11/17/2013 is the third Sunday of the month

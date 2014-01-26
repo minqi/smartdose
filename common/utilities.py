@@ -65,12 +65,9 @@ def lastWeekOfMonth(dt):
 		return True
 
 class DatetimeStub(object):
-	"""A datetimestub object to replace methods and classes from 
+	"""
+	A datetimestub object to replace methods and classes from 
 	the datetime module. 
-
-	Usage:
-		import sys
-		sys.modules['datetime'] = DatetimeStub()
 	"""
 	fixed_now = None; 
 	class datetime(datetime_orig.datetime):
@@ -79,6 +76,7 @@ class DatetimeStub(object):
 			if DatetimeStub.fixed_now:
 				return DatetimeStub.fixed_now;
 			else:
+				print datetime_orig.datetime.now()
 				return datetime_orig.datetime.now();
 	
 	@classmethod
