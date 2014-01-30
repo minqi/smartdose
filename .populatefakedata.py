@@ -22,7 +22,7 @@ lucid_dream = Drug.objects.create(name="lucid dream check")
 
 # Create a patient Matt who takes a vitamin once a day in the afternoon and meditation twice a day. He also gets two lucid dream reminders.
 
-matt = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-13-10")
+matt = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")
 minqi = PatientProfile.objects.create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")
 
 matt_prescription1 = Prescription.objects.create(prescriber=bob, patient=matt, drug=meditation,
