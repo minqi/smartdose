@@ -7,10 +7,12 @@ celery==3.0.23
 django-celery==3.0.23
 httplib2==0.8
 kombu==2.5.14
+meld3==0.6.10
 psycopg2==2.5.1
 python-dateutil==2.1
 pytz==2013d
 six==1.4.1
+supervisor==3.0
 twilio==3.6.2
 unittest2==0.5.1
 wsgiref==0.1.2
