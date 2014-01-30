@@ -123,7 +123,7 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
     #TODO(mgaba): How do we make this general?
     "/home/ubuntu/www/smartdose/"
-    #"/Users/minqi/projects/smartdose"
+    # "/Users/minqi/projects/smartdose"
 )
 
 INSTALLED_APPS = (
