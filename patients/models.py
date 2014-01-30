@@ -11,11 +11,8 @@ class SafetyNetRelationship(models.Model):
 	patient_relationship	= models.CharField(null=False, blank=False, max_length="20")
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship
 
-
-
 class PatientManager(UserProfileManager):
 	"""Manager for performing operations on PatientProfile records"""
-
 
 class PatientProfile(UserProfile):
 	"""Model for patient-specific information"""
@@ -44,8 +41,6 @@ class PatientProfile(UserProfile):
 		(KILOGRAMS, 'kg'),
 		(POUNDS, 'lb'),
 	)
-
-
 
 	# Patient specific fields
 	age = models.PositiveIntegerField(default=0)

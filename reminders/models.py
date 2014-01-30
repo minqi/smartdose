@@ -5,7 +5,6 @@ from common.models import Drug
 import datetime
 from common.utilities import weekOfMonth, lastWeekOfMonth
 
-
 class Prescription(models.Model):
 	"""Model for prescriptions"""
 	prescriber     				= models.ForeignKey(DoctorProfile, blank=False)

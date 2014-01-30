@@ -32,8 +32,6 @@ class UserProfileManager(models.Manager):
 		return super(UserProfileManager, self).create(**kwards)
 
 	
-
-
 # Models that implement UserProfile
 # doctors.models.DoctorProfile
 # patients.models.PatientProfile
@@ -75,4 +73,4 @@ class UserProfile(User):
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
 	name = models.CharField(max_length=64, blank=False)
-	# NEED TO RESEARCH WHICH FIELDS MUST BE ADDED
+	# AI(minqi): add appropriate fields
