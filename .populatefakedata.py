@@ -9,7 +9,7 @@ from datetime import datetime, date, time
 
 # Create a doctor named Bob
 
-bob = DoctorProfile.objects.create(primary_phone_number="2029163381", first_name="Robert", last_name="Wachter", birthday="1/1/1960")
+bob = DoctorProfile.objects.create(primary_phone_number="2029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")
 
 # Create a vitamin
 vitamin = Drug.objects.create(name="vitamin")
@@ -22,8 +22,8 @@ lucid_dream = Drug.objects.create(name="lucid dream check")
 
 # Create a patient Matt who takes a vitamin once a day in the afternoon and meditation twice a day. He also gets two lucid dream reminders.
 
-matt = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="10/13/1989")
-minqi = PatientProfile.objects.create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="8/7/1990")
+matt = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-13-10")
+minqi = PatientProfile.objects.create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")
 
 matt_prescription1 = Prescription.objects.create(prescriber=bob, patient=matt, drug=meditation,
 												 note="To make you stable", safety_net_on=True)
