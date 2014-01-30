@@ -36,7 +36,7 @@ minqi_prescription3 = Prescription.objects.create(prescriber=bob, patient=minqi,
 												 note="To make you lucid dream", safety_net_on=True)
 
 matt_reminder3 = ReminderTime.objects.create(prescription=matt_prescription3, repeat=ReminderTime.DAILY, send_time=time(hour=17, minute=15))
-minqi_reminder3 = ReminderTime.objects.create(prescription=minqi_prescription3, repeat=ReminderTime.DAILY, send_time=time(hour=23, minute=59))
+minqi_reminder3 = ReminderTime.objects.create(prescription=minqi_prescription3, repeat=ReminderTime.DAILY, send_time=time(hour=0, minute=45))
 
 
 
