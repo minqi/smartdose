@@ -122,7 +122,8 @@ TEMPLATE_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     #TODO(mgaba): How do we make this general?
-    "/Users/minqi/projects/smartdose/"
+    "/home/ubuntu/www/smartdose/"
+    #"/Users/minqi/projects/smartdose"
 )
 
 INSTALLED_APPS = (
