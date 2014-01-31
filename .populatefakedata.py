@@ -56,7 +56,7 @@ for idx, drug in enumerate(drugs):
 # schedule reminders
 now = datetime.now()
 for idx, prescription in enumerate(minqi_prescriptions):
-	ReminderTime.objects.get_or_create(prescription=prescription, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(minutes=4))
+	ReminderTime.objects.get_or_create(prescription=prescription, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(hours=4))
 
 for idx, prescription in enumerate(matt_prescriptions):
 	ReminderTime.objects.get_or_create(prescription=prescription, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(hours=4))
