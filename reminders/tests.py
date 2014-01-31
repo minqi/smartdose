@@ -22,6 +22,7 @@ from common.utilities import DatetimeStub, getLastSentMessageContent, getLastNSe
 from configs.dev import settings
 import os
 from datetime import datetime, timedelta, time, date
+from configs.dev.settings import MESSAGE_CUTOFF
 
 class SafetyNetTest(TestCase):
 	def setUp(self):
@@ -402,7 +403,7 @@ class SendRemindersTest(TestCase):
 		self.assertEquals(m5.message_number, 1)
 		self.assertEquals(Message.objects.get(id=m4.id).state, Message.EXPIRED)
 
-	def textreminder_template_test(self):
+	def test_textreminder_template(self):
 		send_time = time(hour=9, minute=0)
 
 		# Test message with one reminder
@@ -433,7 +434,7 @@ class SendRemindersTest(TestCase):
 		message_body = render_to_string('templates/textreminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin, meditation and lipitor. Reply '1' when you finish.")
 
-	def sendOneReminder_test(self):
+	def test_sendOneReminder(self):
 		send_time = time(hour=9, minute=0)
 
 		# Define a reminder
@@ -446,7 +447,8 @@ class SendRemindersTest(TestCase):
 		# Send the message
 		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
 		# Did the message get sent correctly?
-		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.\n")
+		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 1)		
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
 		# Did database get correctly updated?
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
 		self.assertEqual(message.count(), 1)
@@ -468,7 +470,8 @@ class SendRemindersTest(TestCase):
 		# Send the message
 		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
 		# Did the message get sent correctly?
-		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.\n")
+		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 2)
+		# self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
 		# Did database get correctly updated?
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 1)
@@ -480,7 +483,7 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(Prescription.objects.get(id=prescription2.id).total_reminders_sent, 1)
 
 
-	def sendRemindersForNow_test(self):
+	def test_sendRemindersForNow(self):
 		# A few more pills, prescriptions
 		meditation = Drug.objects.create(name="meditation")
 		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
@@ -508,7 +511,7 @@ class SendRemindersTest(TestCase):
 		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		reminder_tasks.sendRemindersForNow()
-		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '1' when you finish.\n")
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '1' when you finish.")
 
 		# Add another patient and schedule reminders at 10am for that patient
 		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
@@ -528,7 +531,7 @@ class SendRemindersTest(TestCase):
 		send_datetime = datetime(year=2013, month=4, day=11, hour=10, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		reminder_tasks.sendRemindersForNow()
-		self.assertEqual(getLastSentMessageContent(), matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.\n")
+		self.assertEqual(getLastSentMessageContent(), matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
 
 		# Schedule reminders for Matt and Minqi at 12am. 
 		send_time3 = time(hour=12, minute=0)
@@ -538,14 +541,14 @@ class SendRemindersTest(TestCase):
 		send_datetime = datetime(year=2013, month=4, day=11, hour=11, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		reminder_tasks.sendRemindersForNow()
-		self.assertNotIn(matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.\n", getLastNSentMessageContent(2))
-		self.assertNotIn(self.minqi.primary_phone_number + ": " + "Time to take your meditation. Reply '2' when you finish.\n", getLastNSentMessageContent(2))
+		self.assertNotIn(matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.", getLastNSentMessageContent(2))
+		self.assertNotIn(self.minqi.primary_phone_number + ": " + "Time to take your meditation. Reply '2' when you finish.", getLastNSentMessageContent(2))
 		# Move time to 12 and make sure messages get sent.
 		send_datetime = datetime(year=2013, month=4, day=11, hour=12, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		reminder_tasks.sendRemindersForNow()
-		self.assertIn(matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.\n", getLastNSentMessageContent(2))
-		self.assertIn(self.minqi.primary_phone_number + ": " + "Time to take your meditation. Reply '2' when you finish.\n", getLastNSentMessageContent(2))
+		self.assertIn(matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.", getLastNSentMessageContent(2))
+		self.assertIn(self.minqi.primary_phone_number + ": " + "Time to take your meditation. Reply '2' when you finish.", getLastNSentMessageContent(2))
 
 
 

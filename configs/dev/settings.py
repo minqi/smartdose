@@ -7,6 +7,7 @@ from celery.schedules import crontab
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
+MESSAGE_CUTOFF = 23 # hours
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -122,8 +123,8 @@ TEMPLATE_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     #TODO(mgaba): How do we make this general?
-    "/home/ubuntu/www/smartdose/"
-    # "/Users/minqi/projects/smartdose"
+    # "/home/ubuntu/www/smartdose/"
+    "/Users/minqi/projects/smartdose"
 )
 
 INSTALLED_APPS = (
@@ -178,7 +179,7 @@ CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULE = {
     'send-reminders': {
         'task' : 'reminders.tasks.sendRemindersForNow',
-        'schedule': crontab(minute='0,15,30,45')
+        'schedule': crontab(minute='*/1')
     }
 }
 

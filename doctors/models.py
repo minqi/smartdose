@@ -12,6 +12,8 @@ class DoctorProfile(UserProfile):
 	# Doctor specific fields
 	#TODO(mgaba): Add doctor specific information: credentials, title, specialty
 
+	# Manager fields
+	objects = DoctorProfileManager()
 
 	# Note, code is shared across patient, doctor, and safety net models, so you should update in all places
 	def validate_unique(self, *args, **kwargs):
@@ -23,7 +25,3 @@ class DoctorProfile(UserProfile):
 	def save(self, *args, **kwargs):
 		self.validate_unique()
 		super(DoctorProfile, self).save(*args, **kwargs)
-
-	# Manager fields
-	objects = DoctorProfileManager()
-

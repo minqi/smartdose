@@ -4,6 +4,7 @@ from doctors.models import DoctorProfile
 from common.models import Drug
 import datetime
 from common.utilities import weekOfMonth, lastWeekOfMonth
+from configs.dev.settings import MESSAGE_CUTOFF
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -126,7 +127,6 @@ class ReminderTime(models.Model):
 class MessageManager(models.Manager):
 	def create(self, patient):
 		# Number of hours in the past to allow acking of messages. (23 hours avoids rounding problems and still gives a full days time to ack)
-		MESSAGE_CUTOFF = 23 #hours
 		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
 		
 		# Calculate the message number to assign to new message
