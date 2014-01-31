@@ -36,19 +36,29 @@ vitamin = Drug.objects.get_or_create(name="vitamin")[0]
 meditation = Drug.objects.get_or_create(name="meditation")[0]
 lucid_dream = Drug.objects.get_or_create(name="lucid dream check")[0]
 
+drugs = [vitamin, meditation, lucid_dream]
+drug_notes = ["To make you healthy", "To make you stable", "To make you lucid dream"]
+
 # # Create a patient Matt who takes a vitamin once a day in the afternoon and meditation twice a day. He also gets two lucid dream reminders.
 matt = PatientProfile.objects.get_or_create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
 minqi = PatientProfile.objects.get_or_create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
 
-matt_prescription1 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=vitamin,
-												 note="To make you healthy", safety_net_on=True)[0]
-minqi_prescription1 = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=vitamin,
-												 note="To make you healthy", safety_net_on=True)[0]
+minqi_prescriptions = []
+matt_prescriptions = []
+for idx, drug in enumerate(drugs):
+	minqi_next_prescription = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=drug,
+												 note=drug_notes[idx], safety_net_on=True)[0]
+	matt_next_prescription = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug,
+												 note=drug_notes[idx], safety_net_on=True)[0]
+	minqi_prescriptions.append(minqi_next_prescription)
+	matt_prescriptions.append(matt_next_prescription)
 
-# schedule a bunch of reminders for immediate delivery over the next ten minutes
+# schedule reminders
 now = datetime.now()
-for i in range(10):
-	ReminderTime.objects.get_or_create(prescription=matt_prescription1, repeat=ReminderTime.DAILY, send_time=now + i*timedelta(minutes=1))
-	ReminderTime.objects.get_or_create(prescription=minqi_prescription1, repeat=ReminderTime.DAILY, send_time=now + i*timedelta(minutes=1))
+for idx, prescription in enumerate(minqi_prescriptions):
+	ReminderTime.objects.get_or_create(prescription=prescription, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(minutes=4))
+
+for idx, prescription in enumerate(matt_prescriptions):
+	ReminderTime.objects.get_or_create(prescription=prescription, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(hours=4))
 
 
