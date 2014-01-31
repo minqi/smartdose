@@ -25,7 +25,7 @@ def sendOneReminder(patient, reminder_list):
 
 	# Send the message
 	dictionary = {'reminder_list': reminder_list, 'message_number': message.message_number}
-	message_body = render_to_string('templates/textreminder.txt', dictionary)
+	message_body = render_to_string('textreminder.txt', dictionary)
 	success = patient.sendTextMessage(message_body)
 
 # Called from scheduler. 
@@ -81,7 +81,7 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
-			message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+			message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
 			# send the message to the safety net
 			safety_net_member.sendTextMessage(message_body)
 
@@ -92,7 +92,7 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
-			message_body = render_to_string('templates/safety_net_adherent_message.txt', dictionary)
+			message_body = render_to_string('safety_net_adherent_message.txt', dictionary)
 			# send the message to the safety net
 			safety_net_member.sendTextMessage(message_body)
 

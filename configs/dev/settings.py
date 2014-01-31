@@ -2,9 +2,17 @@
 from __future__ import absolute_import
 import djcelery
 from celery.schedules import crontab
+import os, re
+
+PROJECT_NAME = "smartdose"
+m = r'.*/%s/?' % (PROJECT_NAME)
+cwd = os.getcwd()
+result = re.search(m, cwd)
+PROJECT_PATH = cwd[:result.end()]
+print PROJECT_PATH
 
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
@@ -13,7 +21,6 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
     ('minqi', 'mnqjng@gmail.com'),
     ('matt', 'matthew.gaba.2@gmail.com'),
-    ('pasha', 'pnahass@gmail.com'),
 )
 
 MANAGERS = ADMINS
@@ -119,12 +126,7 @@ ROOT_URLCONF = 'configs.urls'
 WSGI_APPLICATION = 'common.wsgi.application'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    #TODO(mgaba): How do we make this general?
-    # "/home/ubuntu/www/smartdose/"
-    "/Users/minqi/projects/smartdose"
+    PROJECT_PATH + '/templates/'
 )
 
 INSTALLED_APPS = (
@@ -141,6 +143,7 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
 
     # smartdose apps
+    'landing',
     'common',
     'doctors',
     'patients',

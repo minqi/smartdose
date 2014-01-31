@@ -62,7 +62,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -77,7 +77,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -92,7 +92,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('templates/safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)\nvaccine: 14% (1/7)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -104,7 +104,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('templates/safety_net_adherent_message.txt', dictionary)
+		message_body = render_to_string('safety_net_adherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, successfully took the following medication from 10/10 to 10/17:\nvitamin: 90% (90/100)\ncocaine: 100% (3/3)\nvaccine: 86% (6/7)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -411,7 +411,7 @@ class SendRemindersTest(TestCase):
 		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
 		m1 = Message.objects.create(patient=self.minqi)
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('templates/textreminder.txt', dictionary)
+		message_body = render_to_string('textreminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin. Reply '1' when you finish.")
 
 		# Test message with two reminders
@@ -421,7 +421,7 @@ class SendRemindersTest(TestCase):
 		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('templates/textreminder.txt', dictionary)
+		message_body = render_to_string('textreminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin and meditation. Reply '1' when you finish.")
 
 		# Test message with three reminders
@@ -431,7 +431,7 @@ class SendRemindersTest(TestCase):
 		reminder3 = ReminderTime.objects.create(prescription=prescription3, repeat=ReminderTime.DAILY, send_time=send_time)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2) | Q(prescription=prescription3))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('templates/textreminder.txt', dictionary)
+		message_body = render_to_string('textreminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin, meditation and lipitor. Reply '1' when you finish.")
 
 	def test_sendOneReminder(self):
