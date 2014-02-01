@@ -11,11 +11,15 @@ result = re.search(m, cwd)
 PROJECT_PATH = cwd[:result.end()]
 print PROJECT_PATH
 
-
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
+
+TEST_ALL_APPS = False
+
+if TEST_ALL_APPS:
+    TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
