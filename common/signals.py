@@ -6,7 +6,7 @@ from django.dispatch import receiver
 
 @receiver(pre_save)
 def my_callback(sender, **kwargs):
-	if not issubclass(sender, User):
+	if not issubclass(sender, UserProfile):
 		return
 	obj = kwargs['instance'] 
 	if not obj.id:

@@ -11,7 +11,7 @@ from patients.models import PatientProfile, SafetyNetRelationship
 import datetime
 
 # Send reminders every REMINDER_INTERVAL minutes
-REMINDER_INTERVAL = 15
+REMINDER_INTERVAL = 1
 
 # Takes a patient and the reminders for which the patient will be receiving the text
 def sendOneReminder(patient, reminder_list):
