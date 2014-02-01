@@ -16,7 +16,7 @@ TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
 
-TEST_ALL_APPS = False
+TEST_ALL_APPS = True
 
 if TEST_ALL_APPS:
     TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
