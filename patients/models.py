@@ -3,6 +3,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 from common.models import UserProfile, UserProfileManager
 from common.utilities import sendTextMessageToNumber
+from reminders.models import Message, SentReminder, ReminderTime
 from django.core.exceptions import ValidationError
 
 class SafetyNetRelationship(models.Model):
@@ -66,6 +67,39 @@ class PatientProfile(UserProfile):
 			return True
 		else:
 			return False
+
+	# Takes a patient and the reminders for which the patient will be receiving the text
+	# @reminder_list is a ReminderTime QuerySet
+	def sendReminders(self, reminder_list):
+		# First send refill reminders
+		refill_reminder_list = reminder_list.filter(reminder_type=ReminderTime.REFILL)
+		if refill_reminder_list:
+			# Update database to reflect state of messages and reminders
+			refill_reminder_list = refill_reminder_list.order_by("prescription__drug__name")
+			message = Message.objects.create(patient=self)
+			for reminder in refill_reminder_list:
+				s = SentReminder.objects.create(prescription = reminder.prescription,
+												reminder_time = reminder,
+												message=message)
+			# Send the refill message
+			dictionary = {'reminder_list': refill_reminder_list, 'message_number': message.message_number}
+			message_body = render_to_string('refill_reminder.txt', dictionary)
+			success = self.sendTextMessage(message_body)
+
+		# Next, send medication reminders
+		medication_reminder_list = reminder_list.filter(reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
+		if medication_reminder_list:
+			# Update database to reflect state of messages and reminders
+			medication_reminder_list = medication_reminder_list.order_by("prescription__drug__name")
+			message = Message.objects.create(patient=self)
+			for reminder in medication_reminder_list:
+				s = SentReminder.objects.create(prescription = reminder.prescription,
+												reminder_time = reminder,
+												message=message)
+			# Send the medication message
+			dictionary = {'reminder_list': medication_reminder_list, 'message_number': message.message_number}
+			message_body = render_to_string('medication_reminder.txt', dictionary)
+			success = self.sendTextMessage(message_body)
 
 	def quit(self):
 		self.status = PatientProfile.QUIT

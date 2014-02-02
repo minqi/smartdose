@@ -13,21 +13,6 @@ import datetime
 # Send reminders every REMINDER_INTERVAL minutes
 REMINDER_INTERVAL = 1
 
-# Takes a patient and the reminders for which the patient will be receiving the text
-def sendOneReminder(patient, reminder_list):
-	# Update database to reflect state of messages and reminders
-	reminder_list = reminder_list.order_by("prescription__drug__name")
-	message = Message.objects.create(patient=patient)
-	for reminder in reminder_list:
-		s = SentReminder.objects.create(prescription = reminder.prescription, 
-										reminder_time = reminder,
-										message=message)
-
-	# Send the message
-	dictionary = {'reminder_list': reminder_list, 'message_number': message.message_number}
-	message_body = render_to_string('textreminder.txt', dictionary)
-	success = patient.sendTextMessage(message_body)
-
 # Called from scheduler. 
 # Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
 @shared_task()
@@ -40,7 +25,7 @@ def sendRemindersForNow():
 	for reminder in distinct_reminders:
 		p = reminder.prescription.patient
 		p_reminders = reminders_for_now.filter(prescription__patient=p)
-		sendOneReminder(p, p_reminders)
+		p.sendReminders(p_reminders)
 
 
 # Sends a message to a safety net member to notify about a missed dose. Safety net member will be notified if the patient 

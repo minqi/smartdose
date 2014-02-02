@@ -29,6 +29,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
+TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',

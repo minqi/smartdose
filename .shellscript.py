@@ -2,7 +2,7 @@ from celery import task
 from django.template.loader import render_to_string
 from reminders.models import NextReminderPointer
 from common.utilities import sendTextMessage
-from reminders.tasks import sendOneReminder
+from reminders.tasks import sendReminders
 from patients.models import PatientProfile
 from datetime import datetime,timedelta
 from django.conf import settings
@@ -28,7 +28,7 @@ patients_list = reminders_for_now_list.values_list('prescription__patient__prima
 for patient in patients_list:
 	p = PatientProfile.objects.get(primary_phone_number=patient)
 	p_pills = reminders_for_now_list.filter(prescription__patient__primary_phone_number=patient)
-	sendOneReminder(p, p_pills, False)
+	sendReminders(p, p_pills, False)
 """
 #matts_pills = reminders_for_now_list.filter(prescription__patient__primary_phone_number=patients_list[1].values()[0])
 #print patients_list[1].values()[0]
