@@ -8,7 +8,7 @@ from datetime import datetime,timedelta
 from reminders.tasks import REMINDER_INTERVAL
 
 # Number of hours for which a text can be ack'd
-ACK_WINDOW = REMINDER_INTERVAL * 4
+ACK_WINDOW = 24
 
 def isAck(body):
 	# Check to see if the body is a number.

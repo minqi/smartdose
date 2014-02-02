@@ -4,12 +4,13 @@ import djcelery
 from celery.schedules import crontab
 import os, re
 
+# store project path in PROJECT_PATH
 PROJECT_NAME = "smartdose"
 m = r'.*/%s/?' % (PROJECT_NAME)
 cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_PATH = cwd[:result.end()]
-print PROJECT_PATH
+
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG

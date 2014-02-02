@@ -409,7 +409,7 @@ class SendRemindersTest(TestCase):
 		m3 = Message.objects.create(patient=self.minqi)
 		m3.time_sent = sent_time
 		m3.save()
-		self.assertEquals(m3.message_number, 3)
+		self.assertEquals(m3.message_number, 1)
 
 		# Advance to the next day (18 hours later) and send another message. Test the message number
 		sent_time = sent_time + timedelta(hours=18)
@@ -417,7 +417,7 @@ class SendRemindersTest(TestCase):
 		m4 = Message.objects.create(patient=self.minqi)
 		m4.time_sent = sent_time
 		m4.save()
-		self.assertEquals(m4.message_number, 1)
+		self.assertEquals(m4.message_number, 2)
 		self.assertEquals(m1.state, Message.ACKED)
 		self.assertEquals(m4.state, Message.UNACKED)
 

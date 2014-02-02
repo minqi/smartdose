@@ -89,11 +89,11 @@ class ReminderManager(models.Manager):
 class ReminderTime(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
 	# Reminder type
-	MEDICATION 	= 'med'
-	REFILL 		= 'fill'
+	MEDICATION 	= 'm'
+	REFILL 		= 'r'
 	TYPE_CHOICES = (
-		(MEDICATION,	'med'),
-		(REFILL,		'fill')
+		(MEDICATION, 'medication'),
+		(REFILL,	 'refill')
 	)
 
 
@@ -152,7 +152,7 @@ class MessageManager(models.Manager):
 					break
 				new_message_number += 1
 		# Mark all unacked messages with this number as expired
-		expired_messages = self.filter(message_number=new_message_number, state=Message.UNACKED)
+		expired_messages = self.filter(time_sent__lte=expired_time, state=Message.UNACKED)
 		expired_messages.update(state=Message.EXPIRED)
 		return super(MessageManager, self).create(patient=patient, message_number=new_message_number)
 
@@ -202,4 +202,5 @@ class SentReminder(models.Model):
 			self.prescription.save()
 			self.reminder_time.active = False
 			self.reminder_time.save()
+			# self.reminder_time.delete()
 
