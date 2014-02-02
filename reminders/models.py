@@ -19,17 +19,10 @@ class Prescription(models.Model):
 	last_edited    				= models.DateTimeField(auto_now=True)
 	note		  				= models.CharField(max_length=300)
 
-	total_reminders_sent		= models.PositiveIntegerField(null=False, blank=False, default=0)
-	total_reminders_acked		= models.PositiveIntegerField(null=False, blank=False, default=0)
 	last_contacted_safety_net 	= models.DateTimeField(null=True)
 
-	def reminderSent(self):
-		self.total_reminders_sent += 1
-		self.save()
-
-	def reminderAcked(self):
-		self.total_reminders_acked +=1
-		self.save()
+	# Has the prescription been filled at the pharmacy?
+	filled						= models.BooleanField(default=False)
 
 class ReminderManager(models.Manager):
 	def reminders_at_time(self, dt, offset):
@@ -56,7 +49,8 @@ class ReminderManager(models.Manager):
 		if day_of_week == offset_day_of_week:
 			# Get all reminders sent between time-offset and time
 			reminders_at_time = super(ReminderManager, self).get_query_set().filter(
-				(Q(send_time__gte=offset_t) & Q(send_time__lte=t)) &
+					Q(active=True) & 
+					(Q(send_time__gte=offset_t) & Q(send_time__lte=t)) &
 					((Q(repeat=ReminderTime.DAILY)) | 
 					(Q(repeat=ReminderTime.WEEKLY, day_of_week=day_of_week)) | 
 					(Q(repeat=ReminderTime.MONTHLY, week_of_month=week_of_month, day_of_week=day_of_week)) |
@@ -71,6 +65,7 @@ class ReminderManager(models.Manager):
 			midnight = datetime.time.min
 			dawn = datetime.time.max
 			reminders_at_time = super(ReminderManager, self).get_query_set().filter(
+				Q(active=True) &
 				((Q(send_time__gte=midnight) & Q(send_time__lte=t)) &
 					((Q(repeat=ReminderTime.DAILY)) | 
 					(Q(repeat=ReminderTime.WEEKLY, day_of_week=day_of_week)) | 
@@ -93,6 +88,15 @@ class ReminderManager(models.Manager):
 
 class ReminderTime(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
+	# Reminder type
+	MEDICATION 	= 'med'
+	REFILL 		= 'fill'
+	TYPE_CHOICES = (
+		(MEDICATION,	'med'),
+		(REFILL,		'fill')
+	)
+
+
 	# repeat choices i.e., what is the period of this reminder time
 	DAILY   = 'd'
 	WEEKLY  = 'w'
@@ -111,6 +115,8 @@ class ReminderTime(models.Model):
 	LAST_WEEK_OF_MONTH = 5
 
 	prescription 	= models.ForeignKey(Prescription, blank=False, null=False)
+	reminder_type	= models.CharField(max_length=4,
+									   choices=TYPE_CHOICES, blank=False, null=False)
 	repeat 			= models.CharField(max_length=2,
 									   choices=REPEAT_CHOICES, blank=False, null=False)
 	send_time		= models.TimeField(blank=False, null=False)
@@ -122,16 +128,19 @@ class ReminderTime(models.Model):
 	day_of_year		= models.PositiveIntegerField(null=True)
 	month_of_year	= models.PositiveIntegerField(null=True)
 	objects 		= ReminderManager()
+
+	# The reminder is no longer relevant. For example, if a prescription reminder gets filled
+	active			= models.BooleanField(default=True)
 	#TODO(mgaba): Write code to store an arbitrary function for "custom" types. Will involve serializing functions, etc.
 
 class MessageManager(models.Manager):
 	def create(self, patient):
+		# Calculate the appropriate message number
 		# Number of hours in the past to allow acking of messages. (23 hours avoids rounding problems and still gives a full days time to ack)
 		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
-		
 		# Calculate the message number to assign to new message
 		new_message_number = 1
-		active_messages = self.filter(time_sent__gte=expired_time, patient=patient)
+		active_messages = self.filter(time_sent__gte=expired_time, patient=patient).exclude(state=Message.ACKED)
 		if active_messages:
 			# Loop through active messages to find the lowest non-active message number.
 			# There should never be too many active_messages for any person (no more than 4 or 5), so this is safe.
@@ -166,6 +175,7 @@ class Message(models.Model):
 	state 						= models.CharField(max_length=2,
 												   choices=STATE_CHOICES,
 												   default=UNACKED)
+
 	objects						= MessageManager()
 
 	def processAck(self):
@@ -175,11 +185,6 @@ class Message(models.Model):
 		for sentreminder in sentreminders:
 			sentreminder.processAck()
 
-class SentReminderManager(models.Manager):
-	def create(self, prescription, reminder_time, message):
-		prescription.reminderSent()
-		return super(SentReminderManager, self).create(prescription=prescription, reminder_time=reminder_time, message=message)
-
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
 	prescription 			= models.ForeignKey(Prescription, blank=False)
@@ -187,11 +192,14 @@ class SentReminder(models.Model):
 	message 				= models.ForeignKey(Message)
 	time_sent    			= models.DateTimeField(auto_now_add=True)
 	ack						= models.BooleanField(default=False)
-	objects					= SentReminderManager()
+
 
 	def processAck(self):
 		self.ack = True
 		self.save()
-		self.prescription.reminderAcked()
-
+		if self.reminder_time.reminder_type == ReminderTime.REFILL:
+			self.prescription.filled = True
+			self.prescription.save()
+			self.reminder_time.active = False
+			self.reminder_time.save()
 

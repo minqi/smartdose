@@ -42,15 +42,15 @@ class SafetyNetTest(TestCase):
 											 	  postal_code="94131", 
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close() 
 
-	#def tearDown(self):
-		#f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file.
-		#f.close()  
+	def tearDown(self):
+		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file.
+		f.close()  
 
 	def test_safety_net_template(self):
 		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
@@ -70,7 +70,7 @@ class SafetyNetTest(TestCase):
 		# Try it with a second prescription
 		drug2 = Drug.objects.create(name="cocaine")
 		minqi_prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=drug2,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		# Minqi has only taken 50 / 100 vitamins and 1/3 cocaine from the time period 10/10/2013 to 10/17/2013
 		prescriptions = [(self.minqi_prescription, 50, 100), (minqi_prescription2, 1, 3)]
 		window_start = datetime(year=2013, month=10, day=10)
@@ -85,7 +85,7 @@ class SafetyNetTest(TestCase):
 		# Try it with three prescriptions
 		drug3 = Drug.objects.create(name="vaccine")
 		minqi_prescription3 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=drug3,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		# Minqi has only taken 50 / 100 vitamins, 1/3 cocaine, 1/7 vaccine from the time period 10/10/2013 to 10/17/2013
 		prescriptions = [(self.minqi_prescription, 50, 100), (minqi_prescription2, 1, 3), (minqi_prescription3, 1, 7)]
 		window_start = datetime(year=2013, month=10, day=10)
@@ -121,11 +121,11 @@ class SafetyNetTest(TestCase):
 		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		send_time = time(hour=9, minute=0)
-		reminder = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
-		reminders = ReminderTime.objects.filter(id=reminder.id) #sendOneReminder needs a queryset, so get one here
-		reminder_tasks.sendOneReminder(self.minqi, reminders)
-		reminder_tasks.sendOneReminder(self.minqi, reminders)
-		reminder_tasks.sendOneReminder(self.minqi, reminders)
+		reminder = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
+		reminders = ReminderTime.objects.filter(id=reminder.id) #sendReminders needs a queryset, so get one here
+		self.minqi.sendReminders(reminders)
+		self.minqi.sendReminders(reminders)
+		self.minqi.sendReminders(reminders)
 		sent_reminders = SentReminder.objects.filter(reminder_time=reminder)
 		for sent_reminder in sent_reminders:
 			sent_reminder.time_sent = send_datetime
@@ -158,43 +158,71 @@ class HandleResponseTest(TestCase):
 											 	  postal_code="94131", 
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
 
 
-	def test_is_done(self):
-		self.assertEqual(reminder_views.isDone(""), False)
-		self.assertEqual(reminder_views.isDone("Hello"), False)
-		self.assertEqual(reminder_views.isDone("1d"), False)
-		self.assertEqual(reminder_views.isDone("1"), True)
-		self.assertEqual(reminder_views.isDone("12"), True)
-		self.assertEqual(reminder_views.isDone("14201341204124"), True)
+	def test_is_ack(self):
+		self.assertEqual(reminder_views.isAck(""), False)
+		self.assertEqual(reminder_views.isAck("Hello"), False)
+		self.assertEqual(reminder_views.isAck("1d"), False)
+		self.assertEqual(reminder_views.isAck("1"), True)
+		self.assertEqual(reminder_views.isAck("12"), True)
+		self.assertEqual(reminder_views.isAck("14201341204124"), True)
 
-	def test_process_done(self):
+	def test_process_ack(self):
 		# Returns HttpResponseNotFound() when there's nothing to ack
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1").status_code, 404)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 0)
+		self.assertEqual(reminder_views.processAck(self.minqi.primary_phone_number, "1").status_code, 404)
+
 		# Schedule a reminder and put database in state after sent message
 		send_time = time(hour=9, minute=0)
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		message = Message.objects.create(patient=self.minqi)
 		sent_reminder = SentReminder.objects.create(prescription = reminder1.prescription,
 													reminder_time = reminder1,
 													message=message)
-		# Check that prescription knows there was a sent reminder
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 0)
-		# If there is an ack with the wrong number, nothing should change.
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "2").content, "Whoops--there is no reminder with number '2' that needs a response.")
+		# Check that there was a sent reminder
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, False)
 		self.assertEqual(Message.objects.get(id=message.id).state, Message.UNACKED)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 0)
+		# If there is an ack with the wrong number, nothing should change.
+		self.assertEqual(reminder_views.processAck(self.minqi.primary_phone_number, "2").content, "Whoops--there is no reminder with number '2' that needs a response.")
+		self.assertEqual(Message.objects.get(id=message.id).state, Message.UNACKED)
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, False)
 		# Now, a proper ack with the correct number
-		self.assertEqual(reminder_views.processDone(self.minqi.primary_phone_number, "1").content, "Be happy that you are taking care of your health!")
+		self.assertEqual(reminder_views.processAck(self.minqi.primary_phone_number, "1").content, "Your family will be happy to know that you're taking care of your health :)")
 		self.assertEqual(Message.objects.get(id=message.id).state, Message.ACKED)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_acked, 1)
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, True)
+
+		# Test a pharmacy refill reminder
+		meditation = Drug.objects.create(name="meditation")
+		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
+														 note="To make you strong", safety_net_on=True)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		message = Message.objects.create(patient=self.minqi)
+		sent_reminder = SentReminder.objects.create(prescription = prescription2,
+													reminder_time = reminder2,
+													message=message)
+		# Check that there was a sent reminder
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, False)
+		self.assertEqual(Message.objects.get(id=message.id).state, Message.UNACKED)
+		self.assertEqual(prescription2.filled, False)
+		self.assertEqual(ReminderTime.objects.filter(id=reminder2.id).count(), 1)
+		# If there is an ack with the wrong number, nothing should change.
+		self.assertEqual(reminder_views.processAck(self.minqi.primary_phone_number, "2").content, "Whoops--there is no reminder with number '2' that needs a response.")
+		self.assertEqual(Message.objects.get(id=message.id).state, Message.UNACKED)
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, False)
+		self.assertEqual(prescription2.filled, False)
+		self.assertEqual(ReminderTime.objects.get(id=reminder2.id).active, True)
+		# Now, a proper ack with the correct number should mark prescription as filled and delete the refill reminder
+		self.assertEqual(reminder_views.processAck(self.minqi.primary_phone_number, "1").content, "Your family will be happy to know that you're taking care of your health :)")
+		self.assertEqual(Message.objects.get(id=message.id).state, Message.ACKED)
+		self.assertEqual(SentReminder.objects.get(id=sent_reminder.id).ack, True)
+		self.assertEqual(Prescription.objects.get(id=prescription2.id).filled, True)
+		self.assertEqual(ReminderTime.objects.get(id=reminder2.id).active, False)
+
 
 		# What if we get a message from an unknown number?
-		self.assertEqual(reminder_views.processDone("2229392919", "9").status_code, 404)
+		self.assertEqual(reminder_views.processAck("2229392919", "9").status_code, 404)
 
 	def test_twilio_request(self):
 		# Set up a patient named matt who takes a vitamin at 9am
@@ -207,8 +235,8 @@ class HandleResponseTest(TestCase):
 											 	  postal_code="94131", 
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		matt_prescription = Prescription.objects.create(prescriber=self.bob, patient=matt, drug=self.vitamin,
-														note="To make you strong", safety_net_on=True)
-		reminder = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=time(hour=9, minute=0))
+														note="To make you strong", safety_net_on=True, filled=True)
+		reminder = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=time(hour=9, minute=0), reminder_type=ReminderTime.MEDICATION)
 		# Set time to 9am and send messages
 		reminder_tasks.datetime.set_fixed_now(datetime(year=2013, month=12, day=26, hour=9, minute=0))
 		reminder_tasks.sendRemindersForNow()
@@ -222,7 +250,7 @@ class HandleResponseTest(TestCase):
 		# Patient sends the correct message
 		response = c.get('/textmessage_response/', {'from':matt.primary_phone_number, 'body':message_number})
 		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.ACKED)
-		self.assertEqual(response.content, "Be happy that you are taking care of your health!")
+		self.assertEqual(response.content, "Your family will be happy to know that you're taking care of your health :)")
 
 
 class SendRemindersTest(TestCase):
@@ -245,7 +273,7 @@ class SendRemindersTest(TestCase):
 											 	  postal_code="94131", 
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_model.datetime = DatetimeStub()
 		reminder_tasks.datetime = DatetimeStub()
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
@@ -266,27 +294,27 @@ class SendRemindersTest(TestCase):
 		send_time5 = time(hour=0, minute=6)
 
 		# Sent every day at 12:00pm
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time1)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time1, reminder_type=ReminderTime.MEDICATION)
 		# Sent every day at 9:00am
-		reminder1a = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time3)
+		reminder1a = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time3, reminder_type=ReminderTime.MEDICATION)
 		# Sent every Monday at 12:00pm
-		reminder2 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.WEEKLY, send_time=send_time1, day_of_week=1)
+		reminder2 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.WEEKLY, send_time=send_time1, day_of_week=1, reminder_type=ReminderTime.MEDICATION)
 		# Sent every Wednesday at 12:00pm
-		reminder3 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.WEEKLY, send_time=send_time1, day_of_week=3)
+		reminder3 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.WEEKLY, send_time=send_time1, day_of_week=3, reminder_type=ReminderTime.MEDICATION)
 		# Sent first Wednesday of every month at 12:00pm
-		reminder4 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=3, week_of_month=1)
+		reminder4 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=3, week_of_month=1, reminder_type=ReminderTime.MEDICATION)
 		# Sent third Wednesday of every month at 12:00pm
-		reminder5 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=3, week_of_month=3)
+		reminder5 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=3, week_of_month=3, reminder_type=ReminderTime.MEDICATION)
 		# Sent last Monday of every month at 12:00pm
-		reminder6 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=1, week_of_month=5)
+		reminder6 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time1, day_of_week=1, week_of_month=5, reminder_type=ReminderTime.MEDICATION)
 		# Sent first day of every month at 9:00am
-		reminder7 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time3, day_of_month=1)
+		reminder7 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time3, day_of_month=1, reminder_type=ReminderTime.MEDICATION)
 		# Sent first day of every year at 3:00pm
-		reminder8 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.YEARLY, send_time=send_time2, day_of_year=1)
+		reminder8 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.YEARLY, send_time=send_time2, day_of_year=1, reminder_type=ReminderTime.MEDICATION)
 		# Sent daily at 11:59pm
-		reminder9 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time4)
+		reminder9 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time4, reminder_type=ReminderTime.MEDICATION)
 		# Send second Thursday of every month at 12:06am
-		reminder10 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time5, day_of_week=4, week_of_month=2)
+		reminder10 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.MONTHLY, send_time=send_time5, day_of_week=4, week_of_month=2, reminder_type=ReminderTime.MEDICATION)
 
 		# Query at 12pm on 3rd Sunday, 11/17/13 should return only one reminder
 		query_time = datetime(year=2013, month=11, day=17, hour=12, minute=0)
@@ -351,7 +379,7 @@ class SendRemindersTest(TestCase):
 
 	def test_create_message(self):
 		send_time1 = time(hour=12, minute=0)
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time1)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time1, reminder_type=ReminderTime.MEDICATION)
 
 		# Create a message now and test the message number
 		sent_time = datetime.now()
@@ -403,49 +431,85 @@ class SendRemindersTest(TestCase):
 		self.assertEquals(m5.message_number, 1)
 		self.assertEquals(Message.objects.get(id=m4.id).state, Message.EXPIRED)
 
-	def test_textreminder_template(self):
+		reminder_model.datetime.reset_now()
+
+	def test_medicationreminder_template(self):
 		send_time = time(hour=9, minute=0)
 
 		# Test message with one reminder
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
 		m1 = Message.objects.create(patient=self.minqi)
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('textreminder.txt', dictionary)
+		message_body = render_to_string('medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin. Reply '1' when you finish.")
 
 		# Test message with two reminders
 		meditation = Drug.objects.create(name="meditation")
 		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
-														 note="To make you strong", safety_net_on=True)
-		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time)
+														 note="To make you strong", safety_net_on=True, filled=True)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('textreminder.txt', dictionary)
+		message_body = render_to_string('medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin and meditation. Reply '1' when you finish.")
 
 		# Test message with three reminders
 		lipitor = Drug.objects.create(name="lipitor")
 		prescription3 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=lipitor,
-														 note="To make you strong", safety_net_on=True)
-		reminder3 = ReminderTime.objects.create(prescription=prescription3, repeat=ReminderTime.DAILY, send_time=send_time)
+														 note="To make you strong", safety_net_on=True, filled=True)
+		reminder3 = ReminderTime.objects.create(prescription=prescription3, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2) | Q(prescription=prescription3))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('textreminder.txt', dictionary)
+		message_body = render_to_string('medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin, meditation and lipitor. Reply '1' when you finish.")
 
-	def test_sendOneReminder(self):
+	def test_refillreminder_template(self):
+		send_time = time(hour=9, minute=0)
+
+		# Test message with one reminder
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
+		m1 = Message.objects.create(patient=self.minqi)
+		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
+		message_body = render_to_string('refill_reminder.txt', dictionary)
+		self.assertEquals(message_body, "It's important you fill your vitamin prescription as soon as possible. Reply '1' when you've received your medicine.")
+		self.assertTrue(message_body.__len__()<=160)
+
+
+		# Test message with two reminders
+		meditation = Drug.objects.create(name="meditation")
+		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
+														 note="To make you strong", safety_net_on=True)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
+		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
+		message_body = render_to_string('refill_reminder.txt', dictionary)
+		self.assertEquals(message_body, "It's important you fill your vitamin and meditation prescription as soon as possible. Reply '1' when you've received your medicine.")
+		self.assertTrue(message_body.__len__()<=160)
+
+		# Test message with three reminders
+		lipitor = Drug.objects.create(name="lipitor")
+		prescription3 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=lipitor,
+														 note="To make you strong", safety_net_on=True)
+		reminder3 = ReminderTime.objects.create(prescription=prescription3, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2) | Q(prescription=prescription3))
+		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
+		message_body = render_to_string('refill_reminder.txt', dictionary)
+		self.assertEquals(message_body, "It's important you fill your vitamin, meditation and lipitor prescription as soon as possible. Reply '1' when you've received your medicine.")
+		self.assertTrue(message_body.__len__()<=160)
+
+	def test_sendReminders_medication(self):
 		send_time = time(hour=9, minute=0)
 
 		# Define a reminder
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
 		# Entry should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
 		self.assertEqual(message.count(), 0)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 0)
 		# Send the message
-		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
+		self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 1)		
 		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
@@ -454,24 +518,21 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(message.count(), 1)
 		sentreminders = SentReminder.objects.filter(prescription=self.minqi_prescription, message=message[0])
 		self.assertEqual(sentreminders.count(), 1)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
 
 		# Now send a message with two reminders
 		meditation = Drug.objects.create(name="meditation")
 		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
-														 note="To make you strong", safety_net_on=True)
-		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time)
+														 note="To make you strong", safety_net_on=True, filled=True)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
 		# Entry for message with second prescription should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 0)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 1)
-		self.assertEqual(Prescription.objects.get(id=prescription2.id).total_reminders_sent, 0)
 		# Send the message
-		reminder_tasks.sendOneReminder(self.minqi, reminder_list)
+		self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 2)
-		# self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
 		# Did database get correctly updated?
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 1)
@@ -479,15 +540,59 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(sentreminders.count(), 1)
 		sentreminders = SentReminder.objects.filter(prescription=prescription2, message=message[0])
 		self.assertEqual(sentreminders.count(), 1)
-		self.assertEqual(Prescription.objects.get(id=self.minqi_prescription.id).total_reminders_sent, 2)
-		self.assertEqual(Prescription.objects.get(id=prescription2.id).total_reminders_sent, 1)
+
+
+	def test_sendReminders_refill(self):
+		send_time = time(hour=9, minute=0)
+
+		# Define a reminder
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
+		# Entry should not exist in database before sending message
+		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
+		self.assertEqual(message.count(), 0)
+		# Send the message
+		self.minqi.sendReminders(reminder_list)
+		# Did the message get sent correctly?
+		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 1)		
+		self.assertNotEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "It's important you fill your vitamin prescription as soon as possible. Reply '1' when you've received your medicine.")
+
+		# Did database get correctly updated?
+		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
+		self.assertEqual(message.count(), 1)
+		sentreminders = SentReminder.objects.filter(prescription=self.minqi_prescription, message=message[0])
+		self.assertEqual(sentreminders.count(), 1)
+
+		# Now send a message with two reminders
+		meditation = Drug.objects.create(name="meditation")
+		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
+														 note="To make you strong", safety_net_on=True, filled=False)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.REFILL)
+		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
+		# Entry for message with second prescription should not exist in database before sending message
+		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
+		self.assertEqual(message.count(), 0)
+		# Send the message
+		self.minqi.sendReminders(reminder_list)
+		# Did the message get sent correctly?
+		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 2)
+		self.assertNotEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
+		self.assertNotEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "It's important you fill your vitamin and meditation prescription as soon as possible. Reply '2' when you've received your medicine.")
+		# Did database get correctly updated?
+		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
+		self.assertEqual(message.count(), 1)
+		sentreminders = SentReminder.objects.filter(prescription=self.minqi_prescription, message=message[0])
+		self.assertEqual(sentreminders.count(), 1)
+		sentreminders = SentReminder.objects.filter(prescription=prescription2, message=message[0])
+		self.assertEqual(sentreminders.count(), 1)
 
 
 	def test_sendRemindersForNow(self):
 		# A few more pills, prescriptions
 		meditation = Drug.objects.create(name="meditation")
 		prescription2 = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=meditation,
-													note="To make you strong", safety_net_on=True)
+													note="To make you strong", safety_net_on=True, filled=True)
 
 		# make sure there's nothing in our sent message logs
 		self.assertEqual(getLastSentMessageContent(), "")
@@ -500,8 +605,8 @@ class SendRemindersTest(TestCase):
 
 		# Schedule some reminders at 9am for Minqi
 		send_time = time(hour=9, minute=0)
-		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time)
-		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time)
+		reminder1 = ReminderTime.objects.create(prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
+		reminder2 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time, reminder_type=ReminderTime.MEDICATION)
 		
 		# Send some reminders for now (12am)
 		reminder_tasks.sendRemindersForNow()
@@ -523,9 +628,9 @@ class SendRemindersTest(TestCase):
 											 	  postal_code="94131", 
 											 	  city="San Francisco", state_province="CA", country_iso_code="US")
 		matt_prescription = Prescription.objects.create(prescriber=self.bob, patient=matt, drug=self.vitamin,
-														 note="To make you strong", safety_net_on=True)
+														 note="To make you strong", safety_net_on=True, filled=True)
 		send_time2 = time(hour=10, minute=0)
-		matt_reminder1 = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=send_time2)
+		matt_reminder1 = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=send_time2, reminder_type=ReminderTime.MEDICATION)
 
 		# Change time to 10am and make sure message is sent
 		send_datetime = datetime(year=2013, month=4, day=11, hour=10, minute=0)
@@ -535,8 +640,8 @@ class SendRemindersTest(TestCase):
 
 		# Schedule reminders for Matt and Minqi at 12am. 
 		send_time3 = time(hour=12, minute=0)
-		matt_reminder2 = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=send_time3)
-		minqi_reminder3 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time3)
+		matt_reminder2 = ReminderTime.objects.create(prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=send_time3, reminder_type=ReminderTime.MEDICATION)
+		minqi_reminder3 = ReminderTime.objects.create(prescription=prescription2, repeat=ReminderTime.DAILY, send_time=send_time3, reminder_type=ReminderTime.MEDICATION)
 		# Move time to 11 to make sure no messages are sent.
 		send_datetime = datetime(year=2013, month=4, day=11, hour=11, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
@@ -550,6 +655,6 @@ class SendRemindersTest(TestCase):
 		self.assertIn(matt.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.", getLastNSentMessageContent(2))
 		self.assertIn(self.minqi.primary_phone_number + ": " + "Time to take your meditation. Reply '2' when you finish.", getLastNSentMessageContent(2))
 
-
+		reminder_model.datetime.reset_now()
 
 

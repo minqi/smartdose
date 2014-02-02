@@ -59,7 +59,7 @@ class UserProfile(User):
 
 	@staticmethod
 	def get_unique_username(obj):
-		original_username = str(hash(obj.first_name+obj.last_name))
+		original_username = str(hash(obj.first_name+obj.last_name+obj.primary_phone_number+str(obj.birthday)))
 		username = original_username
 		for i in range(0, 10000): #aribtrarily choose max range to be 10000 on the assumption that there will not be more than 10,000 collisions.
 			try:
