@@ -5,6 +5,7 @@ anyjson==0.3.3
 billiard==3.3.0.14
 celery==3.1.8
 django-celery==3.0.23
+fake-factory==0.3.2
 httplib2==0.8
 kombu==3.0.10
 meld3==0.6.10

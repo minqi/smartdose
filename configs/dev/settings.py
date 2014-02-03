@@ -4,12 +4,12 @@ import djcelery
 from celery.schedules import crontab
 import os, re
 
-# store project path in PROJECT_PATH
+# store project root in PROJECT_ROOT
 PROJECT_NAME = "smartdose"
 m = r'.*/%s/?' % (PROJECT_NAME)
 cwd = os.getcwd()
 result = re.search(m, cwd)
-PROJECT_PATH = cwd[:result.end()]
+PROJECT_ROOT = cwd[:result.end()]
 
 
 DEBUG = True
@@ -133,7 +133,7 @@ ROOT_URLCONF = 'configs.urls'
 WSGI_APPLICATION = 'common.wsgi.application'
 
 TEMPLATE_DIRS = (
-    PROJECT_PATH + '/templates/'
+    PROJECT_ROOT + '/templates/'
 )
 
 INSTALLED_APPS = (

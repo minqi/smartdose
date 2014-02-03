@@ -1,6 +1,8 @@
 # Tasks that will be executed by Celery.
 from __future__ import absolute_import
 
+import datetime
+
 from celery import shared_task
 from django.template.loader import render_to_string
 from django.db.models import Q
@@ -8,15 +10,34 @@ from reminders.models import ReminderTime
 from reminders.models import Message
 from reminders.models import SentReminder
 from patients.models import PatientProfile, SafetyNetRelationship
-import datetime
+from common.datasources import *
 
-# Send reminders every REMINDER_INTERVAL minutes
-REMINDER_INTERVAL = 1
 
-# Called from scheduler. 
-# Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
+REMINDER_INTERVAL = 1 # Send reminders every REMINDER_INTERVAL minutes
+FAKE_CSV = True # Use fake patient csv data for 
+
+# @shared_task()
+def fetch_new_patient_records(source="fake_csv"):
+	"""
+	Fetch new patient records from data source
+	"""
+	load_patient_data(source)
+
+# @shared_task()
+def welcome_new_patients():
+	"""
+	Send Smartdose welcome message to new patients
+	"""
+	pass
+
+
+
 @shared_task()
 def sendRemindersForNow():
+	"""
+	Called from scheduler. 
+	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
+	"""
 	now = datetime.datetime.now()
 	reminders_for_now = ReminderTime.objects.reminders_at_time(now, datetime.timedelta(minutes=REMINDER_INTERVAL))
 	# Get reminders that are distinct by patients
@@ -28,10 +49,12 @@ def sendRemindersForNow():
 		p.sendReminders(p_reminders)
 
 
-# Sends a message to a safety net member to notify about a missed dose. Safety net member will be notified if the patient 
-# takes fewer than threshold (a ratio of taken medications to total medications) between window_start, window_finish. A 
-# medication is considered not taken if it has gone unacknowledged for longer than timeout.
 def contactSafetyNet(window_start, window_finish, threshold, timeout):
+	"""
+	Sends a message to a safety net member to notify about a missed dose. Safety net member will be notified if the patient 
+	takes fewer than threshold (a ratio of taken medications to total medications) between window_start, window_finish. A 
+	medication is considered not taken if it has gone unacknowledged for longer than timeout.
+	"""
 	# Get all acked reminders in the timeframe
 	acked_reminders = SentReminder.objects.filter(time_sent__gte=window_start, time_sent__lte=window_finish, ack=True)
 	# Get all expired reminders in the timeframe
