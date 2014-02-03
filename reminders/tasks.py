@@ -31,7 +31,6 @@ def welcome_new_patients():
 	pass
 
 
-
 @shared_task()
 def sendRemindersForNow():
 	"""

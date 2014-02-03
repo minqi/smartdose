@@ -96,6 +96,7 @@ def load_fake_csv_patient_data(filename="fake_patient_data.csv"):
 	Populates models with fake patient and prescription data 
 	from fake_patient_data.csv
 	"""
+	print "running"
 	fake_datasources_path = get_fake_datasources_path()
 	f_in_path = os.path.join(fake_datasources_path, filename)
 	if not os.path.exists(f_in_path):
@@ -145,9 +146,8 @@ def load_clarity_patient_data():
 # master patient data-loader
 def load_patient_data(source='fake_csv'):
 	load_function_name = 'load_' + source + '_patient_data'
-	load_function = globals()[load_function_name]
-	if load_function:
-		load_function()
-	else:
+	try:
+		load_function = globals()[load_function_name]()
+	except KeyError:
 		return
 
