@@ -2,34 +2,26 @@
 from __future__ import absolute_import
 
 import datetime
+import common.datasources as datasources
 
 from celery import shared_task
 from django.template.loader import render_to_string
 from django.db.models import Q
-from reminders.models import ReminderTime
-from reminders.models import Message
-from reminders.models import SentReminder
+from reminders.models import ReminderTime, Message, SentReminder
+from common.models import UserProfile
 from patients.models import PatientProfile, SafetyNetRelationship
-from common.datasources import *
+from doctors.models import DoctorProfile
 
-
-REMINDER_INTERVAL = 1 # Send reminders every REMINDER_INTERVAL minutes
-FAKE_CSV = True # Use fake patient csv data for 
+FAKE_CSV = False # Use fake patient csv data for 
 
 # @shared_task()
 def fetch_new_patient_records(source="fake_csv"):
 	"""
 	Fetch new patient records from data source
 	"""
-	load_patient_data(source)
-
-# @shared_task()
-def welcome_new_patients():
-	"""
-	Send Smartdose welcome message to new patients
-	"""
-	pass
-
+	print "Fetching new patient records..."
+	datasources.load_patient_data(source)
+	print "Fetched new patient records"
 
 @shared_task()
 def sendRemindersForNow():
@@ -38,13 +30,13 @@ def sendRemindersForNow():
 	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
 	"""
 	now = datetime.datetime.now()
-	reminders_for_now = ReminderTime.objects.reminders_at_time(now, datetime.timedelta(minutes=REMINDER_INTERVAL))
+	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('prescription__patient')
 	# Send a reminder to each patient with the pills they need to take
 	for reminder in distinct_reminders:
 		p = reminder.prescription.patient
-		p_reminders = reminders_for_now.filter(prescription__patient=p)
+		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
 		p.sendReminders(p_reminders)
 
 

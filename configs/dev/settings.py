@@ -11,16 +11,17 @@ cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
-
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
+REMINDER_SWEEP_OFFSET = 10 # minutes
 
 TEST_ALL_APPS = True
 
 if TEST_ALL_APPS:
     TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -158,6 +159,7 @@ INSTALLED_APPS = (
 
     # external apps
     'djcelery',
+    'django_nose',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'

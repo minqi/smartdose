@@ -6,6 +6,7 @@ from twilio.rest import TwilioRestClient
 import datetime as datetime_orig
 from datetime import timedelta
 from math import ceil, floor
+from configs.dev.settings import REMINDER_SWEEP_OFFSET
 
 # Construct our client for communicating with Twilio service
 twilio_client = TwilioRestClient(settings.TWILIO_ACCOUNT_SID, 
@@ -50,19 +51,31 @@ def getLastNSentMessageContent(n):
 	l = l[-n:] # reverse array so most recently sent message is first
 	return l
 
-
-# Returns which week a day of a month falls in. 
-# For example, Thursday, May 9th, 2013 is the 2nd Tuesday of the month.
 def weekOfMonth(dt):
+	"""Returns which week a day of a month falls in. 
+	For example, Thursday, May 9th, 2013 is the 2nd Tuesday of the month"""
 	return ceil(dt.day / 7.0)
 
-# Returns whether the day for the given datetime fall in the last week of the month
 def lastWeekOfMonth(dt):
+	"""Returns whether the day for the given datetime fall in the last week of the month"""
 	next_week = dt + timedelta(weeks=1)
 	if dt.month == next_week.month:
 		return False
 	else:
 		return True
+
+def is_today(dt): #TODO(minqi):test
+	"""Return True if dt is a time in today"""
+	dt_time = dt.date()
+	today = datetime_orig.datetime.now().date()
+	return dt_time == today
+
+# def is_within_timeframe_past(dt): #TODO(minqi):test
+# 	"""Return True if dt is a time within REMINDER_SWEEP_OFFSET minutes"""
+# 	now_time = datetime_orig.datetime.now()
+# 	minutes = (now_time - dt).seconds/60.0
+
+# 	return minutes < REMINDER_SWEEP_OFFSET
 
 class DatetimeStub(object):
 	"""
@@ -76,7 +89,6 @@ class DatetimeStub(object):
 			if DatetimeStub.fixed_now:
 				return DatetimeStub.fixed_now;
 			else:
-				print datetime_orig.datetime.now()
 				return datetime_orig.datetime.now();
 	
 	@classmethod

@@ -31,15 +31,19 @@ class UserProfile(User):
 		abstract = True
 
 	# status
+	NEW     = 'n'
 	ACTIVE	= 'a'
 	QUIT 	= 'q'
 	STATUS_CHOICES = (
+		(NEW,    'n'),
 		(ACTIVE, 'a'),
-		(QUIT, 'q'),
+		(QUIT,   'q'),
 	)
+
+	# by default, new UserProfile instances are 'NEW'
 	status = models.CharField(max_length=2,
 						  choices=STATUS_CHOICES,
-						  default=ACTIVE)
+						  default=NEW)
 
 	# User specific fields
 	primary_phone_number 	= models.CharField(max_length=32, blank=False, null=False)

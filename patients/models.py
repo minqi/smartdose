@@ -62,44 +62,61 @@ class PatientProfile(UserProfile):
 	objects = PatientManager()
 
 	def sendTextMessage(self, body):
-		if self.status == PatientProfile.ACTIVE:
-			sendTextMessageToNumber(body, self.primary_phone_number)
-			return True
-		else:
-			return False
+		# Additional checks/actions to be performed before sending a text to a
+		# patient can happen at this step, if any.
+		sendTextMessageToNumber(body, self.primary_phone_number)
 
 	# Takes a patient and the reminders for which the patient will be receiving the text
 	# @reminder_list is a ReminderTime QuerySet
 	def sendReminders(self, reminder_list):
-		# First send refill reminders
+		# Don't send message if patient's account is disabled
+		if self.status == PatientProfile.QUIT:
+			return
+
+		# Send welcome messages
+		welcome_reminder_list = reminder_list.filter(reminder_type=ReminderTime.WELCOME)
+		if welcome_reminder_list:
+			welcome_reminder = list(welcome_reminder_list.order_by("send_time"))[0]
+			message = Message.objects.create(patient=self)
+			dictionary = {'patient_first_name':self.first_name}
+			message_body = render_to_string('welcome_reminder.txt', dictionary)
+			self.sendTextMessage(message_body)
+			s = SentReminder.objects.create(reminder_time=welcome_reminder, message=message)
+			welcome_reminder.active = False
+			self.status = UserProfile.ACTIVE
+			self.save()
+
+		# Send refill reminders
 		refill_reminder_list = reminder_list.filter(reminder_type=ReminderTime.REFILL)
 		if refill_reminder_list:
 			# Update database to reflect state of messages and reminders
 			refill_reminder_list = refill_reminder_list.order_by("prescription__drug__name")
 			message = Message.objects.create(patient=self)
-			for reminder in refill_reminder_list:
-				s = SentReminder.objects.create(prescription = reminder.prescription,
-												reminder_time = reminder,
-												message=message)
-			# Send the refill message
 			dictionary = {'reminder_list': refill_reminder_list, 'message_number': message.message_number}
+			for reminder in refill_reminder_list:
+				s = SentReminder.objects.create(prescription=reminder.prescription,
+												reminder_time=reminder,
+												message=message)
+				reminder.update_to_next_send_time()
+			# Send the refill message
 			message_body = render_to_string('refill_reminder.txt', dictionary)
-			success = self.sendTextMessage(message_body)
+			self.sendTextMessage(message_body)
 
-		# Next, send medication reminders
+		# Send medication reminders
 		medication_reminder_list = reminder_list.filter(reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
 		if medication_reminder_list:
 			# Update database to reflect state of messages and reminders
 			medication_reminder_list = medication_reminder_list.order_by("prescription__drug__name")
 			message = Message.objects.create(patient=self)
-			for reminder in medication_reminder_list:
-				s = SentReminder.objects.create(prescription = reminder.prescription,
-												reminder_time = reminder,
-												message=message)
-			# Send the medication message
 			dictionary = {'reminder_list': medication_reminder_list, 'message_number': message.message_number}
+			for reminder in medication_reminder_list:
+				s = SentReminder.objects.create(prescription=reminder.prescription,
+												reminder_time=reminder,
+												message=message)
+				reminder.update_to_next_send_time()
+			# Send the medication message
 			message_body = render_to_string('medication_reminder.txt', dictionary)
-			success = self.sendTextMessage(message_body)
+			self.sendTextMessage(message_body)
 
 	def quit(self):
 		self.status = PatientProfile.QUIT
@@ -136,9 +153,4 @@ class PatientProfile(UserProfile):
 	def save(self, *args, **kwargs):
 		self.validate_unique()
 		super(PatientProfile, self).save(*args, **kwargs)
-
-
-
-		
-
 

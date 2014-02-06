@@ -1,10 +1,11 @@
+import datetime, calendar
+
 from django.db import models
 from django.db.models import Q
 from doctors.models import DoctorProfile
 from common.models import Drug
-import datetime
 from common.utilities import weekOfMonth, lastWeekOfMonth
-from configs.dev.settings import MESSAGE_CUTOFF
+from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_SWEEP_OFFSET
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -17,6 +18,7 @@ class Prescription(models.Model):
 	with_food      				= models.BooleanField(default=False)
 	with_water     				= models.BooleanField(default=False)
 	last_edited    				= models.DateTimeField(auto_now=True)
+	sig                         = models.CharField(max_length=300)
 	note		  				= models.CharField(max_length=300)
 
 	last_contacted_safety_net 	= models.DateTimeField(null=True)
@@ -25,101 +27,83 @@ class Prescription(models.Model):
 	filled						= models.BooleanField(default=False)
 
 class ReminderManager(models.Manager):
-	def reminders_at_time(self, dt, offset):
-		"""Returns all reminders from (dt - offset) to dt
+	def reminders_at_time(self, now_datetime):
+		"""Returns all reminders at and before now_datetime
 
-		Keyword arguments:
-		dt -- the datetime for which we care about reminders. datetime object
-		offset -- the amount of time into the past to go to retrieve reminders. python timedelta object
+		Arguments:
+		now_datetime -- the datetime for which we care about reminders. datetime object
 		"""
-		t = dt.time()
-		day_of_week = dt.isoweekday()
-		week_of_month = weekOfMonth(dt)
-		day_of_month = dt.day
-		day_of_year = dt.timetuple().tm_yday
-		last_day_of_week = lastWeekOfMonth(dt)
-		
-		offset_t = (dt - offset).time()
-		offset_day_of_week = (dt-offset).isoweekday()
-		offset_week_of_month = weekOfMonth(dt-offset)
-		offset_day_of_month = (dt-offset).day
-		offset_day_of_year = (dt-offset).timetuple().tm_yday
-		offset_last_day_of_week = lastWeekOfMonth(dt-offset)
+		reminders_at_time = super(ReminderManager, self).get_query_set().filter(
+			Q(active=True) &
+			Q(send_time__lte=now_datetime)
+		)
 
-		if day_of_week == offset_day_of_week:
-			# Get all reminders sent between time-offset and time
-			reminders_at_time = super(ReminderManager, self).get_query_set().filter(
-					Q(active=True) & 
-					(Q(send_time__gte=offset_t) & Q(send_time__lte=t)) &
-					((Q(repeat=ReminderTime.DAILY)) | 
-					(Q(repeat=ReminderTime.WEEKLY, day_of_week=day_of_week)) | 
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=week_of_month, day_of_week=day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, day_of_month=day_of_month)) |
-					(Q(repeat=ReminderTime.YEARLY, day_of_year=day_of_year))))
-			if not last_day_of_week: 
-				if week_of_month != 5:
-					reminders_at_time = reminders_at_time.exclude(repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=day_of_week)
-		else:
-			# If the offset causes wrapping, go query previous day and current day
-			midnight = datetime.time.min
-			dawn = datetime.time.max
-			reminders_at_time = super(ReminderManager, self).get_query_set().filter(
-				Q(active=True) &
-				((Q(send_time__gte=midnight) & Q(send_time__lte=t)) &
-					((Q(repeat=ReminderTime.DAILY)) | 
-					(Q(repeat=ReminderTime.WEEKLY, day_of_week=day_of_week)) | 
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=week_of_month, day_of_week=day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, day_of_month=day_of_month)) |
-					(Q(repeat=ReminderTime.YEARLY, day_of_year=day_of_year)))) | 
-				(Q(send_time__gte=offset_t) & Q(send_time__lte=dawn)) &
-					((Q(repeat=ReminderTime.DAILY)) | 
-					(Q(repeat=ReminderTime.WEEKLY, day_of_week=offset_day_of_week)) | 
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=offset_week_of_month, day_of_week=offset_day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=offset_day_of_week)) |
-					(Q(repeat=ReminderTime.MONTHLY, day_of_month=offset_day_of_month)) |
-					(Q(repeat=ReminderTime.YEARLY, day_of_year=offset_day_of_year))))
-			if not last_day_of_week: 
-				if week_of_month != 5:
-					reminders_at_time = reminders_at_time.exclude((Q(send_time__gte=midnight) & Q(send_time__lte=t)), repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=day_of_week)\
-														 .exclude((Q(send_time__gte=offset_t) & Q(send_time__lte=dawn)), repeat=ReminderTime.MONTHLY, week_of_month=ReminderTime.LAST_WEEK_OF_MONTH, day_of_week=offset_day_of_week)
 		return reminders_at_time
+
+	def create_prescription_reminders(to, repeat, prescription):
+		"""Schedule both a refill reminder and a medication reminder for a prescription"""
+		refill_reminder = ReminderTime.get_or_create(to=to, 
+													 reminder_type=ReminderTime.REFILL, 
+												     repeat=repeat, 
+													 prescription=prescription)
+		refill_reminder.set_best_send_time()
+		med_reminder = ReminderTime.get_or_create(to=to, 
+												  reminder_type=ReminderTime.MEDICATION, 
+										  		  repeat=repeat, 
+										  		  prescription=prescription)
+
+	def create_safety_net_notification():
+		pass
+
+	def create_welcome_notification(to):
+		""""""		
+		ReminderTime.get_or_create(to=to, reminder_type=ReminderTime.WELCOME, 
+										  repeat=DAILY)
 
 class ReminderTime(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
 	# Reminder type
+	WELCOME     = 'w'
 	MEDICATION 	= 'm'
 	REFILL 		= 'r'
-	TYPE_CHOICES = (
+	SAFETY_NET  = 's'
+	REMINDER_TYPE_CHOICES = (
+		(WELCOME,    'welcome'),
 		(MEDICATION, 'medication'),
-		(REFILL,	 'refill')
+		(REFILL,	 'refill'),
+		(SAFETY_NET, 'safety_net'),
 	)
-
 
 	# repeat choices i.e., what is the period of this reminder time
-	DAILY   = 'd'
-	WEEKLY  = 'w'
-	MONTHLY = 'm'
-	YEARLY  = 'y'
-	CUSTOM  = 'c'
+	ONE_SHOT = 'o'
+	DAILY    = 'd'
+	WEEKLY   = 'w'
+	MONTHLY  = 'm'
+	YEARLY   = 'y'
+	CUSTOM   = 'c' 
 	REPEAT_CHOICES = (
-		(DAILY,   'd'),
-		(WEEKLY,  'w'),
-		(MONTHLY, 'm'),
-		(YEARLY,  'y'),
-		(CUSTOM,  'c'),
+		(ONE_SHOT, 'one_shot'),
+		(DAILY,    'daily'),
+		(WEEKLY,   'weekly'),
+		(MONTHLY,  'monthly'),
+		(YEARLY,   'yearly'),
+		(CUSTOM,   'custom'),
 	)
+	#TODO(mgaba): Write code to store an arbitrary function for "custom" types; 
+	# may involve serializing functions
+
 	# If value of week_of_month is 5, it means "last day of month" 
 	# e.g., last Tuesday of every month
 	LAST_WEEK_OF_MONTH = 5
 
-	prescription 	= models.ForeignKey(Prescription, blank=False, null=False)
+	to       		= models.ForeignKey('patients.PatientProfile', blank=False, null=False)
+	prescription 	= models.ForeignKey(Prescription, null=True)
 	reminder_type	= models.CharField(max_length=4,
-									   choices=TYPE_CHOICES, blank=False, null=False)
+									   choices=REMINDER_TYPE_CHOICES, blank=False, null=False)
 	repeat 			= models.CharField(max_length=2,
 									   choices=REPEAT_CHOICES, blank=False, null=False)
-	send_time		= models.TimeField(blank=False, null=False)
+	send_time		= models.DateTimeField(null=True)
+	# send_time		= models.TimeField(null=True)
 	day_of_week		= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
 	day_of_month	= models.PositiveIntegerField(null=True)
 	# If value of week_of_month is 5, it means "last day of month" 
@@ -131,12 +115,104 @@ class ReminderTime(models.Model):
 
 	# The reminder is no longer relevant. For example, if a prescription reminder gets filled
 	active			= models.BooleanField(default=True)
-	#TODO(mgaba): Write code to store an arbitrary function for "custom" types. Will involve serializing functions, etc.
+
+	def __update_one_shot_send_time(self):
+		if self.repeat == self.ONE_SHOT:
+			pass
+
+	def __update_daily_send_time(self):
+		if self.repeat == self.DAILY:
+			now = datetime.datetime.now()
+			dt = datetime.timedelta(days=1)
+			while self.send_time <= now:
+				self.send_time += dt
+			self.save()
+
+	def __update_weekly_send_time(self):
+		if self.repeat == self.WEEKLY:
+			now = datetime.datetime.now()
+			dt = datetime.timedelta(days=7)
+			while self.send_time <= now:
+				self.send_time += dt
+			self.save()
+
+	def __update_monthly_send_time(self):
+		if self.repeat == self.MONTHLY:
+			now_date = datetime.datetime.now().date()
+			next_date = send_time.date()
+			year = next_date.year
+			month = next_date.month
+			while next_date <= now_date:
+				month = next_date.month - 1 + months
+				year = next_date.year + month / 12
+				month = next_month % 12 + 1
+				day = min(next_date.day,calendar.monthrange(year,month)[1])
+
+				next_date = datetime.date(year, month, day)
+
+			if self.LAST_WEEK_OF_MONTH == 5:
+				cal = calendar.Calendar(0)
+				month_week_dates = cal.monthdatescalendar(year, month)
+				lastweek_month = month_week_dates[-1]
+				next_date = lastweek_month[self.day_of_week - 1]
+
+			self.send_time = datetime.datetime.combine(next_date, self.send_time.time())
+			self.save()
+
+	def __update_yearly_send_time(self):
+		if self.repeat == self.YEARLY:
+			now_year = datetime.datetime.now().date().year
+			date = self.send_time.date()
+			year  = date.year
+			month = date.month
+			day = date.day
+			while year <= now_year:
+				year += 1
+
+			next_date = datetime.date(year, month, day)
+			self.send_time = datetime.datetime.combine(next_date, self.send_time.time())
+			self.save()
+
+	def __update_custom_send_time(self):
+		if self.reminder_type == self.CUSTOM:
+			pass
+
+	# update send_time to next send_time based on notification period
+	def update_to_next_send_time(self):
+		update_periodic_send_time = {
+			self.ONE_SHOT: self.__update_one_shot_send_time,
+			self.DAILY:    self.__update_daily_send_time,
+			self.WEEKLY:   self.__update_weekly_send_time,
+			self.MONTHLY:  self.__update_monthly_send_time,
+			self.YEARLY:   self.__update_yearly_send_time,
+			self.CUSTOM:   self.__update_custom_send_time,
+		}
+		update_periodic_send_time[self.repeat]()
+
+	# return the optimal time to send reminder
+	def get_best_send_time(self):
+		pass
+
+	# return and set the optimal time to send reminder 
+	def set_best_send_time(self):
+		# (placeholder for now)
+		if not self.send_time:
+			self.send_time = datetime.datetime.now()
+		pass
+
+	def __init__(self, *args, **kwargs):
+		super(ReminderTime, self).__init__(*args, **kwargs)
+		# custom init logic
+		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
+		# by parsing the prescription sig
+		if not self.send_time:
+			self.set_best_send_time()
 
 class MessageManager(models.Manager):
 	def create(self, patient):
 		# Calculate the appropriate message number
-		# Number of hours in the past to allow acking of messages. (23 hours avoids rounding problems and still gives a full days time to ack)
+		# Number of hours in the past to allow acking of messages. 
+		# (MESSAGE_CUTOFF == 23 hours avoids rounding problems and still gives a full days time to ack)
 		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
 		# Calculate the message number to assign to new message
 		new_message_number = 1
@@ -161,22 +237,21 @@ class Message(models.Model):
 	class Meta:
 		ordering = ['-time_sent']
 
-	UNACKED   	= 'u'
-	ACKED 		= 'a'
-	EXPIRED 	= 'e'
+	UNACKED = 'u'
+	ACKED 	= 'a'
+	EXPIRED = 'e'
 	STATE_CHOICES = (
 		(UNACKED, 	'u'),
 		(ACKED, 	'a'),
 		(EXPIRED,	'e'))
 
-	patient 					= models.ForeignKey('patients.PatientProfile', blank=False)
-	time_sent					= models.DateTimeField(auto_now_add=True)
-	message_number				= models.PositiveIntegerField(blank=False, null=False, default=1)
-	state 						= models.CharField(max_length=2,
-												   choices=STATE_CHOICES,
-												   default=UNACKED)
-
-	objects						= MessageManager()
+	patient        = models.ForeignKey('patients.PatientProfile', blank=False)
+	time_sent      = models.DateTimeField(auto_now_add=True)
+	message_number = models.PositiveIntegerField(blank=False, null=False, default=1)
+	state          = models.CharField(max_length=2,
+											   choices=STATE_CHOICES,
+											   default=UNACKED)
+	objects		   = MessageManager()
 
 	def processAck(self):
 		self.state = Message.ACKED
@@ -187,12 +262,14 @@ class Message(models.Model):
 
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
-	prescription 			= models.ForeignKey(Prescription, blank=False)
-	reminder_time 			= models.ForeignKey(ReminderTime, blank=False)
-	message 				= models.ForeignKey(Message)
-	time_sent    			= models.DateTimeField(auto_now_add=True)
-	ack						= models.BooleanField(default=False)
+	prescription   = models.ForeignKey(Prescription, null=True)
+	reminder_time  = models.ForeignKey(ReminderTime, blank=False)
+	message 	   = models.ForeignKey(Message)
+	time_sent      = models.DateTimeField(auto_now_add=True)
+	ack			   = models.BooleanField(default=False)
 
+	class Meta:
+		get_latest_by = "time_sent"
 
 	def processAck(self):
 		self.ack = True
@@ -202,5 +279,10 @@ class SentReminder(models.Model):
 			self.prescription.save()
 			self.reminder_time.active = False
 			self.reminder_time.save()
-			# self.reminder_time.delete()
+
+
+def add_months(sourcedate,months):
+
+	return datetime.date(year,month,day)
+
 

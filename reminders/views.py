@@ -5,7 +5,6 @@ from reminders.models import Message
 from reminders.models import SentReminder
 from patients.models import PatientProfile
 from datetime import datetime,timedelta
-from reminders.tasks import REMINDER_INTERVAL
 
 # Number of hours for which a text can be ack'd
 ACK_WINDOW = 24
@@ -23,7 +22,6 @@ def isQuit(body):
 		return True
 	else:
 		return False
-
 
 def processAck(phone_number, message_number):
 	# Find all messages for the given number

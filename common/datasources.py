@@ -108,25 +108,29 @@ def load_fake_csv_patient_data(filename="fake_patient_data.csv"):
 	for row in csv_reader:
 		print row
 		patient = \
-			PatientProfile.objects.get_or_create(first_name=row['patient_first_name'],
-								 				 last_name=row['patient_last_name'],
-								 			     primary_phone_number=row['patient_primary_phone_number'],
-								 			     birthday=row['patient_birthday'],
-								 			     address_line1=row['patient_address_line1'],
-								 			     postal_code=row['patient_postal_code'],
-								 			     city=row['patient_city'],
-								 			     state_province=row['patient_state_province'],
-								 			     country_iso_code=row['patient_country_iso_code'])[0]
-		doctor = DoctorProfile.objects.get_or_create(first_name=row['doctor_first_name'],
-													 last_name=row['doctor_last_name'],
-													 primary_phone_number=row['doctor_primary_phone_number'],
-													 birthday=row['doctor_birthday'])[0]
+			PatientProfile.objects.get_or_create(
+				first_name=row['patient_first_name'],
+				last_name=row['patient_last_name'],
+				primary_phone_number=row['patient_primary_phone_number'],
+				birthday=row['patient_birthday'],
+				address_line1=row['patient_address_line1'],
+				postal_code=row['patient_postal_code'],
+				city=row['patient_city'],
+				state_province=row['patient_state_province'],
+				country_iso_code=row['patient_country_iso_code'])[0]
+		doctor = DoctorProfile.objects.get_or_create(
+				first_name=row['doctor_first_name'],
+				last_name=row['doctor_last_name'],
+				primary_phone_number=row['doctor_primary_phone_number'],
+				birthday=row['doctor_birthday'])[0]
 		drug = Drug.objects.get_or_create(name=row['drug_name'])[0]
-		prescription = Prescription.objects.get_or_create(prescriber=doctor,
-														  patient=patient,
-														  drug=drug,
-														  with_food=row['with_food'],
-														  with_water=row['with_water'])[0]
+		prescription = Prescription.objects.get_or_create(
+				prescriber=doctor,
+				patient=patient,
+				drug=drug,
+				with_food=row['with_food'],
+				with_water=row['with_water'])[0]
+		# add reminder time scheduling
 	f_in.close()
 
 
@@ -150,4 +154,3 @@ def load_patient_data(source='fake_csv'):
 		load_function = globals()[load_function_name]()
 	except KeyError:
 		return
-
