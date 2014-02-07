@@ -712,4 +712,67 @@ class SendRemindersTest(TestCase):
 
 		reminder_model.datetime.reset_now()
 
+	def test_update_send_time(self):
+		# make sure there's nothing in our sent message logs
+		self.assertEqual(getLastSentMessageContent(), "")
 
+		# try sending messages for when there are no scheduled reminders (12am)
+		send_datetime = datetime(year=2013, month=4, day=11, hour=12, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), "")
+
+		# Schedule some daily reminders at 9am for Minqi
+		datetime1 = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		reminder1 = ReminderTime.objects.create(
+						to=self.minqi, 
+						prescription=self.minqi_prescription, 
+						repeat=ReminderTime.DAILY, 
+						send_time=datetime1, 
+						reminder_type=ReminderTime.MEDICATION)
+
+		# Send some reminders for now (12am)
+		send_datetime = datetime(year=2013, month=4, day=11, hour=0, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), "")
+
+		# Now change the time to 9am when reminders should be sent
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
+
+		# Try sending reminders a minute later to make sure additional reminders aren't sent
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
+		self.assertNotIn(self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.", getLastNSentMessageContent(2))
+
+
+		# Try sending reminders a day later to make sure reminders are sent
+		send_datetime = datetime(year=2013, month=4, day=12, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.")
+
+
+
+		# Simulate a three day outage and send a reminder
+		send_datetime = datetime(year=2013, month=4, day=15, hour=9, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '3' when you finish.")
+
+		# Advance time by one minute and try sending. Shouldn't send any more reminders
+		send_datetime = datetime(year=2013, month=4, day=15, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '3' when you finish.")
+
+		# Advance time by one day and try sending. Should send.
+		send_datetime = datetime(year=2013, month=4, day=16, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '4' when you finish.")
