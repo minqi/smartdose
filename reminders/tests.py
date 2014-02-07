@@ -23,6 +23,32 @@ from configs.dev import settings
 import os, sys
 from datetime import datetime, timedelta, time, date
 from configs.dev.settings import MESSAGE_CUTOFF
+from reminders.notification_center import NotificationCenter
+
+class NotificationCenterTest(TestCase):
+	def test_merge_notifications(self):
+		nc = NotificationCenter()
+
+		# create 5 notifications within an 3600 s (1 hr), and 5 in the next hour
+		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+								 				  primary_phone_number="8569067308", 
+								 				  birthday=date(year=1990, month=8, day=7))
+		now_time = datetime.now()
+		for i in range(5):
+			send_time = now_time + timedelta(seconds=i*360)
+			ReminderTime.objects.create(to=minqi, reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY, send_time=send_time)
+
+		reminders = ReminderTime.objects.all()
+		merged_reminders = nc.merge_notifications(reminders)
+
+		ground_truth_merged_reminders = []
+
+		reminder_group = []
+		for reminder in reminders:
+			reminder_group.append(reminder)
+		ground_truth_merged_reminders.append(tuple(reminder_group))
+		ground_truth_merged_reminders = tuple(ground_truth_merged_reminders)
+		self.assertEqual(merged_reminders, ground_truth_merged_reminders)
 
 class SafetyNetTest(TestCase):
 	def setUp(self):
@@ -44,6 +70,7 @@ class SafetyNetTest(TestCase):
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
+		reminder_model.datetime = DatetimeStub()
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close() 
@@ -121,9 +148,14 @@ class SafetyNetTest(TestCase):
 		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		send_time1 = time(hour=9, minute=0)
-		datetime1 = datetime.combine(date.today(), send_time1)
+		datetime1 = datetime.combine(date(year=2013, month=4, day=11), send_time1)
 
-		reminder = ReminderTime.objects.create(to=self.minqi, prescription=self.minqi_prescription, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.MEDICATION)
+		reminder = ReminderTime.objects.create(
+						to=self.minqi, 
+						prescription=self.minqi_prescription, 
+						repeat=ReminderTime.DAILY, 
+						send_time=datetime1, 
+						reminder_type=ReminderTime.MEDICATION)
 		reminders = ReminderTime.objects.filter(id=reminder.id) #sendReminders needs a queryset, so get one here
 		self.minqi.sendReminders(reminders)
 		self.minqi.sendReminders(reminders)
@@ -137,8 +169,10 @@ class SafetyNetTest(TestCase):
 		# Now contact safety net
 		contact_datetime = datetime(year=2013, month=4, day=18, hour=12, minute=0)
 		reminder_tasks.datetime.set_fixed_now(contact_datetime)
-		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
 
+		reminder_model.datetime.set_fixed_now(contact_datetime)
+		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
+		reminder_tasks.sendRemindersForNow()
 		self.assertEqual(getLastSentMessageContent(), "2147094720: Your friend, Minqi Jiang, has had trouble taking the following medication from 04/11 to 04/18:|vitamin: 33% (1/3)")
 
 
@@ -516,6 +550,9 @@ class SendRemindersTest(TestCase):
 		# Entry for message with second prescription should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 0)
+
+		reminder1.send_time = datetime1
+		reminder1.save()
 		# Send the message
 		self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?
@@ -562,6 +599,9 @@ class SendRemindersTest(TestCase):
 		# Entry for message with second prescription should not exist in database before sending message
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder2.prescription)
 		self.assertEqual(message.count(), 0)
+
+		reminder1.send_time = datetime1
+		reminder1.save()
 		# Send the message
 		self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?

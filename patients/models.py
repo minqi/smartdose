@@ -5,6 +5,7 @@ from common.models import UserProfile, UserProfileManager
 from common.utilities import sendTextMessageToNumber
 from reminders.models import Message, SentReminder, ReminderTime
 from django.core.exceptions import ValidationError
+from reminders.notification_center import NotificationCenter
 
 class SafetyNetRelationship(models.Model):
 	patient 				= models.ForeignKey('PatientProfile', related_name='patient_safety_net')
@@ -22,25 +23,25 @@ class PatientProfile(UserProfile):
 	FEMALE = 'f'
 	UNKNOWN = ''
 	GENDER_CHOICES = (
-		(MALE, 'm'),
-		(FEMALE, 'f'),
-		(UNKNOWN, ''),
+		(MALE, 'male'),
+		(FEMALE, 'female'),
+		(UNKNOWN, 'unknown'),
 	)
 
 	# height units
 	INCHES = 'in'
 	METERS = 'm'
 	HEIGHT_UNIT_CHOICES = (
-		(INCHES, 'in'),
-		(METERS, 'm'),
+		(INCHES, 'inches'),
+		(METERS, 'meters'),
 	)
 
 	# weight units
 	KILOGRAMS = 'kg'
 	POUNDS = 'lb'
 	WEIGHT_UNIT_CHOICES = (
-		(KILOGRAMS, 'kg'),
-		(POUNDS, 'lb'),
+		(KILOGRAMS, 'kilograms'),
+		(POUNDS, 'pounds'),
 	)
 
 	# Patient specific fields
@@ -73,6 +74,8 @@ class PatientProfile(UserProfile):
 		if self.status == PatientProfile.QUIT:
 			return
 
+		nc = NotificationCenter() # to handle various notification brokering tasks, like merging
+
 		# Send welcome messages
 		welcome_reminder_list = reminder_list.filter(reminder_type=ReminderTime.WELCOME)
 		if welcome_reminder_list:
@@ -91,32 +94,45 @@ class PatientProfile(UserProfile):
 		if refill_reminder_list:
 			# Update database to reflect state of messages and reminders
 			refill_reminder_list = refill_reminder_list.order_by("prescription__drug__name")
-			message = Message.objects.create(patient=self)
-			dictionary = {'reminder_list': refill_reminder_list, 'message_number': message.message_number}
-			for reminder in refill_reminder_list:
-				s = SentReminder.objects.create(prescription=reminder.prescription,
-												reminder_time=reminder,
-												message=message)
-				reminder.update_to_next_send_time()
-			# Send the refill message
-			message_body = render_to_string('refill_reminder.txt', dictionary)
-			self.sendTextMessage(message_body)
+			reminder_groups = nc.merge_notifications(refill_reminder_list)
+			for reminder_group in reminder_groups:
+				message = Message.objects.create(patient=self)
+				dictionary = {'reminder_list': reminder_group, 'message_number': message.message_number}
+				for reminder in reminder_group:
+					s = SentReminder.objects.create(prescription=reminder.prescription,
+													reminder_time=reminder,
+													message=message)
+					reminder.update_to_next_send_time()
+				# Send the refill message
+				message_body = render_to_string('refill_reminder.txt', dictionary)
+				self.sendTextMessage(message_body)
 
 		# Send medication reminders
 		medication_reminder_list = reminder_list.filter(reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
 		if medication_reminder_list:
 			# Update database to reflect state of messages and reminders
 			medication_reminder_list = medication_reminder_list.order_by("prescription__drug__name")
-			message = Message.objects.create(patient=self)
-			dictionary = {'reminder_list': medication_reminder_list, 'message_number': message.message_number}
-			for reminder in medication_reminder_list:
-				s = SentReminder.objects.create(prescription=reminder.prescription,
-												reminder_time=reminder,
-												message=message)
-				reminder.update_to_next_send_time()
-			# Send the medication message
-			message_body = render_to_string('medication_reminder.txt', dictionary)
-			self.sendTextMessage(message_body)
+			reminder_groups = nc.merge_notifications(medication_reminder_list)
+			for reminder_group in reminder_groups:
+				message = Message.objects.create(patient=self)
+				dictionary = {'reminder_list': medication_reminder_list, 'message_number': message.message_number}
+				for reminder in medication_reminder_list:
+					s = SentReminder.objects.create(prescription=reminder.prescription,
+													reminder_time=reminder,
+													message=message)
+					reminder.update_to_next_send_time()
+				# Send the medication message
+				message_body = render_to_string('medication_reminder.txt', dictionary)
+				self.sendTextMessage(message_body)
+
+		# send safety-net reminders
+		safetynet_reminder_list = reminder_list.filter(reminder_type=ReminderTime.SAFETY_NET)
+		if safetynet_reminder_list:
+			safetynet_reminder_list = safetynet_reminder_list.order_by("send_time")
+			for reminder in safetynet_reminder_list:
+				message = Message.objects.create(patient=self)
+				s = SentReminder.objects.create(reminder_time=reminder, message=message)
+				self.sendTextMessage(reminder.text)
 
 	def quit(self):
 		self.status = PatientProfile.QUIT

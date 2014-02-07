@@ -19,9 +19,10 @@ def fetch_new_patient_records(source="fake_csv"):
 	"""
 	Fetch new patient records from data source
 	"""
-	print "Fetching new patient records..."
-	datasources.load_patient_data(source)
-	print "Fetched new patient records"
+	if FAKE_CSV:
+		print "Fetching new patient records..."
+		datasources.load_patient_data(source)
+		print "Fetched new patient records"
 
 @shared_task()
 def sendRemindersForNow():
@@ -32,13 +33,12 @@ def sendRemindersForNow():
 	now = datetime.datetime.now()
 	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
 	# Get reminders that are distinct by patients
-	distinct_reminders = reminders_for_now.distinct('prescription__patient')
+	distinct_reminders = reminders_for_now.distinct('to')
 	# Send a reminder to each patient with the pills they need to take
 	for reminder in distinct_reminders:
-		p = reminder.prescription.patient
+		p = reminder.to
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
 		p.sendReminders(p_reminders)
-
 
 def contactSafetyNet(window_start, window_finish, threshold, timeout):
 	"""
@@ -47,9 +47,15 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 	medication is considered not taken if it has gone unacknowledged for longer than timeout.
 	"""
 	# Get all acked reminders in the timeframe
-	acked_reminders = SentReminder.objects.filter(time_sent__gte=window_start, time_sent__lte=window_finish, ack=True)
+	acked_reminders = SentReminder.objects.filter(
+							time_sent__gte=window_start, 
+							time_sent__lte=window_finish, 
+							ack=True)
 	# Get all expired reminders in the timeframe
-	expired_reminders = SentReminder.objects.filter(time_sent__gte=window_start, time_sent__lte=window_finish, ack=False).exclude(time_sent__gte=datetime.datetime.now() - timeout)
+	expired_reminders = SentReminder.objects.filter(
+							time_sent__gte=window_start, 
+							time_sent__lte=window_finish, 
+							ack=False).exclude(time_sent__gte=datetime.datetime.now() - timeout)
 	# Get all prescriptions with expired reminders
 	prescription_reminders = expired_reminders.distinct('prescription')
 	
@@ -73,29 +79,41 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		else:
 			patient_adherent_dict[prescription.patient].append((prescription, acked_count, total_count))
 
-	# Send messages for non-adherence to safety net members
+	# Send messages to safety net members indicating patient was non-adherent
 	for patient, prescriptions in patient_nonadherent_dict.iteritems():
 		# render prescriptions to template
-		dictionary = {'prescriptions':prescriptions, 'patient_first':patient.first_name, 'patient_last':patient.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		dictionary = {
+				'prescriptions':prescriptions, 
+				'patient_first':patient.first_name, 
+				'patient_last' :patient.last_name, 
+				'window_start' :window_start, 
+				'window_finish':window_finish
+				}
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
+			# queue safety net notifications here
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
 			message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
 			# send the message to the safety net
-			safety_net_member.sendTextMessage(message_body)
+			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
+			# safety_net_member.sendTextMessage(message_body)
 
-	# Send messages for adherence to safety net members
+	# Send messages to safety net members indicating patient was adherent
 	for patient, prescriptions in patient_adherent_dict.iteritems():
 		# render prescriptions to template
-		dictionary = {'prescriptions':prescriptions, 'patient_first':patient.first_name, 'patient_last':patient.last_name, 'window_start':window_start, 'window_finish':window_finish}
+		dictionary = {
+				'prescriptions':prescriptions, 
+			  	'patient_first':patient.first_name, 
+			  	'patient_last' :patient.last_name, 
+			  	'window_start' :window_start, 
+			  	'window_finish':window_finish
+		 		}
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
+			# queue safety_net notifications here
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
 			message_body = render_to_string('safety_net_adherent_message.txt', dictionary)
 			# send the message to the safety net
-			safety_net_member.sendTextMessage(message_body)
-
-
-
-
+			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
+			# safety_net_member.sendTextMessage(message_body)
 

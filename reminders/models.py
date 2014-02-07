@@ -13,7 +13,6 @@ class Prescription(models.Model):
 	patient        				= models.ForeignKey('patients.PatientProfile', blank=False)
 	drug           				= models.ForeignKey(Drug, blank=False)
 	safety_net_on				= models.BooleanField(default=False)
-	
 
 	with_food      				= models.BooleanField(default=False)
 	with_water     				= models.BooleanField(default=False)
@@ -37,28 +36,30 @@ class ReminderManager(models.Manager):
 			Q(active=True) &
 			Q(send_time__lte=now_datetime)
 		)
-
 		return reminders_at_time
 
-	def create_prescription_reminders(to, repeat, prescription):
+	def create_prescription_reminders(self, to, repeat, prescription):
 		"""Schedule both a refill reminder and a medication reminder for a prescription"""
-		refill_reminder = ReminderTime.get_or_create(to=to, 
+		refill_reminder = ReminderTime.objects.get_or_create(to=to, 
 													 reminder_type=ReminderTime.REFILL, 
 												     repeat=repeat, 
-													 prescription=prescription)
-		refill_reminder.set_best_send_time()
-		med_reminder = ReminderTime.get_or_create(to=to, 
+													 prescription=prescription)[0]
+		med_reminder = ReminderTime.objects.get_or_create(to=to, 
 												  reminder_type=ReminderTime.MEDICATION, 
 										  		  repeat=repeat, 
-										  		  prescription=prescription)
+										  		  prescription=prescription)[0]
+		return (refill_reminder, med_reminder)
 
-	def create_safety_net_notification():
-		pass
+	def create_safety_net_notification(self, to, text):
+		safetynet_reminder = ReminderTime.objects.get_or_create(to=to, 
+														reminder_type=ReminderTime.SAFETY_NET,
+														repeat=ReminderTime.ONE_SHOT, 
+														text=text)[0]
+		return safetynet_reminder
 
-	def create_welcome_notification(to):
-		""""""		
-		ReminderTime.get_or_create(to=to, reminder_type=ReminderTime.WELCOME, 
-										  repeat=DAILY)
+	def create_welcome_notification(self, to):
+		welcome_reminder = ReminderTime.objects.get_or_create(to=to, reminder_type=ReminderTime.WELCOME, repeat=DAILY)[0]
+		return welcome_reminder
 
 class ReminderTime(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
@@ -96,25 +97,26 @@ class ReminderTime(models.Model):
 	# e.g., last Tuesday of every month
 	LAST_WEEK_OF_MONTH = 5
 
-	to       		= models.ForeignKey('patients.PatientProfile', blank=False, null=False)
-	prescription 	= models.ForeignKey(Prescription, null=True)
+	# required fields:
+	to       		= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
 	reminder_type	= models.CharField(max_length=4,
-									   choices=REMINDER_TYPE_CHOICES, blank=False, null=False)
+									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
 	repeat 			= models.CharField(max_length=2,
-									   choices=REPEAT_CHOICES, blank=False, null=False)
+									   choices=REPEAT_CHOICES, null=False, blank=False)
+
+	# optional fields:
 	send_time		= models.DateTimeField(null=True)
-	# send_time		= models.TimeField(null=True)
 	day_of_week		= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
 	day_of_month	= models.PositiveIntegerField(null=True)
-	# If value of week_of_month is 5, it means "last day of month" 
-	# e.g., last Tuesday of every month
-	week_of_month	= models.PositiveIntegerField(null=True) 
+	week_of_month	= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
 	day_of_year		= models.PositiveIntegerField(null=True)
 	month_of_year	= models.PositiveIntegerField(null=True)
-	objects 		= ReminderManager()
 
-	# The reminder is no longer relevant. For example, if a prescription reminder gets filled
-	active			= models.BooleanField(default=True)
+	text            = models.CharField(max_length=160, null=True, blank=True)
+	prescription 	= models.ForeignKey(Prescription, null=True)
+	active			= models.BooleanField(default=True) # is the reminder still alive?
+
+	objects 		= ReminderManager()
 
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.ONE_SHOT:
@@ -279,10 +281,5 @@ class SentReminder(models.Model):
 			self.prescription.save()
 			self.reminder_time.active = False
 			self.reminder_time.save()
-
-
-def add_months(sourcedate,months):
-
-	return datetime.date(year,month,day)
 
 
