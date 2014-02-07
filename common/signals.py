@@ -6,7 +6,9 @@ from reminders.models import ReminderTime
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from datetime import datetime
+import os
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "configs.dev.settings")
 
 @receiver(pre_save)
 def setup_new_userprofile(sender, **kwargs):
