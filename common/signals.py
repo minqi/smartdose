@@ -8,8 +8,6 @@ from django.dispatch import receiver
 from datetime import datetime
 import os
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "configs.dev.settings")
-
 @receiver(pre_save)
 def setup_new_userprofile(sender, **kwargs):
 	if not issubclass(sender, UserProfile):

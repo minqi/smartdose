@@ -6,7 +6,6 @@ from twilio.rest import TwilioRestClient
 import datetime as datetime_orig
 from datetime import timedelta
 from math import ceil, floor
-from configs.dev.settings import REMINDER_SWEEP_OFFSET
 
 # Construct our client for communicating with Twilio service
 twilio_client = TwilioRestClient(settings.TWILIO_ACCOUNT_SID, 
@@ -69,13 +68,6 @@ def is_today(dt): #TODO(minqi):test
 	dt_time = dt.date()
 	today = datetime_orig.datetime.now().date()
 	return dt_time == today
-
-# def is_within_timeframe_past(dt): #TODO(minqi):test
-# 	"""Return True if dt is a time within REMINDER_SWEEP_OFFSET minutes"""
-# 	now_time = datetime_orig.datetime.now()
-# 	minutes = (now_time - dt).seconds/60.0
-
-# 	return minutes < REMINDER_SWEEP_OFFSET
 
 class DatetimeStub(object):
 	"""

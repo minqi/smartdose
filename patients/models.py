@@ -125,7 +125,7 @@ class PatientProfile(UserProfile):
 				message_body = render_to_string('medication_reminder.txt', dictionary)
 				self.sendTextMessage(message_body)
 
-		# send safety-net reminders
+		# Send safety-net reminders
 		safetynet_reminder_list = reminder_list.filter(reminder_type=ReminderTime.SAFETY_NET)
 		if safetynet_reminder_list:
 			safetynet_reminder_list = safetynet_reminder_list.order_by("send_time")

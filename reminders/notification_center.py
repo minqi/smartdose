@@ -1,8 +1,9 @@
 from reminders.models import ReminderTime
+from configs.dev import settings
 import datetime
 
 class NotificationCenter(object):
-	def __init__(self, interval_sec=3600):
+	def __init__(self, interval_sec=settings.REMINDER_MERGE_INTERVAL):
 		self.interval_sec = interval_sec
 
 	def merge_notifications(self, notifications, interval_sec=None):

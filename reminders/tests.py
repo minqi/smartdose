@@ -172,6 +172,7 @@ class SafetyNetTest(TestCase):
 
 		reminder_model.datetime.set_fixed_now(contact_datetime)
 		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
+
 		reminder_tasks.sendRemindersForNow()
 		self.assertEqual(getLastSentMessageContent(), "2147094720: Your friend, Minqi Jiang, has had trouble taking the following medication from 04/11 to 04/18:|vitamin: 33% (1/3)")
 

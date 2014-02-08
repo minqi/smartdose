@@ -5,7 +5,7 @@ from django.db.models import Q
 from doctors.models import DoctorProfile
 from common.models import Drug
 from common.utilities import weekOfMonth, lastWeekOfMonth
-from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_SWEEP_OFFSET
+from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -27,7 +27,10 @@ class Prescription(models.Model):
 
 class ReminderManager(models.Manager):
 	def reminders_at_time(self, now_datetime):
-		"""Returns all reminders at and before now_datetime
+		"""
+		Returns all notifications at and before now_datetime
+		If there is at least one such reminder, also looks ahead REMINDER_MERGE_INTERVAL
+		seconds to look for additional notifications
 
 		Arguments:
 		now_datetime -- the datetime for which we care about reminders. datetime object
@@ -36,6 +39,15 @@ class ReminderManager(models.Manager):
 			Q(active=True) &
 			Q(send_time__lte=now_datetime)
 		)
+		latest_reminder = None
+		if reminders_at_time.exists():
+			latest_reminder = reminders_at_time.latest()
+		if latest_reminder:
+			max_send_time_for_batch = latest_reminder.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
+			reminders_at_time = super(ReminderManager, self).get_queryset().filter(
+				Q(active=True) &
+				Q(send_time__lt=max_send_time_for_batch)
+			)	
 		return reminders_at_time
 
 	def create_prescription_reminders(self, to, repeat, prescription):
@@ -98,25 +110,25 @@ class ReminderTime(models.Model):
 	LAST_WEEK_OF_MONTH = 5
 
 	# required fields:
-	to       		= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
-	reminder_type	= models.CharField(max_length=4,
+	to       			= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
+	reminder_type		= models.CharField(max_length=4,
 									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
-	repeat 			= models.CharField(max_length=2,
+	repeat 				= models.CharField(max_length=2,
 									   choices=REPEAT_CHOICES, null=False, blank=False)
 
 	# optional fields:
-	send_time		= models.DateTimeField(null=True)
-	day_of_week		= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
-	day_of_month	= models.PositiveIntegerField(null=True)
-	week_of_month	= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
-	day_of_year		= models.PositiveIntegerField(null=True)
-	month_of_year	= models.PositiveIntegerField(null=True)
+	send_time			= models.DateTimeField(null=True)
+	day_of_week			= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
+	day_of_month		= models.PositiveIntegerField(null=True)
+	week_of_month		= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
+	day_of_year			= models.PositiveIntegerField(null=True)
+	month_of_year		= models.PositiveIntegerField(null=True)
 
-	text            = models.CharField(max_length=160, null=True, blank=True)
-	prescription 	= models.ForeignKey(Prescription, null=True)
-	active			= models.BooleanField(default=True) # is the reminder still alive?
+	text            	= models.CharField(max_length=160, null=True, blank=True)
+	prescription 		= models.ForeignKey(Prescription, null=True)
+	active				= models.BooleanField(default=True) # is the reminder still alive?
 
-	objects 		= ReminderManager()
+	objects 			= ReminderManager()
 
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.ONE_SHOT:
@@ -209,6 +221,10 @@ class ReminderTime(models.Model):
 		# by parsing the prescription sig
 		if not self.send_time:
 			self.set_best_send_time()
+
+	class Meta:
+		get_latest_by = 'send_time'
+
 
 class MessageManager(models.Manager):
 	def create(self, patient):

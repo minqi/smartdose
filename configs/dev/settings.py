@@ -11,11 +11,12 @@ cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
+# Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
-REMINDER_SWEEP_OFFSET = 10 # minutes
+REMINDER_MERGE_INTERVAL = 3600 # seconds
 
 TEST_ALL_APPS = True
 
