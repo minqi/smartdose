@@ -12,7 +12,7 @@ result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
 # Reminder system parameters
-DEBUG = True
+DEBUG = False 
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
@@ -195,6 +195,7 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(minute='*/1')
     }
 }
+USE_TZ = False
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

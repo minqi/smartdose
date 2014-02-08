@@ -47,7 +47,9 @@ class ReminderManager(models.Manager):
 			reminders_at_time = super(ReminderManager, self).get_queryset().filter(
 				Q(active=True) &
 				Q(send_time__lt=max_send_time_for_batch)
-			)	
+			)
+
+		print "found reminders for " + str([r.to.first_name for r in reminders_at_time]) + "..."
 		return reminders_at_time
 
 	def create_prescription_reminders(self, to, repeat, prescription):
