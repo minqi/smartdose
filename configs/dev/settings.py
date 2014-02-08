@@ -166,9 +166,15 @@ INSTALLED_APPS = (
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 
 # Account Sid and Auth Token from twilio.com/user/account
-TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
-TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
-TWILIO_NUMBER =  "+16179368157"
+# Minqi's account
+TWILIO_ACCOUNT_SID = "AC10e87781d9743eeff4c0bced97c9613e"
+TWILIO_AUTH_TOKEN = "4cd2e96f454ed2fd228ecee0c5050950"
+TWILIO_NUMBER =  "+18563243138"
+
+# Matt's account
+# TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
+# TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
+# TWILIO_NUMBER =  "+16179368157"
 
 MESSAGE_LOG_FILENAME="message_output"
 
