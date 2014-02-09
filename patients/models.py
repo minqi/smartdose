@@ -65,12 +65,14 @@ class PatientProfile(UserProfile):
 	def sendTextMessage(self, body):
 		# Additional checks/actions to be performed before sending a text to a
 		# patient can happen at this step, if any.
+		print "sending SMS to " + self.first_name + "..."
 		sendTextMessageToNumber(body, self.primary_phone_number)
 
 	# Takes a patient and the reminders for which the patient will be receiving the text
 	# @reminder_list is a ReminderTime QuerySet
 	def sendReminders(self, reminder_list):
 		# Don't send message if patient's account is disabled
+		print "sending reminders..."
 		if self.status == PatientProfile.QUIT:
 			return
 
@@ -115,8 +117,8 @@ class PatientProfile(UserProfile):
 			reminder_groups = nc.merge_notifications(medication_reminder_list)
 			for reminder_group in reminder_groups:
 				message = Message.objects.create(patient=self)
-				dictionary = {'reminder_list': medication_reminder_list, 'message_number': message.message_number}
-				for reminder in medication_reminder_list:
+				dictionary = {'reminder_list': reminder_group, 'message_number': message.message_number}
+				for reminder in reminder_group:
 					s = SentReminder.objects.create(prescription=reminder.prescription,
 													reminder_time=reminder,
 													message=message)
