@@ -62,12 +62,12 @@ def processUnknown(number):
 	return HttpResponse(content="We did not understand your message. Reply 'help' for a list of available commands.")
 
 def handle_text(request):
-	if isAck(request.GET['body']):
-		return processAck(request.GET['from'], request.GET['body'])
-		return HttpResponse(content="Thanks for sending that message", content_type="text/plain")
-	elif isQuit(request.GET['body']):
-		return processQuit(request.GET['from'])
+	# print request
+	if isAck(request.GET['Body']):
+		return processAck(request.GET['From'], request.GET['Body'])
+	elif isQuit(request.GET['Body']):
+		return processQuit(request.GET['From'])
 	else:
-		return processUnknown(request.GET['from'])
+		return processUnknown(request.GET['From'])
 
 

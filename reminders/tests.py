@@ -286,11 +286,11 @@ class HandleResponseTest(TestCase):
 		message_number = Message.objects.get(sentreminder__prescription__id=matt_prescription.id).message_number
 		# Patient sends a bogus message
 		c = Client()
-		response = c.get('/textmessage_response/', {'from':matt.primary_phone_number, 'body':'bogus message'})
+		response = c.get('/textmessage_response/', {'From':matt.primary_phone_number, 'Body':'bogus message'})
 		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.UNACKED)
 		self.assertEqual(response.content, "We did not understand your message. Reply 'help' for a list of available commands.")
 		# Patient sends the correct message
-		response = c.get('/textmessage_response/', {'from':matt.primary_phone_number, 'body':message_number})
+		response = c.get('/textmessage_response/', {'From':matt.primary_phone_number, 'Body':message_number})
 		self.assertEqual(Message.objects.get(sentreminder__prescription__id=matt_prescription.id).state, Message.ACKED)
 		self.assertEqual(response.content, "Your family will be happy to know that you're taking care of your health :)")
 
