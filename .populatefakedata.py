@@ -29,9 +29,9 @@ def my_callback(sender, **kwargs):
    		print username
 
 # Create a doctor and patients
-bob = DoctorProfile.objects.get_or_create(primary_phone_number="2029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")[0]
-matt = PatientProfile.objects.get_or_create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
-minqi = PatientProfile.objects.get_or_create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
+bob = DoctorProfile.objects.get_or_create(primary_phone_number="+12029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")[0]
+matt = PatientProfile.objects.get_or_create(primary_phone_number="+12147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
+minqi = PatientProfile.objects.get_or_create(primary_phone_number="+18569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
 
 # schedule reminders
 now = datetime.now()
