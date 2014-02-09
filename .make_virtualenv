@@ -1,4 +1,9 @@
-virtualenv --no-site-packages --distribute .venv && source .venv/bin/activate && pip install -r .requirements.pip
+if ! [-d .venv];
+then
+	virtualenv --no-site-packages --distribute .venv
+fi
+source .venv/bin/activate
+pip install -r .requirements.pip
 chmod 755 "$(pwd)/configs/dev/manage.py"
 alias manage="python $(pwd)/configs/dev/manage.py"
 export DJANGO_SETTINGS_MODULE='configs.dev.settings'
