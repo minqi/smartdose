@@ -642,6 +642,7 @@ class SendRemindersTest(TestCase):
 						repeat=ReminderTime.DAILY, 
 						send_time=datetime1, 
 						reminder_type=ReminderTime.MEDICATION)
+		datetime1 = datetime(year=2013, month=4, day=11, hour=9, minute=0)
 		reminder2 = ReminderTime.objects.create(
 						to=self.minqi, 
 						prescription=prescription2, 
@@ -656,7 +657,7 @@ class SendRemindersTest(TestCase):
 		self.assertEqual(getLastSentMessageContent(), "")
 
 		# Now change the time to 9am when reminders should be sent
-		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=1)
 		reminder_tasks.datetime.set_fixed_now(send_datetime)
 		reminder_tasks.sendRemindersForNow()
 		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '1' when you finish.")
