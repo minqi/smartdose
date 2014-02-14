@@ -57,7 +57,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 	for i in range(num):
 		fake_fields["patient_first_name"] = fake.first_name()
 		fake_fields["patient_last_name"] = fake.last_name()
-		fake_fields["patient_primary_phone_number"] = random.randint(1e9, 1e10 - 1)
+		fake_fields["patient_primary_phone_number"] = str(random.randint(1e9, 1e10 - 1))
 		fake_fields["patient_birthday"] = fake.date()
 		fake_fields["patient_address_line1"] = fake.street_address()
 		fake_fields["patient_postal_code"] = fake.postcode()
@@ -66,7 +66,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 		fake_fields["patient_country_iso_code"] = random.randint(10,99)
 		fake_fields["doctor_first_name"] = fake.first_name()
 		fake_fields["doctor_last_name"] = fake.last_name()
-		fake_fields["doctor_primary_phone_number"] = random.randint(1e9, 1e10 - 1)
+		fake_fields["doctor_primary_phone_number"] = str(random.randint(1e9, 1e10 - 1))
 		fake_fields["doctor_birthday"] = fake.date()
 		fake_fields["drug_name"] = fake.domain_word()
 

@@ -8,10 +8,15 @@ from django.core.exceptions import ValidationError
 from reminders.notification_center import NotificationCenter
 
 class SafetyNetRelationship(models.Model):
-	patient 				= models.ForeignKey('PatientProfile', related_name='patient_safety_net')
-	safety_net 				= models.ForeignKey('PatientProfile', related_name='safety_net_safety_net')
-	patient_relationship	= models.CharField(null=False, blank=False, max_length="20")
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship
+	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
+	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
+	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
+
+class PrimaryContactRelationship(models.Model):
+	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_primary_contacts')
+	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_primary_contacts')
+	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
 
 class PatientManager(UserProfileManager):
 	"""Manager for performing operations on PatientProfile records"""
@@ -45,20 +50,27 @@ class PatientProfile(UserProfile):
 	)
 
 	# Patient specific fields
-	age = models.PositiveIntegerField(default=0)
-	gender = models.CharField(max_length=1,
+	age 		= models.PositiveIntegerField(default=0)
+	gender 		= models.CharField(max_length=1,
 							  choices=GENDER_CHOICES,
 							  default=UNKNOWN)
-	height = models.PositiveIntegerField(default=0)
+	height 		= models.PositiveIntegerField(default=0)
 	height_unit = models.CharField(max_length=2,
 								   choices=HEIGHT_UNIT_CHOICES,
 								   default=INCHES)
-	weight = models.PositiveIntegerField(default=0)
+	weight 		= models.PositiveIntegerField(default=0)
 	weight_unit = models.CharField(max_length=2,
 									choices=HEIGHT_UNIT_CHOICES,
 									default=POUNDS)
-	safety_net_members = models.ManyToManyField("self", through='SafetyNetRelationship', symmetrical=False)
-	has_safety_net = models.BooleanField(default=False)
+	
+	safety_net_members 		= models.ManyToManyField("self", through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
+	primary_contact_members = models.ManyToManyField("self", through='PrimaryContactRelationship', symmetrical=False, related_name='primary_contact')
+	has_safety_net 			= models.BooleanField(default=False)
+	has_primary_contact 	= models.BooleanField(default=False)
+
+	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
+	email 					= models.EmailField(blank=True, null=True, unique=True)
+
 	# Manager fields
 	objects = PatientManager()
 
@@ -138,8 +150,8 @@ class PatientProfile(UserProfile):
 		self.status = PatientProfile.QUIT
 		self.save()
 
-	def addSafetyNetMember(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
-		"""Returns a tuple of the safetynetmember and whether the safetynetmember was created or not"""
+	def add_safety_net_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
+		"""Returns a tuple of the safety_net_member and whether the safety_net_member was created or not"""
 		#TODO: Figure out what happens when a user adds a safety net member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
 		#TODO: Add a way to create a backward-relationship
 		created = True
@@ -152,12 +164,34 @@ class PatientProfile(UserProfile):
 													   first_name=first_name,
 													   last_name=last_name,
 													   birthday=birthday)
-		SafetyNetRelationship.objects.create(patient=self, safety_net=sn, patient_relationship=patient_relationship)
+		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, patient_relationship=patient_relationship)
 		self.has_safety_net = True
 		self.save()
 
 		#TODO: Send a message to a safety net member letting them know they've opted in.
 		return sn, created
+	
+	def add_primary_contact_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
+		"""Returns a tuple of the primary_contact_member and whether the primary_contact_member was created or not"""
+		#TODO: Figure out what happens when a user adds a primary contact member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
+		#TODO: Add a way to create a backward-relationship
+		created = True
+		try: 
+			pc = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
+			created = False
+		except PatientProfile.DoesNotExist:
+			pc = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
+													   username=primary_phone_number,
+													   first_name=first_name,
+													   last_name=last_name,
+													   birthday=birthday)
+		PrimaryContactRelationship.objects.create(source_patient=self, target_patient=pc, patient_relationship=patient_relationship)
+		self.has_primary_contact = True
+		self.save()
+
+		#TODO: Send a message to a primary contact member letting them know they've opted in.
+		return pc, created
+
 
 	# Note, code is shared across patient, doctor, and safety net models, so you should update in all places
 	def validate_unique(self, *args, **kwargs):

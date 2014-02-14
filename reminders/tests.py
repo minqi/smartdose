@@ -6,7 +6,6 @@ Replace this with more appropriate tests for your application.
 """
 
 from django.test import TestCase
-
 from common.models import Drug
 from django.template.loader import render_to_string
 from django.test import Client
@@ -31,8 +30,8 @@ class NotificationCenterTest(TestCase):
 
 		# create 5 notifications within an 3600 s (1 hr), and 5 in the next hour
 		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  birthday=date(year=1990, month=8, day=7))
+												  primary_phone_number="8569067308",
+												  birthday=date(year=1990, month=8, day=7))
 		now_time = datetime.now()
 		for i in range(5):
 			send_time = now_time + timedelta(seconds=i*360)
@@ -60,13 +59,13 @@ class SafetyNetTest(TestCase):
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  username="8569067308",
-								 				  birthday=date(year=1990, month=4, day=21),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="8569067308",
+												  username="8569067308",
+												  birthday=date(year=1990, month=4, day=21),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
@@ -80,7 +79,7 @@ class SafetyNetTest(TestCase):
 		f.close()  
 
 	def test_safety_net_template(self):
-		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		self.minqi.add_safety_net_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 						 birthday=date(year=1989, month=10, day=13), 
 						 patient_relationship="friend")
 		# Minqi has only taken 50 / 100 vitamins from the time period 10/10/2013 to 10/17/2013
@@ -139,7 +138,7 @@ class SafetyNetTest(TestCase):
 	def test_contact_safety_net(self):
 		# Add a safety net member for Minqi
 		# TODO: test scenario where Minqi doesn't have a safety net
-		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		self.minqi.add_safety_net_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 						 birthday=date(year=1989, month=10, day=13), 
 						 patient_relationship="friend")
 		self.minqi_prescription.safety_net_on = True
@@ -169,7 +168,6 @@ class SafetyNetTest(TestCase):
 		# Now contact safety net
 		contact_datetime = datetime(year=2013, month=4, day=18, hour=12, minute=0)
 		reminder_tasks.datetime.set_fixed_now(contact_datetime)
-
 		reminder_model.datetime.set_fixed_now(contact_datetime)
 		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
 		reminder_tasks.sendRemindersForNow()
@@ -186,13 +184,13 @@ class HandleResponseTest(TestCase):
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  username="8569067308",
-								 				  birthday=date(year=1990, month=4, day=21),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="8569067308",
+												  username="8569067308",
+												  birthday=date(year=1990, month=4, day=21),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
@@ -267,13 +265,13 @@ class HandleResponseTest(TestCase):
 
 		# Set up a patient named matt who takes a vitamin at 9am
 		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
-								 				  primary_phone_number="2147094720", 
-								 				  username="2147094720",
-								 				  birthday=date(year=1989, month=10, day=13),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="2147094720",
+												  username="2147094720",
+												  birthday=date(year=1989, month=10, day=13),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US")
 		matt_prescription = Prescription.objects.create(prescriber=self.bob, patient=matt, drug=self.vitamin,
 														note="To make you strong", safety_net_on=True, filled=True)
 		reminder = ReminderTime.objects.create(to=matt, prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.MEDICATION)
@@ -298,7 +296,7 @@ class SendRemindersTest(TestCase):
 	def setUp(self):
 		# Create some records
 		#TODO(mgaba): Create fixtures that have populate DB with this information
-		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
+		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
 										   primary_phone_number="2029163381", 
 										   username="2029163381",
 										   birthday=date(year=1960, month=10, day=20),
@@ -306,13 +304,19 @@ class SendRemindersTest(TestCase):
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  username="8569067308",
-								 				  birthday=date(year=1990, month=4, day=21),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="8569067308",
+												  birthday=date(year=1990, month=4, day=21),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US", email="minqi@aol.com")
+		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+										  primary_phone_number="8569067307",
+										  birthday=date(year=1990, month=4, day=21),
+										  gender=PatientProfile.MALE,
+										  address_line1="4266 Cesar Chavez",
+										  postal_code="94131",
+										  city="San Francisco", state_province="CA", country_iso_code="US", email="miqi@aal.com")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_model.datetime = DatetimeStub()
@@ -443,9 +447,9 @@ class SendRemindersTest(TestCase):
 		# m4 doesn't get acked. What happens when we advance to the next day and send a message?
 		sent_time = sent_time + timedelta(hours=24)
 		reminder_model.datetime.set_fixed_now(sent_time)
- 		m5 = Message.objects.create(patient=self.minqi)
- 		m5.time_sent = sent_time
- 		m5.save()
+		m5 = Message.objects.create(patient=self.minqi)
+		m5.time_sent = sent_time
+		m5.save()
 		self.assertEquals(m5.state, Message.UNACKED)
 		self.assertEquals(m5.message_number, 1)
 		self.assertEquals(Message.objects.get(id=m4.id).state, Message.EXPIRED)
@@ -662,13 +666,13 @@ class SendRemindersTest(TestCase):
 
 		# Add another patient and schedule reminders at 10am for that patient
 		matt = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
-								 				  primary_phone_number="2147094720", 
-								 				  username="2147094720",
-								 				  birthday=date(year=1989, month=10, day=13),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="2147094720",
+												  username="2147094720",
+												  birthday=date(year=1989, month=10, day=13),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US")
 		matt_prescription = Prescription.objects.create(
 								prescriber=self.bob, 
 								patient=matt, 
