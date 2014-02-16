@@ -27,7 +27,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 
 	# open file for writing
 	f_out_path = os.path.join(fake_datasources_path, filename)
-	f_out = open(f_out_path, 'w')
+	f_out = open(f_out_path, 'wb')
 
 	# generate fake data
 	fake_fields = {}
@@ -81,6 +81,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 		csv_writer.writerow(fake_fields)
 
 	f_out.close()
+	return f_out_path
 
 def make_fake_ncpdp_patient_data(num=DEFAULT_NUM):
 	"""
@@ -96,17 +97,15 @@ def load_fake_csv_patient_data(filename="fake_patient_data.csv"):
 	Populates models with fake patient and prescription data 
 	from fake_patient_data.csv
 	"""
-	print "running"
 	fake_datasources_path = get_fake_datasources_path()
 	f_in_path = os.path.join(fake_datasources_path, filename)
 	if not os.path.exists(f_in_path):
 		make_fake_csv_patient_data(filename=filename)
 
-	f_in = open(f_in_path, 'r')
+	f_in = open(f_in_path, 'rb')
 	csv_reader = csv.DictReader(f_in)
 
 	for row in csv_reader:
-		print row
 		patient = \
 			PatientProfile.objects.get_or_create(
 				first_name=row['patient_first_name'],
@@ -132,7 +131,6 @@ def load_fake_csv_patient_data(filename="fake_patient_data.csv"):
 				with_water=row['with_water'])[0]
 		# add reminder time scheduling
 	f_in.close()
-
 
 def load_fake_ncpdp_patient_data(filename):
 	"""

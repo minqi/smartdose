@@ -3,6 +3,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from common.utilities import convert_to_e164
 
 class Country(models.Model):
 	"""Model for mapping country_iso_code to country name"""
@@ -60,6 +61,11 @@ class UserProfile(User):
 
 	def __unicode__(self):
 		return self.primary_phone_number
+
+	def __init__(self, *args, **kwargs):
+		super(UserProfile, self).__init__(*args, **kwargs)
+		self.username = self.get_unique_username(self)
+		self.primary_phone_number = convert_to_e164(self.primary_phone_number) 
 
 	@staticmethod
 	def get_unique_username(obj):

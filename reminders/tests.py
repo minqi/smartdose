@@ -1,13 +1,5 @@
-"""
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
-
-Replace this with more appropriate tests for your application.
-"""
-
 from django.test import TestCase
-
-from common.models import Drug
+from common.models import UserProfile, Drug
 from django.template.loader import render_to_string
 from django.test import Client
 from django.db.models import Q
@@ -26,29 +18,228 @@ from configs.dev.settings import MESSAGE_CUTOFF
 from reminders.notification_center import NotificationCenter
 
 class NotificationCenterTest(TestCase):
-	def test_merge_notifications(self):
-		nc = NotificationCenter()
-
-		# create 5 notifications within an 3600 s (1 hr), and 5 in the next hour
-		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+	def setUp(self):
+		self.nc = NotificationCenter()
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=date(year=1990, month=8, day=7))
-		now_time = datetime.now()
+		self.patient2 = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
+								 				  primary_phone_number="2147094720", 
+								 				  birthday=date(year=1989, month=10, day=13))
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher", 
+			primary_phone_number="2029163381", birthday=date(1960, 1, 1))
+		self.drug1 = Drug.objects.create(name='advil')
+		self.prescription1 = Prescription.objects.create(prescriber=self.doctor, 
+			patient=self.patient1, drug=self.drug1, filled=True)
+		self.prescription2 = Prescription.objects.create(prescriber=self.doctor, 
+			patient=self.patient1, drug=self.drug1)
+
+		# create a bunch of medication notifications
+		self.now_datetime = datetime.now()
+		self.old_send_datetimes = []
 		for i in range(5):
-			send_time = now_time + timedelta(seconds=i*360)
-			ReminderTime.objects.create(to=minqi, reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY, send_time=send_time)
+			send_datetime = self.now_datetime + timedelta(seconds=i*180)
+			self.old_send_datetimes.append(send_datetime)
+			ReminderTime.objects.create(to=self.patient1, 
+				reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY, send_time=send_datetime)
+		self.med_reminders = ReminderTime.objects.filter(
+			to=self.patient1, reminder_type=ReminderTime.MEDICATION).order_by('send_time')
 
-		reminders = ReminderTime.objects.all()
-		merged_reminders = nc.merge_notifications(reminders)
+		(self.refill_reminder, self.med_reminder) = ReminderTime.objects.create_prescription_reminders(
+			to=self.patient2, repeat=ReminderTime.DAILY, prescription=self.prescription2)
 
+		self.safetynet_notification = ReminderTime.objects.create_safety_net_notification(to=self.patient1, text='testing')
+
+	def test_merge_notifications(self):
+		merged_reminders = self.nc.merge_notifications(self.med_reminders)
 		ground_truth_merged_reminders = []
-
 		reminder_group = []
-		for reminder in reminders:
+		for reminder in self.med_reminders:
 			reminder_group.append(reminder)
 		ground_truth_merged_reminders.append(tuple(reminder_group))
 		ground_truth_merged_reminders = tuple(ground_truth_merged_reminders)
 		self.assertEqual(merged_reminders, ground_truth_merged_reminders)
+
+	def test_send_message(self):
+		self.patient1.status = UserProfile.ACTIVE
+		self.nc.send_message(to=self.patient1, notifications=self.med_reminders,
+			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)})
+
+		# see if the right messages are created
+		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
+
+		# # see if the right book-keeping is performed
+		sent_notifications = SentReminder.objects.all()
+		self.assertEqual(len(sent_notifications), len(self.med_reminders))
+		for n in sent_notifications:
+			self.assertTrue(n.reminder_time in self.med_reminders)
+
+		ReminderTime.objects.update()
+		self.assertTrue((self.med_reminders[0].send_time.day - datetime.now().day) == 1)
+
+	def test_send_welcome_notifications(self):
+		# check that the patient's status is NEW
+		self.assertTrue(self.patient1.status == UserProfile.NEW)
+		# see if a reminder is sent (shouldn't be)
+		self.nc.send_notifications(to=self.patient1, notifications=self.med_reminders)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 0)
+
+		# see if a welcome message is sent
+		now_datetime = datetime.now()
+		welcome_notification = ReminderTime.objects.create(to=self.patient1, 
+			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY, send_time=now_datetime)
+		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
+
+		# see if message is sent
+		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
+
+		# see if the patient's status is changed from NEW to ACTIVE
+		self.assertTrue(self.patient1.status == UserProfile.ACTIVE)
+
+		# check that notification is deactivated
+		welcome_notification = ReminderTime.objects.filter(pk=welcome_notification.pk)[0]
+		self.assertTrue(welcome_notification.active == False)
+
+	def test_send_refill_notifications(self):
+		# see if you can send refill notification
+		self.assertTrue(self.patient2.status == UserProfile.NEW)
+		self.nc.send_notifications(to=self.patient2, notifications=self.refill_reminder)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 0)
+		
+		# see if refill is sent
+		self.patient2.status = UserProfile.ACTIVE
+		self.nc.send_notifications(to=self.patient2, notifications=self.refill_reminder)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 1)
+
+		# check that send_time is properly incremented
+		self.refill_reminder = ReminderTime.objects.get(pk=self.refill_reminder.pk)
+		self.assertTrue(self.refill_reminder.send_time.day > datetime.now().day)
+
+	def test_send_medication_notifications(self):
+		# see if you can send medication notification
+		self.assertTrue(self.patient1.status == UserProfile.NEW)
+		self.nc.send_notifications(to=self.patient1, notifications=self.med_reminder)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 0)
+		
+		# medication notification shouldn't be sent if prescription isn't filled
+		self.patient2.status = UserProfile.ACTIVE
+		self.nc.send_notifications(to=self.patient2, notifications=self.med_reminder)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 0)
+
+		# medication notification should be sent if prescription is filled
+		self.prescription2.filled = True
+		self.prescription2.save()
+		self.nc.send_notifications(to=self.patient2, notifications=self.med_reminder)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 1)
+		# # check that send_time is properly incremented
+		self.med_reminder = ReminderTime.objects.get(pk=self.med_reminder.pk)
+		self.assertTrue(self.med_reminder.send_time.day > datetime.now().day)
+
+	def test_send_safetynet_notifications(self):
+		# # see if safetynet notification is sent
+		self.patient1.status = UserProfile.ACTIVE
+		self.nc.send_notifications(to=self.patient1, notifications=self.safetynet_notification)
+		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
+
+		# check that safety-net notification is deactivated
+		self.safetynet_notification = ReminderTime.objects.get(pk=self.safetynet_notification.pk)
+		self.assertTrue(self.safetynet_notification.active == False)
+
+	def test_send_notifications_deactivated_user(self):
+		# Should not send messages to deactivated account
+		self.patient1.status = UserProfile.QUIT
+		self.patient1.save()
+		now_datetime = datetime.now()
+		notification = ReminderTime.objects.create(to=self.patient1, 
+			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY, send_time=now_datetime)
+
+		self.nc.send_notifications(self.patient1, notification)
+		self.assertEqual(len(Message.objects.all()), 0)
+
+	def test_send_notifications_activated_user(self):
+		# Check that sending a notification to active creates message as expected
+		self.patient1.status = UserProfile.ACTIVE
+		self.patient1.save()
+		now_datetime = datetime.now()
+		notification = ReminderTime.objects.create(to=self.patient1, prescription=self.prescription1,
+			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY, send_time=now_datetime)
+
+		self.nc.send_notifications(self.patient1, notification)
+		self.assertEqual(len(Message.objects.all()), 1)
+
+class WelcomeMessageTest(TestCase):
+	def setUp(self):
+		self.nc = NotificationCenter()
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+								 				  primary_phone_number="8569067308", 
+								 				  birthday=date(year=1990, month=8, day=7))
+		ReminderTime.objects.create_welcome_notification(to=self.patient1)
+	def test_welcome_message(self):
+		self.assertEqual(self.patient1.status, PatientProfile.NEW)
+		
+		# make sure welcome message was created
+		now_datetime = datetime.now()
+		notifications = ReminderTime.objects.reminders_at_time(now_datetime)
+		self.assertEqual(len(notifications), 1) 
+		self.assertEqual(notifications[0].reminder_type, ReminderTime.WELCOME)
+		self.assertEqual(notifications[0].to, self.patient1)
+
+		# after sending welcome, make sure patient is active and 
+		# welcome notification is not
+		self.nc.send_notifications(self.patient1, notifications)
+		welcome_notification = ReminderTime.objects.filter(pk=notifications[0].pk)[0]
+		self.assertEqual(welcome_notification.active,  False)
+		self.assertEqual(self.patient1.status, PatientProfile.ACTIVE)
+
+class UpdateSendDateTimeTest(TestCase):
+	def setUp(self):
+		reminder_model.datetime = DatetimeStub()
+		self.test_datetime = datetime.now()
+
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+								 				  primary_phone_number="8569067308", 
+								 				  birthday=date(year=1990, month=8, day=7))
+		self.n_daily = ReminderTime(to=self.patient1, repeat=ReminderTime.DAILY,
+			reminder_type=ReminderTime.SAFETY_NET, send_time=self.test_datetime)
+		self.n_weekly = ReminderTime(to=self.patient1, repeat=ReminderTime.WEEKLY,
+			reminder_type=ReminderTime.SAFETY_NET, send_time=self.test_datetime)
+		self.n_monthly = ReminderTime(to=self.patient1, repeat=ReminderTime.MONTHLY,
+			reminder_type=ReminderTime.SAFETY_NET, send_time=self.test_datetime)
+		self.n_yearly = ReminderTime(to=self.patient1, repeat=ReminderTime.YEARLY,
+			reminder_type=ReminderTime.SAFETY_NET, send_time=self.test_datetime)
+
+	def tearDown(self):
+		reminder_model.datetime.reset_now()
+		
+	def test_update_daily_send_time(self):
+		future_datetime = self.test_datetime + timedelta(days=1)
+		reminder_model.datetime.set_fixed_now(future_datetime)
+		self.n_daily.update_to_next_send_time()
+		self.n_daily = ReminderTime.objects.get(pk=self.n_daily.pk)
+		self.assertTrue((self.n_daily.send_time - future_datetime).days == 1)
+
+	def test_update_weekly_send_time(self):
+		future_datetime = self.test_datetime + timedelta(days=7)
+		reminder_model.datetime.set_fixed_now(future_datetime)
+		self.n_weekly.update_to_next_send_time()
+		self.n_weekly = ReminderTime.objects.get(pk=self.n_weekly.pk)
+		self.assertTrue((self.n_weekly.send_time - future_datetime).days == 7)
+
+	def test_update_monthly_send_time(self):
+		future_datetime = self.test_datetime + timedelta(days=31)
+		reminder_model.datetime.set_fixed_now(future_datetime)
+		print self.n_monthly.send_time
+		self.n_monthly.update_to_next_send_time()
+		self.n_monthly = ReminderTime.objects.get(pk=self.n_monthly.pk)
+		print self.n_monthly.send_time
+		self.assertTrue((self.n_monthly.send_time.month - future_datetime.month) == 1)
+
+	def test_update_yearly_send_time(self):
+		future_datetime = self.test_datetime + timedelta(days=31)
+		reminder_model.datetime.set_fixed_now(future_datetime)
+		self.n_yearly.update_to_next_send_time()
+		self.n_yearly = ReminderTime.objects.get(pk=self.n_yearly.pk)
+		self.assertTrue((self.n_yearly.send_time.year - future_datetime.year) == 1)
 
 class SafetyNetTest(TestCase):
 	def setUp(self):
@@ -66,7 +257,8 @@ class SafetyNetTest(TestCase):
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+											 	  city="San Francisco", state_province="CA", country_iso_code="US",
+											 	  status=UserProfile.ACTIVE)
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
@@ -80,7 +272,7 @@ class SafetyNetTest(TestCase):
 		f.close()  
 
 	def test_safety_net_template(self):
-		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		self.minqi.add_safetynet_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 						 birthday=date(year=1989, month=10, day=13), 
 						 patient_relationship="friend")
 		# Minqi has only taken 50 / 100 vitamins from the time period 10/10/2013 to 10/17/2013
@@ -89,7 +281,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('messages/safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -104,7 +296,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('messages/safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -119,7 +311,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
+		message_body = render_to_string('messages/safety_net_nonadherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, has had trouble taking the following medication from 10/10 to 10/17:\nvitamin: 50% (50/100)\ncocaine: 33% (1/3)\nvaccine: 14% (1/7)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -131,7 +323,7 @@ class SafetyNetTest(TestCase):
 		window_finish = datetime(year=2013, month=10, day=17)
 
 		dictionary = {'prescriptions':prescriptions, 'patient_relationship':'friend', 'patient_first':self.minqi.first_name, 'patient_last':self.minqi.last_name, 'window_start':window_start, 'window_finish':window_finish}
-		message_body = render_to_string('safety_net_adherent_message.txt', dictionary)
+		message_body = render_to_string('messages/safety_net_adherent_message.txt', dictionary)
 		correct_message = "Your friend, Minqi Jiang, successfully took the following medication from 10/10 to 10/17:\nvitamin: 90% (90/100)\ncocaine: 100% (3/3)\nvaccine: 86% (6/7)"
 		self.assertEqual(message_body, correct_message)
 		self.assertTrue(message_body.__len__() < 160) # Less than text message length
@@ -139,7 +331,7 @@ class SafetyNetTest(TestCase):
 	def test_contact_safety_net(self):
 		# Add a safety net member for Minqi
 		# TODO: test scenario where Minqi doesn't have a safety net
-		self.minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		self.minqi.add_safetynet_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 						 birthday=date(year=1989, month=10, day=13), 
 						 patient_relationship="friend")
 		self.minqi_prescription.safety_net_on = True
@@ -157,9 +349,13 @@ class SafetyNetTest(TestCase):
 						send_time=datetime1, 
 						reminder_type=ReminderTime.MEDICATION)
 		reminders = ReminderTime.objects.filter(id=reminder.id) #sendReminders needs a queryset, so get one here
-		self.minqi.sendReminders(reminders)
-		self.minqi.sendReminders(reminders)
-		self.minqi.sendReminders(reminders)
+		nc = NotificationCenter()
+		nc.send_notifications(to=self.minqi, notifications=reminders)
+		nc.send_notifications(to=self.minqi, notifications=reminders)
+		nc.send_notifications(to=self.minqi, notifications=reminders)
+		# self.minqi.sendReminders(reminders)
+		# self.minqi.sendReminders(reminders)
+		# self.minqi.sendReminders(reminders)
 		sent_reminders = SentReminder.objects.filter(reminder_time=reminder)
 		for sent_reminder in sent_reminders:
 			sent_reminder.time_sent = send_datetime
@@ -174,7 +370,7 @@ class SafetyNetTest(TestCase):
 		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
 
 		reminder_tasks.sendRemindersForNow()
-		self.assertEqual(getLastSentMessageContent(), "2147094720: Your friend, Minqi Jiang, has had trouble taking the following medication from 04/11 to 04/18:|vitamin: 33% (1/3)")
+		self.assertEqual(getLastSentMessageContent(), "+12147094720: Your friend, Minqi Jiang, has had trouble taking the following medication from 04/11 to 04/18:|vitamin: 33% (1/3)")
 
 
 class HandleResponseTest(TestCase):
@@ -274,7 +470,8 @@ class HandleResponseTest(TestCase):
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+											 	  city="San Francisco", state_province="CA", country_iso_code="US",
+											 	  status=UserProfile.ACTIVE)
 		matt_prescription = Prescription.objects.create(prescriber=self.bob, patient=matt, drug=self.vitamin,
 														note="To make you strong", safety_net_on=True, filled=True)
 		reminder = ReminderTime.objects.create(to=matt, prescription=matt_prescription, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.MEDICATION)
@@ -313,7 +510,8 @@ class SendRemindersTest(TestCase):
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+											 	  city="San Francisco", state_province="CA", country_iso_code="US",
+											 	  status=UserProfile.ACTIVE)
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_model.datetime = DatetimeStub()
@@ -462,7 +660,7 @@ class SendRemindersTest(TestCase):
 		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
 		m1 = Message.objects.create(patient=self.minqi)
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('medication_reminder.txt', dictionary)
+		message_body = render_to_string('messages/medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin. Reply '1' when you finish.")
 
 		# Test message with two reminders
@@ -472,7 +670,7 @@ class SendRemindersTest(TestCase):
 		reminder2 = ReminderTime.objects.create(to=self.minqi, prescription=prescription2, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('medication_reminder.txt', dictionary)
+		message_body = render_to_string('messages/medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin and meditation. Reply '1' when you finish.")
 
 		# Test message with three reminders
@@ -482,7 +680,7 @@ class SendRemindersTest(TestCase):
 		reminder3 = ReminderTime.objects.create(to=self.minqi, prescription=prescription3, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.MEDICATION)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2) | Q(prescription=prescription3))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('medication_reminder.txt', dictionary)
+		message_body = render_to_string('messages/medication_reminder.txt', dictionary)
 		self.assertEquals(message_body, "Time to take your vitamin, meditation and lipitor. Reply '1' when you finish.")
 
 	def test_refillreminder_template(self):
@@ -494,7 +692,7 @@ class SendRemindersTest(TestCase):
 		reminder_list = ReminderTime.objects.filter(prescription=self.minqi_prescription)
 		m1 = Message.objects.create(patient=self.minqi)
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('refill_reminder.txt', dictionary)
+		message_body = render_to_string('messages/refill_reminder.txt', dictionary)
 		self.assertEquals(message_body, "It's important you fill your vitamin prescription as soon as possible. Reply '1' when you've received your medicine.")
 		self.assertTrue(message_body.__len__()<=160)
 
@@ -506,7 +704,7 @@ class SendRemindersTest(TestCase):
 		reminder2 = ReminderTime.objects.create(to=self.minqi, prescription=prescription2, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.REFILL)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('refill_reminder.txt', dictionary)
+		message_body = render_to_string('messages/refill_reminder.txt', dictionary)
 		self.assertEquals(message_body, "It's important you fill your vitamin and meditation prescription as soon as possible. Reply '1' when you've received your medicine.")
 		self.assertTrue(message_body.__len__()<=160)
 
@@ -517,7 +715,7 @@ class SendRemindersTest(TestCase):
 		reminder3 = ReminderTime.objects.create(to=self.minqi, prescription=prescription3, repeat=ReminderTime.DAILY, send_time=datetime1, reminder_type=ReminderTime.REFILL)
 		reminder_list = ReminderTime.objects.filter(Q(prescription=self.minqi_prescription) | Q(prescription=prescription2) | Q(prescription=prescription3))
 		dictionary = {'reminder_list': reminder_list, 'message_number':m1.message_number}
-		message_body = render_to_string('refill_reminder.txt', dictionary)
+		message_body = render_to_string('messages/refill_reminder.txt', dictionary)
 		self.assertEquals(message_body, "It's important you fill your vitamin, meditation and lipitor prescription as soon as possible. Reply '1' when you've received your medicine.")
 		self.assertTrue(message_body.__len__()<=160)
 
@@ -532,7 +730,9 @@ class SendRemindersTest(TestCase):
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
 		self.assertEqual(message.count(), 0)
 		# Send the message
-		self.minqi.sendReminders(reminder_list)
+		nc = NotificationCenter()
+		nc.send_notifications(to=self.minqi, notifications=reminder_list)
+		# self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 1)		
 		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
@@ -555,7 +755,8 @@ class SendRemindersTest(TestCase):
 		reminder1.send_time = datetime1
 		reminder1.save()
 		# Send the message
-		self.minqi.sendReminders(reminder_list)
+		nc.send_notifications(to=self.minqi, notifications=reminder_list)
+		# self.minqi.sendReminders(reminder_list)
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 2)
 		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
@@ -579,7 +780,9 @@ class SendRemindersTest(TestCase):
 		message = Message.objects.filter(patient=self.minqi, sentreminder__prescription=reminder1.prescription)
 		self.assertEqual(message.count(), 0)
 		# Send the message
-		self.minqi.sendReminders(reminder_list)
+		nc = NotificationCenter()
+		# self.minqi.sendReminders(reminder_list)
+		nc.send_notifications(to=self.minqi, notifications=reminder_list)
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 1)		
 		self.assertNotEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
@@ -604,7 +807,9 @@ class SendRemindersTest(TestCase):
 		reminder1.send_time = datetime1
 		reminder1.save()
 		# Send the message
-		self.minqi.sendReminders(reminder_list)
+		# self.minqi.sendReminders(reminder_list)
+		nc.send_notifications(to=self.minqi, notifications=reminder_list)
+
 		# Did the message get sent correctly?
 		self.assertEqual(len(Message.objects.filter(patient=self.minqi)), 2)
 		self.assertNotEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your meditation and vitamin. Reply '2' when you finish.")
@@ -670,7 +875,8 @@ class SendRemindersTest(TestCase):
 								 				  gender=PatientProfile.MALE,
 								 				  address_line1="4266 Cesar Chavez",
 											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+											 	  city="San Francisco", state_province="CA", country_iso_code="US",
+											 	  status=UserProfile.ACTIVE)
 		matt_prescription = Prescription.objects.create(
 								prescriber=self.bob, 
 								patient=matt, 

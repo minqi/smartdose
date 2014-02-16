@@ -24,7 +24,7 @@ class PatientTest(TestCase):
 		self.assertEqual(minqi.has_safety_net, False)
 		self.assertEqual(minqi.safety_net_members.all().count(), 0)
 		# Add Matthew to Minqi's safety net
-		minqi.addSafetyNetMember(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		minqi.add_safetynet_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 								 birthday=date(year=1989, month=10, day=13), 
 								 patient_relationship="friend")
 

@@ -11,6 +11,7 @@ from reminders.models import ReminderTime, Message, SentReminder
 from common.models import UserProfile
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
+from reminders.notification_center import NotificationCenter
 
 FAKE_CSV = False # Use fake patient csv data for 
 
@@ -35,10 +36,13 @@ def sendRemindersForNow():
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 	# Send a reminder to each patient with the pills they need to take
+	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
-		p.sendReminders(p_reminders)
+		# p.sendReminders(p_reminders)
+		nc.send_notifications(to=p, notifications=p_reminders)
+
 
 def contactSafetyNet(window_start, window_finish, threshold, timeout):
 	"""
@@ -93,7 +97,7 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		for safety_net_member in safety_net_members:
 			# queue safety net notifications here
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
-			message_body = render_to_string('safety_net_nonadherent_message.txt', dictionary)
+			message_body = render_to_string('messages/safety_net_nonadherent_message.txt', dictionary)
 			# send the message to the safety net
 			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
 			# safety_net_member.sendTextMessage(message_body)
@@ -112,7 +116,7 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		for safety_net_member in safety_net_members:
 			# queue safety_net notifications here
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
-			message_body = render_to_string('safety_net_adherent_message.txt', dictionary)
+			message_body = render_to_string('messages/safety_net_adherent_message.txt', dictionary)
 			# send the message to the safety net
 			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
 			# safety_net_member.sendTextMessage(message_body)

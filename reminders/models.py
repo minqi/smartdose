@@ -72,7 +72,8 @@ class ReminderManager(models.Manager):
 		return safetynet_reminder
 
 	def create_welcome_notification(self, to):
-		welcome_reminder = ReminderTime.objects.get_or_create(to=to, reminder_type=ReminderTime.WELCOME, repeat=DAILY)[0]
+		welcome_reminder = ReminderTime.objects.get_or_create(to=to, 
+			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT)[0]
 		return welcome_reminder
 
 class ReminderTime(models.Model):
@@ -155,22 +156,22 @@ class ReminderTime(models.Model):
 	def __update_monthly_send_time(self):
 		if self.repeat == self.MONTHLY:
 			now_date = datetime.datetime.now().date()
-			next_date = send_time.date()
+			next_date = self.send_time.date()
 			year = next_date.year
 			month = next_date.month
 			while next_date <= now_date:
-				month = next_date.month - 1 + months
-				year = next_date.year + month / 12
-				month = next_month % 12 + 1
-				day = min(next_date.day,calendar.monthrange(year,month)[1])
+				next_month = next_date.month % 12 + 1
+				next_year = next_date.year + next_month / 12
 
-				next_date = datetime.date(year, month, day)
+				next_day = min(next_date.day,calendar.monthrange(next_year,next_month)[1])
 
-			if self.LAST_WEEK_OF_MONTH == 5:
+				next_date = datetime.date(next_year, next_month, next_day)
+
+			if self.week_of_month == 5:
 				cal = calendar.Calendar(0)
-				month_week_dates = cal.monthdatescalendar(year, month)
+				month_week_dates = cal.monthdatescalendar(next_year, next_month)
 				lastweek_month = month_week_dates[-1]
-				next_date = lastweek_month[self.day_of_week - 1]
+				next_date = lastweek_month[self.send_time.weekday()]
 
 			self.send_time = datetime.datetime.combine(next_date, self.send_time.time())
 			self.save()
