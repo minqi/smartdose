@@ -228,10 +228,8 @@ class UpdateSendDateTimeTest(TestCase):
 	def test_update_monthly_send_time(self):
 		future_datetime = self.test_datetime + timedelta(days=31)
 		reminder_model.datetime.set_fixed_now(future_datetime)
-		print self.n_monthly.send_time
 		self.n_monthly.update_to_next_send_time()
 		self.n_monthly = ReminderTime.objects.get(pk=self.n_monthly.pk)
-		print self.n_monthly.send_time
 		self.assertTrue((self.n_monthly.send_time.month - future_datetime.month) == 1)
 
 	def test_update_yearly_send_time(self):
@@ -365,7 +363,6 @@ class SafetyNetTest(TestCase):
 		# Now contact safety net
 		contact_datetime = datetime(year=2013, month=4, day=18, hour=12, minute=0)
 		reminder_tasks.datetime.set_fixed_now(contact_datetime)
-
 		reminder_model.datetime.set_fixed_now(contact_datetime)
 		reminder_tasks.contactSafetyNet(send_datetime, contact_datetime, .8, timedelta(hours=4))
 
@@ -383,13 +380,13 @@ class HandleResponseTest(TestCase):
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  username="8569067308",
-								 				  birthday=date(year=1990, month=4, day=21),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US")
+												  primary_phone_number="8569067308",
+												  username="8569067308",
+												  birthday=date(year=1990, month=4, day=21),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US")
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_tasks.datetime = DatetimeStub()
@@ -496,7 +493,7 @@ class SendRemindersTest(TestCase):
 	def setUp(self):
 		# Create some records
 		#TODO(mgaba): Create fixtures that have populate DB with this information
-		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",  
+		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
 										   primary_phone_number="2029163381", 
 										   username="2029163381",
 										   birthday=date(year=1960, month=10, day=20),
@@ -504,14 +501,14 @@ class SendRemindersTest(TestCase):
 										   city="San Francisco", state_province="CA", country_iso_code="US")
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  username="8569067308",
-								 				  birthday=date(year=1990, month=4, day=21),
-								 				  gender=PatientProfile.MALE,
-								 				  address_line1="4266 Cesar Chavez",
-											 	  postal_code="94131", 
-											 	  city="San Francisco", state_province="CA", country_iso_code="US",
-											 	  status=UserProfile.ACTIVE)
+												  primary_phone_number="8569067308",
+												  birthday=date(year=1990, month=4, day=21),
+												  gender=PatientProfile.MALE,
+												  address_line1="4266 Cesar Chavez",
+												  postal_code="94131",
+												  city="San Francisco", state_province="CA", country_iso_code="US", 
+												  email="minqi@minqi.com",
+												  status=UserProfile.ACTIVE)
 		self.minqi_prescription = Prescription.objects.create(prescriber=self.bob, patient=self.minqi, drug=self.vitamin,
 														 note="To make you strong", safety_net_on=True, filled=True)
 		reminder_model.datetime = DatetimeStub()
@@ -642,9 +639,9 @@ class SendRemindersTest(TestCase):
 		# m4 doesn't get acked. What happens when we advance to the next day and send a message?
 		sent_time = sent_time + timedelta(hours=24)
 		reminder_model.datetime.set_fixed_now(sent_time)
- 		m5 = Message.objects.create(patient=self.minqi)
- 		m5.time_sent = sent_time
- 		m5.save()
+		m5 = Message.objects.create(patient=self.minqi)
+		m5.time_sent = sent_time
+		m5.save()
 		self.assertEquals(m5.state, Message.UNACKED)
 		self.assertEquals(m5.message_number, 1)
 		self.assertEquals(Message.objects.get(id=m4.id).state, Message.EXPIRED)
@@ -920,4 +917,64 @@ class SendRemindersTest(TestCase):
 
 		reminder_model.datetime.reset_now()
 
+	def test_update_send_time(self):
+		# make sure there's nothing in our sent message logs
+		self.assertEqual(getLastSentMessageContent(), "")
 
+		# try sending messages for when there are no scheduled reminders (12am)
+		send_datetime = datetime(year=2013, month=4, day=11, hour=12, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), "")
+
+		# Schedule some daily reminders at 9am for Minqi
+		datetime1 = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		reminder1 = ReminderTime.objects.create(
+						to=self.minqi, 
+						prescription=self.minqi_prescription, 
+						repeat=ReminderTime.DAILY, 
+						send_time=datetime1, 
+						reminder_type=ReminderTime.MEDICATION)
+
+		# Send some reminders for now (12am)
+		send_datetime = datetime(year=2013, month=4, day=11, hour=0, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), "")
+
+		# Now change the time to 9am when reminders should be sent
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
+
+		# Try sending reminders a minute later to make sure additional reminders aren't sent
+		send_datetime = datetime(year=2013, month=4, day=11, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '1' when you finish.")
+		self.assertNotIn(self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.", getLastNSentMessageContent(2))
+
+		# Try sending reminders a day later to make sure reminders are sent
+		send_datetime = datetime(year=2013, month=4, day=12, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '2' when you finish.")
+
+		# Simulate a three day outage and send a reminder
+		send_datetime = datetime(year=2013, month=4, day=15, hour=9, minute=0)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '3' when you finish.")
+
+		# Advance time by one minute and try sending. Shouldn't send any more reminders
+		send_datetime = datetime(year=2013, month=4, day=15, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '3' when you finish.")
+
+		# Advance time by one day and try sending. Should send.
+		send_datetime = datetime(year=2013, month=4, day=16, hour=9, minute=1)
+		reminder_tasks.datetime.set_fixed_now(send_datetime)
+		reminder_tasks.sendRemindersForNow()
+		self.assertEqual(getLastSentMessageContent(), self.minqi.primary_phone_number + ": " + "Time to take your vitamin. Reply '4' when you finish.")

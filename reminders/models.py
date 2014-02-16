@@ -222,6 +222,8 @@ class ReminderTime(models.Model):
 		# custom init logic
 		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
 		# by parsing the prescription sig
+		if self.id:
+			return
 		if not self.send_time:
 			self.set_best_send_time()
 

@@ -96,11 +96,10 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
 			# queue safety net notifications here
-			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
+			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(source_patient=patient, target_patient=safety_net_member).patient_relationship
 			message_body = render_to_string('messages/safety_net_nonadherent_message.txt', dictionary)
 			# send the message to the safety net
 			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
-			# safety_net_member.sendTextMessage(message_body)
 
 	# Send messages to safety net members indicating patient was adherent
 	for patient, prescriptions in patient_adherent_dict.iteritems():
@@ -115,9 +114,8 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
 			# queue safety_net notifications here
-			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(patient=patient, safety_net=safety_net_member).patient_relationship
-			message_body = render_to_string('messages/safety_net_adherent_message.txt', dictionary)
+			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(source_patient=patient, target_patient=safety_net_member).patient_relationship
+			message_body = render_to_string('messages/`safety_net_adherent_message.txt', dictionary)
 			# send the message to the safety net
 			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
-			# safety_net_member.sendTextMessage(message_body)
 

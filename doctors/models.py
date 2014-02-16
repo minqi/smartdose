@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 class DoctorProfileManager(UserProfileManager):
 	"""Manager for performing operations on DoctorProfile records"""
 
-
 class DoctorProfile(UserProfile):
 	"""Model for doctor-specific information"""
 	# Doctor specific fields
@@ -14,6 +13,8 @@ class DoctorProfile(UserProfile):
 
 	# Manager fields
 	objects = DoctorProfileManager()
+	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
+	email 					= models.EmailField(blank=False, null=False, unique=True)
 
 	# Note, code is shared across patient, doctor, and safety net models, so you should update in all places
 	def validate_unique(self, *args, **kwargs):

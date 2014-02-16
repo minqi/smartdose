@@ -125,9 +125,13 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    #'django_pdb.middleware.PdbMiddleware'
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
+
+AUTH_USER_MODEL = 'common.UserProfile'
+AUTHENTICATION_BACKENDS = ('common.authentication.SettingsBackend',)
 
 ROOT_URLCONF = 'configs.urls'
 
