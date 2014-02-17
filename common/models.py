@@ -1,10 +1,11 @@
+import datetime
 from django.db import models
 from django.db import transaction
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.contrib.auth import hashers
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-import datetime
+from common.utilities import convert_to_e164
 
 class Country(models.Model):
 	"""Model for mapping country_iso_code to country name"""
@@ -35,8 +36,6 @@ class UserProfileManager(BaseUserManager):
 		user.save(using=self._db)
 		return user
 
-
-	
 # Models that implement UserProfile
 # doctors.models.DoctorProfile
 # patients.models.PatientProfile
@@ -57,7 +56,6 @@ class UserProfile(AbstractBaseUser):
 	status = models.CharField(max_length=2,
 						  choices=STATUS_CHOICES,
 						  default=NEW)
-
 	username 				= models.CharField(max_length=40, unique=True)
 	first_name				= models.CharField(max_length=40, null=False, blank=False)
 	last_name				= models.CharField(max_length=40, null=False, blank=False)
@@ -75,7 +73,6 @@ class UserProfile(AbstractBaseUser):
 	# 1 - ((1-1/31^5)^(2*60/10))^10000 = .0042
 	# Substituting T=60*24, N=10000, CHAR_SPACE=31, AUTH_TOKEN_LENGTH=5, AUTH_TOKEN_MAX_LOGIN_ATTEMPTS = 2, AUTH_TOKEN_WAIT_PERIOD = 10
 	# 1 - ((1-1/31^5)^(2*60*24/10))^10000 = .0957
-
 
 	AUTH_TOKEN_LENGTH				= 5
 	AUTH_TOKEN_MAX_LOGIN_ATTEMPTS 	= 2
@@ -110,13 +107,12 @@ class UserProfile(AbstractBaseUser):
 	def __unicode__(self):
 		return self.get_full_name()
 
-	def generate_auth_token(self):
-		self.auth_token_datetime = datetime.datetime.now()
-		self.auth_token_active = True
-		self.auth_token = UserProfile.objects.make_random_password(length=UserProfile.AUTH_TOKEN_LENGTH, allowed_chars='abcdefghjkmnpqrstuvwxyz23456789')
-		self.save()
-
-
+	def __init__(self, *args, **kwargs):
+		super(UserProfile, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.username = self.get_unique_username(self)
+		self.primary_phone_number = convert_to_e164(self.primary_phone_number) 
 
 	@staticmethod
 	def get_unique_username(obj):
@@ -125,11 +121,17 @@ class UserProfile(AbstractBaseUser):
 		for i in range(0, 10000): #aribtrarily choose max range to be 10000 on the assumption that there will not be more than 10,000 collisions.
 			try:
 				UserProfile.objects.get(username=username)
-				username = original_username+str(i) # If there's a collision, add another integeter and begin incrementing
 			except UserProfile.DoesNotExist:
 				return username
+			else:
+				username = original_username+str(i) # If there's a collision, add another integeter and begin incrementing
 		raise UsernameCollisionError
 
+	def generate_auth_token(self):
+		self.auth_token_datetime = datetime.datetime.now()
+		self.auth_token_active = True
+		self.auth_token = UserProfile.objects.make_random_password(length=UserProfile.AUTH_TOKEN_LENGTH, allowed_chars='abcdefghjkmnpqrstuvwxyz23456789')
+		self.save()
 
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""

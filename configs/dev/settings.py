@@ -11,11 +11,12 @@ cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
+# Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
-REMINDER_SWEEP_OFFSET = 10 # minutes
+REMINDER_MERGE_INTERVAL = 3600 # seconds
 
 TEST_ALL_APPS = True
 
@@ -46,7 +47,7 @@ DATABASES = {
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -166,15 +167,20 @@ INSTALLED_APPS = (
     # external apps
     'djcelery',
     'django_nose',
-    'django_pdb'
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 
 # Account Sid and Auth Token from twilio.com/user/account
-TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
-TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
-TWILIO_NUMBER =  "+16179368157"
+# Minqi's account
+TWILIO_ACCOUNT_SID = "AC10e87781d9743eeff4c0bced97c9613e"
+TWILIO_AUTH_TOKEN = "4cd2e96f454ed2fd228ecee0c5050950"
+TWILIO_NUMBER =  "+18563243138"
+
+# Matt's account
+# TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
+# TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
+# TWILIO_NUMBER =  "+16179368157"
 
 MESSAGE_LOG_FILENAME="message_output"
 
@@ -201,6 +207,7 @@ CELERYBEAT_SCHEDULE = {
         'schedule': crontab(minute='*/1')
     }
 }
+USE_TZ = False
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to

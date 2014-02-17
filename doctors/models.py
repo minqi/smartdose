@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 class DoctorProfileManager(UserProfileManager):
 	"""Manager for performing operations on DoctorProfile records"""
 
-
 class DoctorProfile(UserProfile):
 	"""Model for doctor-specific information"""
 	# Doctor specific fields

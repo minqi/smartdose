@@ -17,7 +17,7 @@ class SettingsBackend(object):
 			user = DoctorProfile.objects.filter(primary_phone_number=phone_number)
 			if not user:
 				user = PatientProfile.objects.filter(primary_phone_number=phone_number)
-		if not user:
+		if not user.exists():
 			return None
 		else:
 			user = user[0]

@@ -11,6 +11,7 @@ from reminders.models import ReminderTime, Message, SentReminder
 from common.models import UserProfile
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
+from reminders.notification_center import NotificationCenter
 
 FAKE_CSV = False # Use fake patient csv data for 
 
@@ -35,10 +36,12 @@ def sendRemindersForNow():
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 	# Send a reminder to each patient with the pills they need to take
+	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
-		p.sendReminders(p_reminders)
+		# p.sendReminders(p_reminders)
+		nc.send_notifications(to=p, notifications=p_reminders)
 
 def compute_adherent_and_nonadherent_patient_to_prescription_dict(window_start, window_finish, threshold, timeout):
 	""" Returns two dictionaries as a tuple. The first dictionary maps patients to prescriptions for which the patient
@@ -109,5 +112,5 @@ def contactSafetyNet(window_start, window_finish, threshold, timeout):
 	medication is considered not taken if it has gone unacknowledged for longer than timeout.
 	"""
 	patient_adherent_dict, patient_nonadherent_dict = compute_adherent_and_nonadherent_patient_to_prescription_dict(window_start, window_finish, threshold, timeout)
-	schedule_safety_net_messages_from_prescription_dict(patient_adherent_dict, window_start, window_finish, 'safety_net_adherent_message.txt')
-	schedule_safety_net_messages_from_prescription_dict(patient_nonadherent_dict, window_start, window_finish, 'safety_net_nonadherent_message.txt')
+	schedule_safety_net_messages_from_prescription_dict(patient_adherent_dict, window_start, window_finish, 'messages/`safety_net_adherent_message.txt')
+	schedule_safety_net_messages_from_prescription_dict(patient_nonadherent_dict, window_start, window_finish, 'messages/`safety_net_nonadherent_message.txt')

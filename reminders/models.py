@@ -5,7 +5,7 @@ from django.db.models import Q
 from doctors.models import DoctorProfile
 from common.models import Drug
 from common.utilities import weekOfMonth, lastWeekOfMonth
-from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_SWEEP_OFFSET
+from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -26,16 +26,30 @@ class Prescription(models.Model):
 	filled						= models.BooleanField(default=False)
 
 class ReminderManager(models.Manager):
-	def reminders_at_time(self, datetime):
-		"""Returns all reminders at and before now_datetime
+	def reminders_at_time(self, now_datetime):
+		"""
+		Returns all notifications at and before now_datetime
+		If there is at least one such reminder, also looks ahead REMINDER_MERGE_INTERVAL
+		seconds to look for additional notifications
 
 		Arguments:
 		now_datetime -- the datetime for which we care about reminders. datetime object
 		"""
 		reminders_at_time = super(ReminderManager, self).get_query_set().filter(
 			Q(active=True) &
-			Q(send_time__lte=datetime)
+			Q(send_time__lte=now_datetime)
 		)
+		latest_reminder = None
+		if reminders_at_time.exists():
+			latest_reminder = reminders_at_time.latest()
+		if latest_reminder:
+			max_send_time_for_batch = latest_reminder.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
+			reminders_at_time = super(ReminderManager, self).get_queryset().filter(
+				Q(active=True) &
+				Q(send_time__lt=max_send_time_for_batch)
+			)
+
+		print "found reminders for " + str([r.to.first_name for r in reminders_at_time]) + "..."
 		return reminders_at_time
 
 	def create_prescription_reminders(self, to, prescription):
@@ -83,8 +97,8 @@ class ReminderManager(models.Manager):
 		return safetynet_reminder
 
 	def create_welcome_notification(self, to):
-		welcome_reminder = ReminderTime.objects.get_or_create(to=to, reminder_type=ReminderTime.WELCOME,
-		                                                      repeat=DAILY)[0]
+		welcome_reminder = ReminderTime.objects.get_or_create(to=to, 
+			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT)[0]
 		return welcome_reminder
 
 class ReminderTime(models.Model):
@@ -117,30 +131,30 @@ class ReminderTime(models.Model):
 		(CUSTOM,   'custom'),
 	)
 
-	# If value of week_of_month is 5, it means "last day of month"
+	# If value of week_of_month is 5, it means "last day of month" 
 	# e.g., last Tuesday of every month
 	LAST_WEEK_OF_MONTH = 5
 
 	# required fields:
-	to       		= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
-	reminder_type	= models.CharField(max_length=4,
+	to       			= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
+	reminder_type		= models.CharField(max_length=4,
 									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
-	repeat 			= models.CharField(max_length=2,
+	repeat 				= models.CharField(max_length=2,
 									   choices=REPEAT_CHOICES, null=False, blank=False)
 
 	# optional fields:
-	send_time		= models.DateTimeField(null=True)
-	day_of_week		= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
-	day_of_month	= models.PositiveIntegerField(null=True)
-	week_of_month	= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
-	day_of_year		= models.PositiveIntegerField(null=True)
-	month_of_year	= models.PositiveIntegerField(null=True)
+	send_time			= models.DateTimeField(null=True)
+	day_of_week			= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
+	day_of_month		= models.PositiveIntegerField(null=True)
+	week_of_month		= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
+	day_of_year			= models.PositiveIntegerField(null=True)
+	month_of_year		= models.PositiveIntegerField(null=True)
 
-	text            = models.CharField(max_length=160, null=True, blank=True)
-	prescription 	= models.ForeignKey(Prescription, null=True)
-	active			= models.BooleanField(default=True) # is the reminder still alive?
+	text            	= models.CharField(max_length=160, null=True, blank=True)
+	prescription 		= models.ForeignKey(Prescription, null=True)
+	active				= models.BooleanField(default=True) # is the reminder still alive?
 
-	objects 		= ReminderManager()
+	objects 			= ReminderManager()
 
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.ONE_SHOT:
@@ -169,18 +183,18 @@ class ReminderTime(models.Model):
 			year = next_date.year
 			month = next_date.month
 			while next_date <= now_date:
-				month = next_date.month - 1 + month
-				year = next_date.year + month / 12
-				month = next_month % 12 + 1
-				day = min(next_date.day,calendar.monthrange(year,month)[1])
+				next_month = next_date.month % 12 + 1
+				next_year = next_date.year + next_month / 12
 
-				next_date = datetime.date(year, month, day)
+				next_day = min(next_date.day,calendar.monthrange(next_year,next_month)[1])
 
-			if self.LAST_WEEK_OF_MONTH == 5:
+				next_date = datetime.date(next_year, next_month, next_day)
+
+			if self.week_of_month == 5:
 				cal = calendar.Calendar(0)
-				month_week_dates = cal.monthdatescalendar(year, month)
+				month_week_dates = cal.monthdatescalendar(next_year, next_month)
 				lastweek_month = month_week_dates[-1]
-				next_date = lastweek_month[self.day_of_week - 1]
+				next_date = lastweek_month[self.send_time.weekday()]
 
 			self.send_time = datetime.datetime.combine(next_date, self.send_time.time())
 			self.save()
@@ -231,8 +245,14 @@ class ReminderTime(models.Model):
 		# custom init logic
 		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
 		# by parsing the prescription sig
+		if self.id:
+			return
 		if not self.send_time:
 			self.set_best_send_time()
+
+	class Meta:
+		get_latest_by = 'send_time'
+
 
 class MessageManager(models.Manager):
 	def create(self, patient):
@@ -302,9 +322,6 @@ class SentReminder(models.Model):
 		self.save()
 		if self.reminder_time.reminder_type == ReminderTime.REFILL:
 			self.prescription.filled = True
-			prescription_reminders = self.prescription.remindertime_set.all()
-			for reminder in prescription_reminders:
-				reminder.update_to_next_send_time()
 			self.prescription.save()
 			self.reminder_time.active = False
 			self.reminder_time.save()

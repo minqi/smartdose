@@ -1,13 +1,11 @@
-# Django imports 
 from configs.dev import settings
-# Twilio imports
 from twilio.rest import TwilioRestClient
-# Python imports
 import datetime as datetime_orig
 import codecs
 from datetime import timedelta
 from math import ceil, floor
-from configs.dev.settings import REMINDER_SWEEP_OFFSET
+from django.db import models
+import phonenumbers
 
 # Construct our client for communicating with Twilio service
 twilio_client = TwilioRestClient(settings.TWILIO_ACCOUNT_SID, 
@@ -95,12 +93,43 @@ def is_today(dt): #TODO(minqi):test
 	today = datetime_orig.datetime.now().date()
 	return dt_time == today
 
-# def is_within_timeframe_past(dt): #TODO(minqi):test
-# 	"""Return True if dt is a time within REMINDER_SWEEP_OFFSET minutes"""
-# 	now_time = datetime_orig.datetime.now()
-# 	minutes = (now_time - dt).seconds/60.0
+def list_to_queryset(l):
+	"""
+	Takes a list of instances all of the same Model subclass
+	and returns a QuerySet. Note this function assumes all
+	QuerySet objects are represented within the database.
+	"""
+	if l:
+		class_name = l[0].__class__.__name__
+		class_object = l[0].__class__
+		for item in l:
+			if item.__class__.__name__ != class_name:
+				return None
+			if not isinstance(item, models.Model):
+				return None
 
-# 	return minutes < REMINDER_SWEEP_OFFSET
+		item_pks = set([item.pk for item in l])
+		return class_object.objects.filter(pk__in=item_pks)
+	return None
+
+def convert_to_e164(raw_phone):
+	"""
+	Convert a raw phone number string to E.164 format
+	"""
+	if not raw_phone:
+		return
+
+	if raw_phone[0] == '+':
+		# Phone number may already be in E.164 format.
+		parse_type = None
+	else:
+		# If no country code information present, assume it's a US number
+		parse_type = "US"
+
+	phone_representation = phonenumbers.parse(raw_phone, parse_type)
+
+	return phonenumbers.format_number(phone_representation,
+		phonenumbers.PhoneNumberFormat.E164)
 
 class DatetimeStub(object):
 	"""

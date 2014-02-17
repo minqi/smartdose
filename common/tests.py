@@ -4,41 +4,104 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
-
-import random
-import string
+import random, string, datetime
 from django.test import SimpleTestCase, TestCase
 from django.template import Context, Template
-from configs.dev import settings
-from common.utilities import weekOfMonth, lastWeekOfMonth, DatetimeStub, sendTextMessageToNumber, getLastSentMessageContent, getLastNSentMessageContent
 from django.contrib.auth import authenticate
+from configs.dev import settings
+from common.utilities import *
+from common.models import Drug
 from patients.models import PatientProfile
 from doctors.models import DoctorProfile
+from reminders.models import ReminderTime, Prescription
+from common.datasources import *
 from django.core.exceptions import ValidationError
+from configs.dev.settings import PROJECT_ROOT
 from freezegun import freeze_time
-import datetime
 
+class TestDatasources(TestCase):
+	def setUp(self):
+		self.dirname = "fake_datasources"
+		self.fake_filename = "fake_patient_data.csv"
+		self.default_num = 10
 
+	def test_get_fake_datasources_path(self):
+		fake_datasources_path = get_fake_datasources_path(dirname=self.dirname)
+		self.assertEqual(fake_datasources_path, os.path.join(PROJECT_ROOT, self.dirname))
 
+	def test_make_fake_csv_patient_data(self):
+		# make sure the write number of lines are written
+		f_path = make_fake_csv_patient_data(num=self.default_num, filename=self.fake_filename)
+		with open(f_path, 'rb') as f:
+			for i, l in enumerate(f):
+				pass
+			f.close()
+		self.assertTrue(i, self.default_num + 1) # note that csv writer adds a trailing empty line
+
+	def test_load_fake_csv_patient_data(self):
+		# make sure the write number of objects are created
+		load_fake_csv_patient_data(filename=self.fake_filename)
+		self.assertTrue(0 < len(PatientProfile.objects.all()) <= self.default_num)
+		self.assertTrue(0 < len(DoctorProfile.objects.all()) <= self.default_num)
+		self.assertTrue(0 < len(Drug.objects.all()) <= self.default_num)
+		self.assertTrue(0 < len(Prescription.objects.all()) <= self.default_num)
+
+class TestListToQuerySet(TestCase):
+	def setUp(self):
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+								 				  primary_phone_number="8569067308", 
+								 				  birthday=datetime.date(year=1990, month=8, day=7))
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher", 
+					primary_phone_number="2029163381", birthday=datetime.date(1960, 1, 1))
+		self.now_datetime = datetime.datetime.now()
+
+	def test_list_to_queryset(self):
+		test_list = []
+		n_pks = []
+		for i in range(5):
+			send_datetime = self.now_datetime + datetime.timedelta(seconds=i*180)
+			n = ReminderTime.objects.create(to=self.patient1, 
+				reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY, send_time=send_datetime)
+			test_list.append(n)
+			n_pks.append(n.pk)
+
+		result = list_to_queryset(test_list)
+		true_queryset = ReminderTime.objects.filter(pk__in=set(n_pks))
+		for idx, n in enumerate(result):
+			self.assertEqual(n, true_queryset[idx])
+
+	# shouldn't work if list objects are of different Model classes
+	def test_list_to_queryset_none(self):
+		test_list = [self.patient1, 1]
+		result = list_to_queryset(test_list)
+		self.assertTrue(result == None)
+
+		test_list = [self.patient1, self.doctor]
+		result = list_to_queryset(test_list)
+		self.assertTrue(result == None)
 
 class baseUserTest(TestCase):
 	def test_create_user(self):
 		# UserProfile is abstract so we'll test creating patients and doctors
-		p = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
+		p = PatientProfile.objects.create(primary_phone_number="2147094720", 
+			first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
 		self.assertEqual(PatientProfile.objects.all().count(), 1) # Make sure record is added to database
 		self.assertNotEqual(p.username, "")
 		# Add a distinct user (doctor) with the same number and names. This can happen if this user is both a doctor and a patient.
-		d = DoctorProfile.objects.create(email="dr.gaba@ucsf.edu", primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
+		d = DoctorProfile.objects.create(email="dr.gaba@ucsf.edu", primary_phone_number="2147094720", 
+			first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
 		self.assertEqual(DoctorProfile.objects.all().count(), 1) # Make sure record is added to database
 		self.assertNotEqual(d.username, "")
 
 		# Creating another patient with the same number should yield a validation error
 		with self.assertRaises(ValidationError): 
-			PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
+			PatientProfile.objects.create(primary_phone_number="2147094720", 
+				first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
 
 		# Creating another doctor should yield a validation error
 		with self.assertRaises(ValidationError): 
-			DoctorProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
+			DoctorProfile.objects.create(primary_phone_number="2147094720", 
+				first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
 
 class templateFilterTest(TestCase):
 	def test_divide_filter(self):
@@ -157,14 +220,12 @@ class datetimeUtilitiesTest(TestCase):
 		self.assertEqual(dtstub_now.minute, datetime_now.minute)
 		self.assertEqual(dtstub_now.second, datetime_now.second)
 
+# ==== AUTHENTICATION TESTS =========================================
 
+class AuthenticationTest(TestCase):
+	def setUp(self):
+		PatientProfile.datetime = DatetimeStub()
 
-
-
-
-
-
-class authenticationTest(TestCase):
     # TEST 1: User creation and valid auth token login-----------------
 	def test_valid_token_authentication(self):
 		# A user signs up for our system at 2/11/2014:00:00:00

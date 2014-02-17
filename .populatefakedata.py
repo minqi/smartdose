@@ -29,9 +29,9 @@ def my_callback(sender, **kwargs):
    		print username
 
 # Create a doctor and patients
-bob = DoctorProfile.objects.get_or_create(primary_phone_number="2029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")[0]
-matt = PatientProfile.objects.get_or_create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
-minqi = PatientProfile.objects.get_or_create(primary_phone_number="8569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
+bob = DoctorProfile.objects.get_or_create(primary_phone_number="+12029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")[0]
+matt = PatientProfile.objects.get_or_create(primary_phone_number="+12147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
+minqi = PatientProfile.objects.get_or_create(primary_phone_number="+18569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
 
 # schedule reminders
 now = datetime.now()
@@ -44,9 +44,27 @@ for i in range(12):
 	prescription_minqi2 = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=drug2, filled=True)[0]
 	prescription_matt1 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug1, filled=True)[0]
 	prescription_matt2 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug2, filled=True)[0]
-	ReminderTime.objects.get_or_create(to=minqi, prescription=prescription_minqi1, repeat=ReminderTime.DAILY, send_time=now + i*timedelta(hours=1))
-	ReminderTime.objects.get_or_create(to=minqi, prescription=prescription_minqi2, repeat=ReminderTime.DAILY, send_time=now + i*timedelta(hours=1))
-	# ReminderTime.objects.get_or_create(to=matt, presciption=prescription_matt1, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(hours=1))
-	# ReminderTime.objects.get_or_create(to=matt, presciption=prescription_matt2, repeat=ReminderTime.DAILY, send_time=now + idx*timedelta(hours=1))
+	ReminderTime.objects.get_or_create(
+		to=minqi, 
+		prescription=prescription_minqi1, 
+		repeat=ReminderTime.DAILY, 
+		send_time=now + i*timedelta(hours=1),
+		reminder_type=ReminderTime.MEDICATION)
+	ReminderTime.objects.get_or_create(
+		to=minqi, 
+		prescription=prescription_minqi2, 
+		repeat=ReminderTime.DAILY, 
+		send_time=now + i*timedelta(hours=1),
+		reminder_type=ReminderTime.MEDICATION)
+	ReminderTime.objects.get_or_create(to=matt, 
+		prescription=prescription_matt1, 
+		repeat=ReminderTime.DAILY, 
+		send_time=now + i*timedelta(hours=1), 
+		reminder_type=ReminderTime.MEDICATION)
+	ReminderTime.objects.get_or_create(to=matt, 
+		prescription=prescription_matt2, 
+		repeat=ReminderTime.DAILY, 
+		send_time=now + i*timedelta(hours=1), 
+		reminder_type=ReminderTime.MEDICATION)
 
 
