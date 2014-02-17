@@ -132,6 +132,8 @@ MIDDLEWARE_CLASSES = (
 AUTH_USER_MODEL = 'common.UserProfile'
 AUTHENTICATION_BACKENDS = ('common.authentication.SettingsBackend',)
 
+SMS_ENCODING = 'utf-16-le'
+
 ROOT_URLCONF = 'configs.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.

@@ -3,7 +3,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 from common.models import UserProfile, UserProfileManager
 from common.utilities import sendTextMessageToNumber
-from reminders.models import Message, SentReminder, ReminderTime
+from reminders.models import Message, SentReminder, ReminderTime, Prescription
 from django.core.exceptions import ValidationError
 from reminders.notification_center import NotificationCenter
 
@@ -73,6 +73,26 @@ class PatientProfile(UserProfile):
 
 	# Manager fields
 	objects = PatientManager()
+
+	def _send_generic_reminder_from_template(self, reminder_list, dictionary, template):
+		message = Message.objects.create(patient=self)
+		for reminder in reminder_list:
+			message_body = render_to_string(template, dictionary)
+			self.sendTextMessage(message_body)
+			SentReminder.objects.create(reminder_time=reminder, message=message)
+
+	def _send_welcome_message(self, reminder_list):
+		self._send_generic_reminder_from_template(reminder_list)
+
+		welcome_reminder = list(welcome_reminder_list.order_by("send_time"))[0]
+		message = Message.objects.create(patient=self)
+		dictionary = {'patient_first_name':self.first_name}
+		message_body = render_to_string('welcome_reminder.txt', dictionary)
+		self.sendTextMessage(message_body)
+		s = SentReminder.objects.create(reminder_time=welcome_reminder, message=message)
+		welcome_reminder.active = False
+		self.status = UserProfile.ACTIVE
+		self.save()
 
 	def sendTextMessage(self, body):
 		# Additional checks/actions to be performed before sending a text to a

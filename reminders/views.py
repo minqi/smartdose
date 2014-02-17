@@ -54,7 +54,6 @@ def processQuit(number):
 	patient.quit()
 	return HttpResponse(content="You've been unenrolled from Smartdose. Please let us know why you quit, so we can improve our service for other patients.", content_type="text/plain")
 
-#TODO(mgaba): Write code to process unknown
 def processUnknown(number):
 	patient = PatientProfile.objects.filter(primary_phone_number=number)
 	if not patient: 
@@ -64,7 +63,6 @@ def processUnknown(number):
 def handle_text(request):
 	if isAck(request.GET['body']):
 		return processAck(request.GET['from'], request.GET['body'])
-		return HttpResponse(content="Thanks for sending that message", content_type="text/plain")
 	elif isQuit(request.GET['body']):
 		return processQuit(request.GET['from'])
 	else:

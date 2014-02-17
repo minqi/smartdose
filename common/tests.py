@@ -165,9 +165,6 @@ class datetimeUtilitiesTest(TestCase):
 
 
 class authenticationTest(TestCase):
-	def setUp(self):
-		PatientProfile.datetime = DatetimeStub()
-
     # TEST 1: User creation and valid auth token login-----------------
 	def test_valid_token_authentication(self):
 		# A user signs up for our system at 2/11/2014:00:00:00
@@ -195,7 +192,8 @@ class authenticationTest(TestCase):
 		current_time = datetime.datetime(year=2014, month=2, day=11)
 		freezer = freeze_time(current_time)
 		freezer.start()
-		p = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
+		p = PatientProfile.objects.create(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba",
+		                                  birthday=datetime.date(year=2013, month=10, day=13))
 		# A user gets sent an upsale link with an auth token 20 minutes after signing up.
 		current_time = current_time+datetime.timedelta(minutes=20)
 		freezer = freeze_time(current_time)
