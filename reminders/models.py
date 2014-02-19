@@ -49,10 +49,9 @@ class ReminderManager(models.Manager):
 				Q(send_time__lt=max_send_time_for_batch)
 			)
 
-		print "found reminders for " + str([r.to.first_name for r in reminders_at_time]) + "..."
 		return reminders_at_time
 
-	def create_prescription_reminders(self, to, prescription):
+	def create_prescription_reminders(self, to, repeat, prescription):
 		"""STUB: Schedule both a refill reminder and a medication reminder for a prescription"""
 		refill_reminder = None
 		if not prescription.filled:
@@ -323,6 +322,11 @@ class SentReminder(models.Model):
 		if self.reminder_time.reminder_type == ReminderTime.REFILL:
 			self.prescription.filled = True
 			self.prescription.save()
+			reminder_times = self.prescription.remindertime_set.all()
+			# Advance medication reminder send times to a point after the refill reminder is ack'd
+			for reminder_time in reminder_times:
+				if reminder_time.reminder_type == ReminderTime.MEDICATION:
+					reminder_time.update_to_next_send_time()
 			self.reminder_time.active = False
 			self.reminder_time.save()
 

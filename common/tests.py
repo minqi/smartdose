@@ -142,23 +142,6 @@ class messageUtilitiesTest(TestCase):
 			f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file.
 			f.close() 
 
-	def test_last_sent_message(self):
-		# Send random text messages and assert that the random text messages are validly retrieved from a call to getLastSentMessageContent() and getLastNSentMessageContent()
-		self.assertEqual(getLastSentMessageContent(), "")
-		message1 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8)) # a random message
-		sendTextMessageToNumber(message1, "2147094720")
-		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1)
-		message2 = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(20)) # a random message
-		sendTextMessageToNumber(message2, "2147094720")
-		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message2)
-		self.assertIn("2147094720: " + message1, getLastNSentMessageContent(2)) 
-		self.assertIn("2147094720: " + message2, getLastNSentMessageContent(2))
-		self.assertNotIn("2147094720: " + message1, getLastNSentMessageContent(1))
-
-		message3 = message1 + '\n' + message2 # a random message
-		sendTextMessageToNumber(message3, "2147094720")
-		self.assertEquals(getLastSentMessageContent(), "2147094720: " + message1 + '|' + message2)
-
 class datetimeUtilitiesTest(TestCase):
 	def test_week_of_month(self):
 		testtime = datetime.datetime(year=2013, month=11, day=17)
@@ -187,44 +170,10 @@ class datetimeUtilitiesTest(TestCase):
 		self.assertTrue(lastWeekOfMonth(testtime))
 		testtime = datetime.datetime(year=2013, month=5, day=31)
 		self.assertTrue(lastWeekOfMonth(testtime))
-	def test_datetime_stub(self):
-		dtstub = DatetimeStub.datetime(year=2013, month=11, day=3)
-		# Assert dtstub possesses datetime attributes
-		self.assertEqual(dtstub.year, 2013)
-		self.assertEqual(dtstub.month, 11)
-		self.assertEqual(dtstub.day, 3)
-		# Assert dtstub returns the default value for now()
-		dtstub_now = dtstub.now()
-		datetime_now = datetime.datetime.now()
-		self.assertEqual(dtstub_now.year, datetime_now.year)
-		self.assertEqual(dtstub_now.month, datetime_now.month)
-		self.assertEqual(dtstub_now.day, datetime_now.day)
-		self.assertEqual(dtstub_now.minute, datetime_now.minute)
-		self.assertEqual(dtstub_now.second, datetime_now.second)
-		# Set a new now() value and test if behaves as expected
-		arbitrary_datetime = datetime.datetime(year=2012, month=11, day=3)
-		DatetimeStub.set_fixed_now(arbitrary_datetime)
-		dtstub_now = dtstub.now()
-		self.assertEqual(dtstub_now.year, arbitrary_datetime.year)
-		self.assertEqual(dtstub_now.month, arbitrary_datetime.month)
-		self.assertEqual(dtstub_now.day, arbitrary_datetime.day)
-		self.assertEqual(dtstub_now.minute, arbitrary_datetime.minute)
-		self.assertEqual(dtstub_now.second, arbitrary_datetime.second)
-		# What happens when we reset the fixed now?
-		DatetimeStub.reset_now()
-		dtstub_now = dtstub.now()
-		datetime_now = datetime.datetime.now()
-		self.assertEqual(dtstub_now.year, datetime_now.year)
-		self.assertEqual(dtstub_now.month, datetime_now.month)
-		self.assertEqual(dtstub_now.day, datetime_now.day)
-		self.assertEqual(dtstub_now.minute, datetime_now.minute)
-		self.assertEqual(dtstub_now.second, datetime_now.second)
 
 # ==== AUTHENTICATION TESTS =========================================
 
 class AuthenticationTest(TestCase):
-	def setUp(self):
-		PatientProfile.datetime = DatetimeStub()
 
     # TEST 1: User creation and valid auth token login-----------------
 	def test_valid_token_authentication(self):

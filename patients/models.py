@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.db import transaction
 from django.template.loader import render_to_string
@@ -73,6 +74,9 @@ class PatientProfile(UserProfile):
 	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
 	email 					= models.EmailField(blank=True, null=True, unique=True)
 
+	# The time from when a user requests to quit that they can confirm the quit to unenroll
+	QUIT_RESPONSE_WINDOW = 60 #minutes
+	quit_request_datetime   = models.DateTimeField(blank=True, null=True)
 	# Manager fields
 	objects = PatientManager()
 
@@ -85,6 +89,11 @@ class PatientProfile(UserProfile):
 
 	def quit(self):
 		self.status = PatientProfile.QUIT
+		self.record_quit_request()
+		self.save()
+
+	def resume(self):
+		self.status = PatientProfile.ACTIVE
 		self.save()
 
 	def add_safetynet_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
@@ -139,4 +148,23 @@ class PatientProfile(UserProfile):
 	def save(self, *args, **kwargs):
 		self.validate_unique()
 		super(PatientProfile, self).save(*args, **kwargs)
+
+	def did_request_quit_within_quit_response_window(self):
+		""" Returns True if the patient initiated a quit message more recently than QUIT_RESPONSE_WINDOW
+		"""
+		if self.quit_request_datetime and self.quit_request_datetime > datetime.datetime.now() - datetime.timedelta(minutes=PatientProfile.QUIT_RESPONSE_WINDOW):
+			return True
+		else:
+			return False
+
+	def record_quit_request(self):
+		self.quit_request_datetime = datetime.datetime.now()
+		self.save()
+
+	def did_quit(self):
+		if self.status == PatientProfile.QUIT:
+			return True
+		else:
+			return False
+
 

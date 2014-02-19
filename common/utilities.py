@@ -131,29 +131,3 @@ def convert_to_e164(raw_phone):
 	return phonenumbers.format_number(phone_representation,
 		phonenumbers.PhoneNumberFormat.E164)
 
-class DatetimeStub(object):
-	"""
-	A datetimestub object to replace methods and classes from 
-	the datetime module. 
-	"""
-	fixed_now = None; 
-	class datetime(datetime_orig.datetime):
-		@classmethod      
-		def now(self):
-			if DatetimeStub.fixed_now:
-				return DatetimeStub.fixed_now;
-			else:
-				return datetime_orig.datetime.now();
-	
-	@classmethod
-	def set_fixed_now(self, dt):
-		self.fixed_now = dt;
-	@classmethod
-	def reset_now(self):
-		self.fixed_now = None;
-
-	def __getattr__(self, attr):
-		"""Get the default implementation for the classes and methods
-		from datetime that are not replaced
-		"""
-		return getattr(datetime_orig, attr)
