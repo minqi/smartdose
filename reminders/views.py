@@ -9,6 +9,38 @@ from datetime import datetime,timedelta
 # Number of hours for which a text can be ack'd
 ACK_WINDOW = 24
 
+# Need to use class-based views
+def create_patient(request):
+	"""Add a new patient to Smartdose"""
+	pass
+
+def retrieve_patient(request):
+	"""Get all patients"""
+
+def update_patient(request):
+	pass
+
+def delete_patient(request):
+	"""Remove a patient from Smartdose"""
+	pass
+
+def new_prescription(request):
+	"""Make a new prescription and schedule associated reminders"""
+	pass
+
+def retrieve_prescription(request):
+	pass
+
+
+def update_prescription(request):
+	"""Update prescription schedule"""
+	pass
+
+def delete_prescription(request):
+	pass
+
+
+
 def isAck(body):
 	# Check to see if the body is a number.
 	try:

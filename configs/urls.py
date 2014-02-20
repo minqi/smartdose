@@ -1,16 +1,13 @@
 from django.conf.urls import patterns, include, url
-
-# Uncomment the next two lines to enable the admin:
-# from django.contrib import admin
-# admin.autodiscover()
+from webapp.views import FishfoodPatientView
 
 urlpatterns = patterns('',
-    # Examples:
-    url(r'^$', 'landing.views.landing_page', name='landing'),
-    url(r'^textmessage_response/', 'reminders.views.handle_text')
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    url(r'^$', 'webapp.views.landing_page', name='landing'),
+    url(r'^textmessage_response/', 'reminders.views.handle_text'),
 
-    # Uncomment the next line to enable the admin:
-    # url(r'^admin/', include(admin.site.urls)),
+    # Fishfood URLs
+    url(r'^fishfood/$', 'webapp.views.fishfood'),
+	url(r'^fishfood/patient/search/$', 'webapp.views.patient_search_results'),
+    url(r'^fishfood/patient/new/$', FishfoodPatientView.as_view()),
+    url(r'^fishfood/patient/', FishfoodPatientView.as_view()),
 )

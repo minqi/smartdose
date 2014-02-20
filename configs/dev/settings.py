@@ -99,6 +99,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    os.path.join(PROJECT_ROOT, "static"),
 )
 
 # List of finder classes that know how to find static files in
@@ -139,7 +140,7 @@ ROOT_URLCONF = 'configs.urls'
 WSGI_APPLICATION = 'common.wsgi.application'
 
 TEMPLATE_DIRS = (
-    PROJECT_ROOT + '/templates/'
+    PROJECT_ROOT + '/templates/',
 )
 
 INSTALLED_APPS = (
@@ -156,7 +157,7 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
 
     # smartdose apps
-    'landing',
+    'webapp',
     'common',
     'doctors',
     'patients',

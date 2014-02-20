@@ -1,0 +1,27 @@
+<div id="patientView" data-id={{ patient.id }}>
+	<div class="greeting">Here's the medical record for</div>
+	<div id="patientProfileHeader">
+		<div class="patientListItemPhoto"></div>
+		<div class="patientListItemInfo">
+			<div class="patientListItemFullName">{{ patient.full_name }}</div>
+			<div class="patientListItemPhoneNumber">{{ patient.primary_phone_number }}</div>
+		</div>
+		<div class="clearfix"></div>
+	</div>
+	<div id="addReminderListItem">
+		<div id="addReminderButton"></div>
+		<div id="addReminderButtonLabel">Add reminder</div>
+		<div class="clearfix"></div>
+	</div>
+	<div class="reminderFields no_display"><p/>
+		<input id="addReminderName" type="text" placeholder="Drug name"/><p/>
+		<input id="addReminderTime" type="time"/><p/>
+		<input type="checkbox" class="dayBubble"/>Mon
+		<input type="checkbox" class="dayBubble"/>Tue
+		<input type="checkbox" class="dayBubble"/>Wed
+		<input type="checkbox" class="dayBubble"/>Thu
+		<input type="checkbox" class="dayBubble"/>Fri
+		<input type="checkbox" class="dayBubble"/>Sat
+		<input type="checkbox" class="dayBubble"/>Sun
+	</div>
+</div>

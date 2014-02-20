@@ -1,0 +1,233 @@
+/* CSS for general layout, components, and recurring motifs */
+
+html, body {
+	height: 100%;
+}
+
+body {
+	direction:ltr;
+/*	color:white;
+	background: #172839
+				url('/Users/minqi/projects/smartdose/static/img/background.png') 
+				top repeat-x;*/
+	font-family: "HelveticaNeue-Medium";
+	margin:0px;
+}
+
+#globalContainer {
+	width: 960px;
+	/*width: 100%;*/
+	min-width:960px;
+	position: relative;
+	margin: 0 auto;
+	border: 1px solid yellow;
+}
+
+#mainContainer {
+	float:left;
+	position: relative;
+	min-height: 600px;
+	width:746px;
+	border: 1px solid red;
+	margin:0;
+	height: 100vh;
+}
+
+#topNavBar {
+	height:40px;
+	width:100vh;
+	padding:0px;
+	margin:0px;
+}
+
+#leftCol {
+	float: left;
+	position: relative;
+	border: 1px solid green;
+	min-height:600px;
+	height: 100vh;
+}
+
+#leftMenu {
+
+}
+
+#patient_search_box {
+	position: relative;
+	float: left;
+	width: 200px;
+	height: 20px;
+	padding: 5px;
+	font-size: 14px;
+	border: 1px solid black;
+	top:3px;
+	outline: none;
+}
+
+#patient_search_results {
+	width:210px;
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+
+#add_patient_button {
+	position: relative;
+	width: 210px;
+	height: 40px;
+	line-height:40px;
+	border: solid 1px brown;
+	font-weight: bold;
+	padding-left:10px;
+	-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+	-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+	box-sizing: border-box;
+	cursor:pointer;
+}
+
+#patient_search_results .patient_result {
+	position: relative;
+	width: 210px;
+	height: 40px;
+	line-height:40px;
+	border: solid 1px brown;
+	padding-left:10px;
+	-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+	-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+	box-sizing: border-box;
+	cursor:pointer;
+}
+
+#mainCol {
+	border: 1px solid blue;
+	float: left;
+	position: relative;
+	width: 525px;
+}
+
+#mainContentView {
+	padding: 0 28px;
+	padding-top: 42px;
+}
+
+#patientProfileHeader {
+
+}
+
+#patientProfileHeader .patientListItemPhoto {
+	height: 62px;
+	width: 62px;
+	float: left;
+	/*border: 1px solid black;*/
+	background: url('/static/img/matt-thumb-test.png');
+	box-shadow: 0px 3px 2px #777;
+}
+
+#patientProfileHeader .patientListItemFullName {
+	font-family: "HelveticaNeue-Medium";
+	font-size: 32px;
+	margin-left: 12px;
+	margin-top: 0px;
+}
+
+#patientProfileHeader .patientListItemPhoneNumber {
+	font-family: "HelveticaNeue-Medium";
+	font-size: 18px;
+	margin-left: 12px;
+	margin-top: 0px;
+}
+
+#patientProfileHeader .patientListItemInfo {
+	float:left;
+	width:400px;
+}
+
+#addPatientForm #id_full_name {
+	font-size: 32px;
+	margin-left: 12px;
+	margin-top: 0px;
+	outline: none;	
+}
+
+#addPatientForm #id_primary_phone_number {
+	font-size: 18px;
+	margin-left: 12px;
+	margin-top: 0px;
+	outline: none;
+}
+
+#addReminderButton {
+	height: 61px;
+	width: 61px;
+	float:left;
+	border:1px solid black;
+	cursor:pointer;
+}
+
+#addReminderButtonLabel {
+	font-family: "HelveticaNeue-Medium";
+	font-size: 32px;
+	float:left;
+	margin-left: 12px;
+	margin-top: 10px;
+}
+
+#patientProfileHeader {
+	margin-top: 9px;
+}
+
+#addReminderListItem {
+	margin-top: 16px;
+	margin-bottom: 29px;
+}
+
+.greeting {
+	font-family: "HelveticaNeue-UltraLight";
+	font-size: 32px;
+}
+
+.prescriptItem {
+	width: 420px;
+}
+
+.prescriptItemHeader {
+
+}
+
+.prescriptItemIcon {
+	width: 61px;
+	height: 61px;
+	float: left;
+	border: 1px solid black;
+}
+
+.prescriptItemDescriptionContainer {
+	float: left;
+	margin-left: 12px;
+}
+
+.prescriptItemName {
+	font-family: "HelveticaNeue-Medium";
+	font-size: 32px;
+}
+
+.prescriptItemDosage {
+	font-family: "HelveticaNeue-Light";
+	font-size: 20px;
+}
+
+.clearfix {
+	clear: both; 
+	display: block;
+	visibility: none;
+}
+
+.unstyledList {
+	list-style: none;
+	margin:0;
+	padding:0;
+}
+
+.no_display {
+	display:none;
+}

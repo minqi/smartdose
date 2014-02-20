@@ -59,6 +59,7 @@ class UserProfile(AbstractBaseUser):
 	username 				= models.CharField(max_length=40, unique=True)
 	first_name				= models.CharField(max_length=40, null=False, blank=False)
 	last_name				= models.CharField(max_length=40, null=False, blank=False)
+	full_name               = models.CharField(max_length=80, null=False, blank=False)
 	birthday 				= models.DateField(blank=True, null=True)
 	is_admin				= models.BooleanField(default=False)
 	join_datetime			= models.DateTimeField(auto_now_add=True)
@@ -112,6 +113,7 @@ class UserProfile(AbstractBaseUser):
 		if self.id:
 			return
 		self.username = self.get_unique_username(self)
+		self.full_name = self.get_full_name()
 		self.primary_phone_number = convert_to_e164(self.primary_phone_number) 
 
 	@staticmethod
