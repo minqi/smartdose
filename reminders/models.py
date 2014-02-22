@@ -11,8 +11,8 @@ class Prescription(models.Model):
 	prescriber     				= models.ForeignKey(DoctorProfile, blank=False)
 	patient        				= models.ForeignKey(PatientProfile, blank=False)
 	drug           				= models.ForeignKey(Drug, blank=False)
+	
 	safety_net_on				= models.BooleanField(default=False)
-
 	with_food      				= models.BooleanField(default=False)
 	with_water     				= models.BooleanField(default=False)
 	last_edited    				= models.DateTimeField(auto_now=True)

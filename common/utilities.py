@@ -106,6 +106,15 @@ def convert_to_e164(raw_phone):
 	return phonenumbers.format_number(phone_representation,
 		phonenumbers.PhoneNumberFormat.E164)
 
+def next_weekday(d, weekday):
+	"""
+	Get datetime of next day after datetime <d> that is a <weekday>
+	"""
+	days_ahead = weekday - d.weekday()
+	if days_ahead <= 0: # Target day already happened this week
+		days_ahead += 7
+	return d + datetime_orig.timedelta(days_ahead)
+
 class DatetimeStub(object):
 	"""
 	A datetimestub object to replace methods and classes from 

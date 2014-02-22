@@ -49,7 +49,6 @@ body {
 }
 
 #leftMenu {
-
 }
 
 #patient_search_box {
@@ -156,6 +155,25 @@ body {
 	outline: none;
 }
 
+#addPatientCancel, #addReminderCancel {
+	border: 1px solid #777;
+	border-radius: 8px;
+	float: left;
+	font-size: 18px;
+	padding: 7px;
+	font-family: "HelveticaNeue-Thin";
+	cursor:pointer;	
+}
+
+#addPatientForm #addPatientSubmit {
+	float: left;
+}
+
+#addReminderButtonContainer {
+	margin-top: 16px;
+	margin-bottom: 29px;
+}
+
 #addReminderButton {
 	height: 61px;
 	width: 61px;
@@ -172,13 +190,46 @@ body {
 	margin-top: 10px;
 }
 
-#patientProfileHeader {
-	margin-top: 9px;
+#prescriptionsListContainer {
+	float:left;
+	margin-top: 25px;
 }
 
-#addReminderListItem {
-	margin-top: 16px;
-	margin-bottom: 29px;
+.prescriptionsListItem {
+	border: 1px solid red;
+	float:left;
+}
+
+.remindersListContainer {
+	border: 1px solid pink;
+	float: left;
+	width:450px;
+}
+
+.deleteReminderButton {
+	float: right;
+	cursor:pointer;
+}
+
+.remindersListItemDay {
+	height: 30px;
+	width: 30px;
+	background: #ccc;
+	float: left;
+	border-radius: 20px;
+	margin-top: 4px;
+	margin-right: 8px;
+	text-align: center;
+	line-height: 30px;
+	color: #777;
+}
+
+.selectedDay {
+	background: #81CC88;
+}
+
+#patientProfileHeader {
+	margin-top: 9px;
 }
 
 .greeting {

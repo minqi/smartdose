@@ -8,20 +8,26 @@
 		</div>
 		<div class="clearfix"></div>
 	</div>
-	<div id="addReminderListItem">
+	<div id="addReminderButtonContainer">
 		<div id="addReminderButton"></div>
 		<div id="addReminderButtonLabel">Add reminder</div>
 		<div class="clearfix"></div>
 	</div>
-	<div class="reminderFields no_display"><p/>
-		<input id="addReminderName" type="text" placeholder="Drug name"/><p/>
-		<input id="addReminderTime" type="time"/><p/>
-		<input type="checkbox" class="dayBubble"/>Mon
-		<input type="checkbox" class="dayBubble"/>Tue
-		<input type="checkbox" class="dayBubble"/>Wed
-		<input type="checkbox" class="dayBubble"/>Thu
-		<input type="checkbox" class="dayBubble"/>Fri
-		<input type="checkbox" class="dayBubble"/>Sat
-		<input type="checkbox" class="dayBubble"/>Sun
-	</div>
+	<form id="addReminderForm" class="no_display"><p/>
+		{% csrf_token %}
+		<input id="addReminderName" type="text" name="drug_name" placeholder="Drug name"/><p/>
+		<input id="addReminderTime" type="time" name="reminder_time"/><p/>
+		<input type="checkbox" class="dayBubble" name="mon"/>Mon
+		<input type="checkbox" class="dayBubble" name="tue"/>Tue
+		<input type="checkbox" class="dayBubble" name="wed"/>Wed
+		<input type="checkbox" class="dayBubble" name="thu"/>Thu
+		<input type="checkbox" class="dayBubble" name="fri"/>Fri
+		<input type="checkbox" class="dayBubble" name="sat"/>Sat
+		<input type="checkbox" class="dayBubble" name="sun"/>Sun
+		<p/>
+		<div id="addReminderCancel">Cancel</div>
+		<input type="submit" id="addReminderSubmit" value="Done"/>
+	</form>
+	<p/>
+	{% include 'fishfood/patient_reminders_list.html' %}
 </div>
