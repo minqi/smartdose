@@ -1,4 +1,5 @@
 from configs.dev import settings
+import twilio
 from twilio.rest import TwilioRestClient
 import datetime as datetime_orig
 import codecs
@@ -11,8 +12,6 @@ import phonenumbers
 twilio_client = TwilioRestClient(settings.TWILIO_ACCOUNT_SID, 
 								 settings.TWILIO_AUTH_TOKEN)
 twilio_number = settings.TWILIO_NUMBER
-
-
 
 class SMSLogger():
 	""" Used to log sent SMS content to a file and read back SMS content from file
@@ -43,7 +42,8 @@ class SMSLogger():
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'r', encoding=settings.SMS_ENCODING)
 		# Iterate through file until we get to last line of file
 		line = ""
-		for line in f:pass
+		for line in f:
+			pass
 		f.close()
 		return SMSLogger._decode_log(line)
 	@staticmethod
@@ -69,7 +69,12 @@ class SMSLogger():
 
 def sendTextMessageToNumber(body, to):
 	if not settings.DEBUG:
-		message = twilio_client.sms.messages.create(body=body, to=to, from_=twilio_number)
+		try: 
+			# just send first 160 char for now; plan to support concatenation in the future
+			body = body[:settings.TWILIO_MAX_SMS_LEN] #
+			message = twilio_client.sms.messages.create(body=body, to=to, from_=twilio_number)
+		except twilio.TwilioRestException as e:
+			print e
 
 	SMSLogger.log(to, body, datetime_orig.datetime.now())
 	return True

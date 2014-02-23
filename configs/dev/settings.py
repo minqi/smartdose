@@ -12,17 +12,17 @@ result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
 # Reminder system parameters
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 
-TEST_ALL_APPS = True
+TEST_ALL_APPS = False
 
 if TEST_ALL_APPS:
-    # TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
-    TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+    TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -88,7 +88,7 @@ MEDIA_URL = ''
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/var/www/example.com/static/"
-STATIC_ROOT = ''
+STATIC_ROOT = '/var/www/smartdose/static/'
 
 # URL prefix for static files.
 # Example: "http://example.com/static/", "http://static.example.com/"
@@ -179,7 +179,7 @@ SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 TWILIO_ACCOUNT_SID = "AC10e87781d9743eeff4c0bced97c9613e"
 TWILIO_AUTH_TOKEN = "4cd2e96f454ed2fd228ecee0c5050950"
 TWILIO_NUMBER =  "+18563243138"
-
+TWILIO_MAX_SMS_LEN = 160
 # Matt's account
 # TWILIO_ACCOUNT_SID = "AC31efceab15417e2e544393253ecd31fc"
 # TWILIO_AUTH_TOKEN = "e315c85df8ca8b54b954a9145fca481c"
