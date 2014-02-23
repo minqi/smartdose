@@ -64,6 +64,7 @@ def create_patient(request, *args, **kwargs):
 				if not created:
 					patient.status = PatientProfile.NEW
 					patient.save()
+				ReminderTime.objects.create_welcome_notification(to=patient)
 				return render_to_response('fishfood/patient_view.html', c)
 			return HttpResponseBadRequest("This phone number is already in use.")
 	# if badly formed request
