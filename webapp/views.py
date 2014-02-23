@@ -17,6 +17,8 @@ from patients.models import PatientProfile, SafetyNetRelationship, PrimaryContac
 from doctors.models import DoctorProfile
 from reminders.models import ReminderTime, Prescription, Message, SentReminder
 
+from lockdown.decorators import lockdown
+
 def landing_page(request):
 	return HttpResponse(content="STAY TUNED", content_type="text/plain")
 
@@ -28,6 +30,7 @@ class NewReminderForm(forms.Form):
 	drug_name = forms.CharField(max_length=80)
 	reminder_time = forms.TimeField(required=True)
 
+@lockdown()
 def fishfood(request):
 	c = RequestContext(request)
 	c['patient_search_results_list'] = PatientProfile.objects.filter(
@@ -35,6 +38,7 @@ def fishfood(request):
 
 	return render_to_response('fishfood/fishfood.html', c)
 
+@lockdown()
 # create new patient
 def create_patient(request, *args, **kwargs):
 	# validate form
@@ -65,6 +69,7 @@ def create_patient(request, *args, **kwargs):
 	# if badly formed request
 	return HttpResponseBadRequest("")
 
+@lockdown()
 def retrieve_patient(request, *args, **kwargs):
 	if request.GET:
 		c = RequestContext(request)
@@ -90,6 +95,7 @@ def retrieve_patient(request, *args, **kwargs):
 		return render_to_response('fishfood/patient_view.html', c)
 	return HttpResponseBadRequest("Something went wrong")
 
+@lockdown()
 def update_patient(request, *args, **kwargs):
 	if request.POST:
 		form = PatientForm(request.POST)
@@ -110,6 +116,7 @@ def update_patient(request, *args, **kwargs):
 				patient.primary_phone_number = primary_phone_number
 				patient.save()
 
+@lockdown()
 def delete_patient(request, *args, **kwargs):
 	if request.POST:
 		p_id = request.POST.get('p_id', None)
@@ -134,6 +141,7 @@ def delete_patient(request, *args, **kwargs):
 				return redirect('/fishfood/')
 	return HttpResponseBadRequest('Something went wrong')
 
+@lockdown()
 def patient_search_results(request, *args, **kwargs):
 	if request.GET:
 		q = request.GET['q']
@@ -148,10 +156,12 @@ def patient_search_results(request, *args, **kwargs):
 	else:
 		return HttpResponseBadRequest("Something went wrong")
 
+@lockdown()
 def patient_reminder_list(request, *args, **kwargs):
 	reminder_id = request.GET['id']
 	(reminder, exists) = ReminderTime.objects.get(id=reminder_id)
 
+@lockdown()
 def create_reminder(request, *args, **kwargs):
 	# update if reminder exists, else create it
 	if request.POST:
@@ -207,9 +217,11 @@ def create_reminder(request, *args, **kwargs):
 	else:
 		raise Http404
 
+@lockdown()
 def update_reminder(request, *args, **kwargs):
 	pass
 
+@lockdown()
 def delete_reminder(request, *args, **kwargs):
 	if request.POST:
 		p_id = request.POST['p_id']

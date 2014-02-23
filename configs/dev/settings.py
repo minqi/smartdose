@@ -21,8 +21,8 @@ REMINDER_MERGE_INTERVAL = 3600 # seconds
 TEST_ALL_APPS = True
 
 if TEST_ALL_APPS:
-    TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
-    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+    # TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+    TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -32,7 +32,7 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+#TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
 
 DATABASES = {
     'default': {
@@ -129,11 +129,13 @@ MIDDLEWARE_CLASSES = (
     #'django_pdb.middleware.PdbMiddleware'
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'lockdown.middleware.LockdownMiddleware',
+    # 'lockdown.middleware.LockdownMiddleware',
 )
 
 AUTH_USER_MODEL = 'common.UserProfile'
 AUTHENTICATION_BACKENDS = ('common.authentication.SettingsBackend',)
+
+SMS_ENCODING = 'utf-16-le'
 
 ROOT_URLCONF = 'configs.urls'
 
@@ -239,4 +241,4 @@ LOGGING = {
     }
 }
 
-LOCKDOWN_PASSWORDS = ('4266cc_thisisthewifipassword',)
+LOCKDOWN_PASSWORDS = ('beta',)

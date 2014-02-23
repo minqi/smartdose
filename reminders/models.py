@@ -48,26 +48,50 @@ class ReminderManager(models.Manager):
 				Q(send_time__lt=max_send_time_for_batch)
 			)
 
-		print "found reminders for " + str([r.to.first_name for r in reminders_at_time]) + "..."
 		return reminders_at_time
 
 	def create_prescription_reminders(self, to, repeat, prescription):
-		"""Schedule both a refill reminder and a medication reminder for a prescription"""
-		refill_reminder = ReminderTime.objects.get_or_create(to=to, 
-													 reminder_type=ReminderTime.REFILL, 
-												     repeat=repeat, 
-													 prescription=prescription)[0]
-		med_reminder = ReminderTime.objects.get_or_create(to=to, 
-												  reminder_type=ReminderTime.MEDICATION, 
-										  		  repeat=repeat, 
+		"""STUB: Schedule both a refill reminder and a medication reminder for a prescription"""
+		refill_reminder = None
+		if not prescription.filled:
+			refill_reminder = ReminderTime.objects.get_or_create(to=to,
+														 reminder_type=ReminderTime.REFILL,
+														 repeat=ReminderTime.DAILY,
+														 prescription=prescription)[0]
+		med_reminder = ReminderTime.objects.get_or_create(to=to,
+												  reminder_type=ReminderTime.MEDICATION,
+										  		  repeat=ReminderTime.DAILY,
 										  		  prescription=prescription)[0]
 		return (refill_reminder, med_reminder)
 
+
+	def create_prescription_reminders_from_reminder_schedule(self, to, prescription, reminder_schedule):
+		""" Take a prescription and a reminder schedule and schedule a refill reminder and medication reminders
+			reminder_schedule is a list of [repeat, send_time] tuples.
+		"""
+		refill_reminder = None
+		if not prescription.filled:
+			refill_reminder = ReminderTime.objects.get_or_create(to=to,
+																 reminder_type=ReminderTime.REFILL,
+																 repeat=ReminderTime.DAILY,
+																 send_time=reminder_schedule[0][1], #TODO(mgaba): Find the right way to make a proper default
+																 prescription=prescription)[0]
+		reminder_times = []
+		for reminder_schedule_entry in reminder_schedule:
+			reminder_time = ReminderTime.objects.create(to=to,
+														reminder_type=ReminderTime.MEDICATION,
+														prescription=prescription,
+														repeat=reminder_schedule_entry[0],
+														send_time=reminder_schedule_entry[1])
+			reminder_times.append(reminder_time)
+
+		return (refill_reminder, reminder_times)
+
 	def create_safety_net_notification(self, to, text):
 		safetynet_reminder = ReminderTime.objects.get_or_create(to=to, 
-														reminder_type=ReminderTime.SAFETY_NET,
-														repeat=ReminderTime.ONE_SHOT, 
-														text=text)[0]
+																reminder_type=ReminderTime.SAFETY_NET,
+																repeat=ReminderTime.ONE_SHOT,
+																text=text)[0]
 		return safetynet_reminder
 
 	def create_welcome_notification(self, to):
@@ -104,8 +128,6 @@ class ReminderTime(models.Model):
 		(YEARLY,   'yearly'),
 		(CUSTOM,   'custom'),
 	)
-	#TODO(mgaba): Write code to store an arbitrary function for "custom" types; 
-	# may involve serializing functions
 
 	# If value of week_of_month is 5, it means "last day of month" 
 	# e.g., last Tuesday of every month
@@ -299,6 +321,11 @@ class SentReminder(models.Model):
 		if self.reminder_time.reminder_type == ReminderTime.REFILL:
 			self.prescription.filled = True
 			self.prescription.save()
+			reminder_times = self.prescription.remindertime_set.all()
+			# Advance medication reminder send times to a point after the refill reminder is ack'd
+			for reminder_time in reminder_times:
+				if reminder_time.reminder_type == ReminderTime.MEDICATION:
+					reminder_time.update_to_next_send_time()
 			self.reminder_time.active = False
 			self.reminder_time.save()
 
