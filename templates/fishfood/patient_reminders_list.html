@@ -9,37 +9,37 @@
 					<div class="deleteReminderButton">Delete</div>
 					<div class="remindersListItemTime">{{ schedule.time|time:"g:i A" }}</div>
 					<div class="remindersListItemDays">
-						{% if 1 in schedule.days_of_week %}
+						{% if 1 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">M</div>
 						{% else %}
 						<div class="remindersListItemDay">M</div>
 						{% endif %}
-						{% if 2 in schedule.days_of_week %}
+						{% if 2 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">T</div>
 						{% else %}
 						<div class="remindersListItemDay">T</div>
 						{% endif %}
-						{% if 3 in schedule.days_of_week %}
+						{% if 3 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">W</div>
 						{% else %}
 						<div class="remindersListItemDay">W</div>
 						{% endif %}
-						{% if 4 in schedule.days_of_week %}
+						{% if 4 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">T</div>
 						{% else %}
 						<div class="remindersListItemDay">T</div>
 						{% endif %}
-						{% if 5 in schedule.days_of_week %}
+						{% if 5 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">F</div>
 						{% else %}
 						<div class="remindersListItemDay">F</div>
 						{% endif %}
-						{% if 6 in schedule.days_of_week %}
+						{% if 6 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">S</div>
 						{% else %}
 						<div class="remindersListItemDay">S</div>
 						{% endif %}
-						{% if 7 in schedule.days_of_week %}
+						{% if 7 in schedule.days_of_week or 8 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">S</div>
 						{% else %}
 						<div class="remindersListItemDay">S</div>

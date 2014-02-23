@@ -194,6 +194,10 @@ def create_reminder(request, *args, **kwargs):
 					break
 			med_reminder = None
 			if is_daily_reminder:
+				# remove all other reminders at this time
+				for r in existing_reminders:
+					if r.send_time.hour == reminder_time.hour and r.send_time.minute == reminder_time.minute:
+						r.delete()
 				send_datetime = datetime.datetime.combine(
 					datetime.datetime.today().date(), reminder_time)
 				med_reminder = ReminderTime.objects.get_or_create(
@@ -203,13 +207,17 @@ def create_reminder(request, *args, **kwargs):
 					repeat=ReminderTime.DAILY, 
 					prescription=prescription)[0]
 				med_reminder.update_to_next_send_time()
+				med_reminder.day_of_week = 8
+				med_reminder.save()
 
 			# otherwise, schedule weekly reminders
 			else:
 				for idx, day in enumerate(days):
 					if request.POST.get(day, None):
-						existing_reminders_for_day = existing_reminders.filter(day_of_week=idx+1)
 						skip_day = False
+						existing_reminders_for_day = existing_reminders.filter( 
+							Q(day_of_week=idx+1) | Q(repeat=ReminderTime.DAILY)
+						)
 						for r in existing_reminders_for_day:
 							if r.send_time.hour == reminder_time.hour and r.send_time.minute == reminder_time.minute:
 								skip_day = True
