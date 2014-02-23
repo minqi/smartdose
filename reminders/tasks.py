@@ -33,6 +33,7 @@ def sendRemindersForNow():
 	"""
 	now = datetime.datetime.now()
 	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
+	print 'Found ' + str(len(reminders_for_now)) + " reminders..."
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 	# Send a reminder to each patient with the pills they need to take
@@ -41,6 +42,7 @@ def sendRemindersForNow():
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
 		# p.sendReminders(p_reminders)
+		print 'Preparing to send reminders to ' + p.full_name + '...'
 		nc.send_notifications(to=p, notifications=p_reminders)
 
 def compute_adherent_and_nonadherent_patient_to_prescription_dict(window_start, window_finish, threshold, timeout):

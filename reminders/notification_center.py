@@ -137,6 +137,7 @@ class NotificationCenter(object):
 		elif isinstance(notifications, ReminderTime):
 			notifications = list_to_queryset([notifications])
 
+		print 'Sending reminders to ' + to.full_name + '!'
 		self.send_welcome_notifications(to, notifications)
 		self.send_refill_notifications(to, notifications)
 		self.send_medication_notifications(to, notifications)
