@@ -3,3 +3,4 @@
 .venv/
 fake_datasources/*
 celerybeat-schedule
+*.png
