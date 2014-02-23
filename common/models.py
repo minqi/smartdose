@@ -137,7 +137,7 @@ class UserProfile(AbstractBaseUser):
 
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
-	name = models.CharField(max_length=64, blank=False)
+	name = models.CharField(max_length=64, blank=False, unique=True)
 	# AI(minqi): add appropriate fields
 
 	def __init__(self, *args, **kwargs):

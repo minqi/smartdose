@@ -179,7 +179,7 @@ def create_reminder(request, *args, **kwargs):
 			drug_name = request.POST['drug_name'].strip().lower()
 			drug = Drug.objects.get_or_create(name=drug_name)[0]
 			prescription = Prescription.objects.get_or_create(
-				prescriber=dr_smartdose, patient=patient, drug=drug, filled=False)[0]
+				prescriber=dr_smartdose, patient=patient, drug=drug)[0]
 			reminder_time_str = request.POST['reminder_time']
 			reminder_time = datetime.datetime.strptime(reminder_time_str, '%H:%M').time()
 			existing_reminders = ReminderTime.objects.filter(
