@@ -194,7 +194,8 @@ def create_reminder(request, *args, **kwargs):
 					break
 			med_reminder = None
 			if is_daily_reminder:
-				send_datetime = datetime.datetime.combine(today.date(), reminder_time)
+				send_datetime = datetime.datetime.combine(
+					datetime.datetime.today().date(), reminder_time)
 				med_reminder = ReminderTime.objects.get_or_create(
 					to=patient, 
 					reminder_type=ReminderTime.MEDICATION,
