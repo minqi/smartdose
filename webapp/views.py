@@ -188,7 +188,7 @@ def create_reminder(request, *args, **kwargs):
 			# check if it's a daily reminder
 			is_daily_reminder = True
 			days = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
-			for day in days):
+			for day in days:
 				if not request.POST.get(day, None):
 					is_daily_reminder = False
 					break

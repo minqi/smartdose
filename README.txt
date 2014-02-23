@@ -19,7 +19,7 @@ Run a celery worker with embedded beat scheduler:
 celery -A celery_app worker -B -l info &
 
 Kill all celery workers
-ps auxww | grep 'celery worker' | awk '{print $2}' | xargs kill -9
+ps auxww | grep 'celery_app worker' | awk '{print $2}' | xargs kill -9
 
 Running gunicorn:
 gunicorn common.wsgi:application
