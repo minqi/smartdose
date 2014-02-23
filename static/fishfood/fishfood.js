@@ -7,7 +7,7 @@
 // listen for 
 	$(function() {
 		// DOM is ready
-		var DEBUG = true;
+		var DEBUG = false;
 		if (DEBUG) {
 			$(document).click(function(e){console.log(e.target)});
 		}
@@ -49,7 +49,7 @@
 				type : "get",
 				data : dynamicData,
 				success : function(data) {
-					$("#patientView").replaceWith(data).show();
+					$("#mainContentView").html(data).show();
 					add_patient_view.hide();
 				}
 			});
@@ -82,13 +82,47 @@
 				type: "post",
 				data: form.serialize(),
 				success: function(data) {
-					$("#patientView").replaceWith(data).show();
+					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
 					get_patient_search_results_list()
 				}
 			});
 		}
-		$("#addPatientForm").submit(submit_new_patient_form);
+		$("#mainContentView").on("submit", "#addPatientForm", submit_new_patient_form);
+
+		// delete button handler for new patient form
+		function delete_patient_button_clicked(e) {
+			$(e.target).hide();
+			$(".deletePatientConfirm").fadeIn();
+			$(".deletePatientConfirmYes").fadeIn();
+			$(".deletePatientConfirmNo").fadeIn();
+		}
+		main_col.on("click", ".deletePatientButton", delete_patient_button_clicked);
+
+		function delete_patient_cancel(e) {
+			$(".deletePatientConfirm").hide();
+			$(".deletePatientConfirmYes").hide();
+			$(".deletePatientConfirmNo").hide();
+			$(".deletePatientButton").fadeIn();
+		}
+		main_col.on("click", ".deletePatientConfirmNo", delete_patient_cancel);
+
+		function delete_patient_confirm(e) {
+			csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value; 
+			var dynamicData = {'csrfmiddlewaretoken':csrfmiddlewaretoken};
+			dynamicData['p_id'] = $("#patientView").attr("data-id");
+			$.ajax({
+				url: "/fishfood/patients/delete/",
+				type: "post",
+				data: dynamicData,
+				success: function(data) {
+					document.open();
+					document.write(data);
+					document.close();
+				}
+			});
+		}
+		main_col.on("click", ".deletePatientConfirmYes", delete_patient_confirm);
 
 		// click handler for add reminder button
 		function load_new_reminder_form(e) {
@@ -126,7 +160,7 @@
 							type: "get",
 							data: {'p_id': p_id},
 							success: function(data) {
-								$("#patientView").html(data);
+								$("#mainContentView").html(data);
 							}
 						});
 					}	
@@ -134,5 +168,37 @@
 			}
 		}
 		main_col.on("click", "#addReminderSubmit", submit_new_reminder_form);
+
+		function delete_reminder_confirm(e) {
+			csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value; 
+			var dynamicData = {'csrfmiddlewaretoken':csrfmiddlewaretoken};
+			dynamicData['p_id'] = $("#patientView").attr("data-id");
+			// need to get the drug name + time
+			var target = $(e.target);
+			var prescriptionsListItem = target.parents(".prescriptionsListItem")
+			dynamicData['drug_name'] = 
+				prescriptionsListItem.children(".prescriptionDrugName").text();
+			dynamicData['reminder_time'] = target.siblings(".remindersListItemTime").text();
+			$.ajax({
+				url: "/fishfood/reminders/delete/",
+				type: "post",
+				data: dynamicData,
+				success: function(data) {
+					var remindersListItem = target.parents(".remindersListItem");
+					remindersListItem.fadeOut();
+					if (prescriptionsListItem.find(".remindersListItem").length == 1) {
+						prescriptionsListItem.fadeOut();
+					}
+					remindersListItem.promise().done(function(){
+						remindersListItem.remove();
+						if (prescriptionsListItem.find(".remindersListItem").length == 0) {
+							prescriptionsListItem.remove();
+						}
+					});
+				}
+			});
+		}
+		main_col.on("click", ".deleteReminderButton", delete_reminder_confirm);
+
 	});
 }));

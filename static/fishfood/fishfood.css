@@ -6,10 +6,6 @@ html, body {
 
 body {
 	direction:ltr;
-/*	color:white;
-	background: #172839
-				url('/Users/minqi/projects/smartdose/static/img/background.png') 
-				top repeat-x;*/
 	font-family: "HelveticaNeue-Medium";
 	margin:0px;
 }
@@ -118,8 +114,7 @@ body {
 	width: 62px;
 	float: left;
 	/*border: 1px solid black;*/
-	background: url('/static/img/matt-thumb-test.png');
-	box-shadow: 0px 3px 2px #777;
+	background: url('/static/img/default-avatar.png');
 }
 
 #patientProfileHeader .patientListItemFullName {
@@ -155,14 +150,18 @@ body {
 	outline: none;
 }
 
-#addPatientCancel, #addReminderCancel {
+#addPatientCancel, #addReminderCancel,
+.deletePatientButton, .deletePatientConfirmYes,
+.deletePatientConfirmNo {
 	border: 1px solid #777;
 	border-radius: 8px;
 	float: left;
 	font-size: 18px;
 	padding: 7px;
 	font-family: "HelveticaNeue-Thin";
-	cursor:pointer;	
+	cursor:pointer;
+	width:54px;	
+	text-align:center;
 }
 
 #addPatientForm #addPatientSubmit {
@@ -211,6 +210,22 @@ body {
 	cursor:pointer;
 }
 
+.deletePatientButton {
+	float:right;
+	cursor:pointer;
+}
+
+.deletePatientConfirm {
+	float: right;
+}
+
+.deletePatientConfirmYes, .deletePatientConfirmNo {
+	float:right;
+	margin-left: 5px;
+	cursor:pointer;
+	border-radius: ;
+}
+
 .remindersListItemDay {
 	height: 30px;
 	width: 30px;
@@ -233,8 +248,10 @@ body {
 }
 
 .greeting {
+	float: left;
 	font-family: "HelveticaNeue-UltraLight";
 	font-size: 32px;
+	width:469px;
 }
 
 .prescriptItem {

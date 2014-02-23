@@ -1,13 +1,13 @@
 <div id="prescriptionsListContainer">
 	{% for drug_group in reminder_groups %}
 	<div class="prescriptionsListItem">
-		<div class"prescriptionDrugName">{{ drug_group.drug_name }}</div>
+		<div class="prescriptionDrugName">{{ drug_group.drug_name|capfirst }}</div>
 		<div class="remindersListContainer">
 			<ul class="remindersList unstyledList">
 				{% for schedule in drug_group.schedules %}
 				<li class="remindersListItem">
 					<div class="deleteReminderButton">Delete</div>
-					<div class="remindersListItemTime">{{ schedule.time }}</div>
+					<div class="remindersListItemTime">{{ schedule.time|time:"g:i A" }}</div>
 					<div class="remindersListItemDays">
 						{% if 1 in schedule.days_of_week %}
 						<div class="remindersListItemDay selectedDay">M</div>

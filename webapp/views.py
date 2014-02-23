@@ -1,6 +1,7 @@
 import datetime
 
 from django import forms
+from django.template import RequestContext
 from django.shortcuts import render_to_response, redirect
 from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.context_processors import csrf
@@ -10,11 +11,11 @@ from django.db.models import Q
 from localflavor.us.forms import USPhoneNumberField
 from itertools import groupby
 
-from common.utilities import next_weekday
+from common.utilities import next_weekday, convert_to_e164
 from common.models import Drug
-from patients.models import PatientProfile
+from patients.models import PatientProfile, SafetyNetRelationship, PrimaryContactRelationship
 from doctors.models import DoctorProfile
-from reminders.models import ReminderTime, Prescription
+from reminders.models import ReminderTime, Prescription, Message, SentReminder
 
 def landing_page(request):
 	return HttpResponse(content="STAY TUNED", content_type="text/plain")
@@ -28,9 +29,9 @@ class NewReminderForm(forms.Form):
 	reminder_time = forms.TimeField(required=True)
 
 def fishfood(request):
-	c = {}
-	c.update(csrf(request))
-	c['patient_search_results_list'] = PatientProfile.objects.all().order_by('full_name')
+	c = RequestContext(request)
+	c['patient_search_results_list'] = PatientProfile.objects.filter(
+		Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW)).order_by('full_name')
 
 	return render_to_response('fishfood/fishfood.html', c)
 
@@ -44,7 +45,7 @@ def create_patient(request, *args, **kwargs):
 			name_tokens = full_name.split()
 			first_name = name_tokens[0].strip()
 			last_name = "".join(name_tokens[1:]).strip()
-			primary_phone_number = request.POST['primary_phone_number']
+			primary_phone_number = convert_to_e164(request.POST['primary_phone_number'])
 			# create new patient
 			try: 
 				(patient, created) = PatientProfile.objects.get_or_create(
@@ -54,16 +55,19 @@ def create_patient(request, *args, **kwargs):
 			except ValidationError:
 				pass
 			else:
-				if created:
-					return render_to_response('fishfood/patient_view.html', {'patient': patient})
-			return HttpResponseBadRequest("This patient already exists")
+				c = RequestContext(request)
+				c['patient'] = patient
+				if not created:
+					patient.status = PatientProfile.NEW
+					patient.save()
+				return render_to_response('fishfood/patient_view.html', c)
+			return HttpResponseBadRequest("This phone number is already in use.")
 	# if badly formed request
 	return HttpResponseBadRequest("")
 
 def retrieve_patient(request, *args, **kwargs):
 	if request.GET:
-		c = {}
-		c.update(csrf(request))
+		c = RequestContext(request)
 
 		patient_id = request.GET['p_id']
 		patient = PatientProfile.objects.get(id=patient_id)
@@ -99,7 +103,7 @@ def update_patient(request, *args, **kwargs):
 			try:
 				patient = PatientProfile.objects.get(id=p_id)
 			except PatientProfile.DoesNotExist:
-				return HttpResponseBadRequest("Something went wrong")
+				return HttpResponseBadRequest('Something went wrong')
 			else:
 				patient.first_name = first_name
 				patient.last_name = last_name
@@ -108,14 +112,35 @@ def update_patient(request, *args, **kwargs):
 
 def delete_patient(request, *args, **kwargs):
 	if request.POST:
-		p_id = request.POST.get['p_id', None]
+		p_id = request.POST.get('p_id', None)
 		if p_id:
-			PatientProfile.objects.filter(id=p_id).delete()
+			try: 
+				patient = PatientProfile.objects.get(id=p_id)
+			except PatientProfile.DoesNotExist:
+				return HttpResponseBadRequest('Something went wrong')
+			else:
+				patient.status = PatientProfile.QUIT
+				patient.save()
+
+				# Delete patient's Prescriptions, Notifications
+				# and also SafetyNetRelationship, PrimaryContactRelationship objects for which
+				# the patient is the source_patient
+				# Note we keep outstanding Messages and SentReminders
+				Prescription.objects.filter(patient=patient).delete()
+				ReminderTime.objects.filter(to=patient).delete()
+				SafetyNetRelationship.objects.filter(source_patient=patient).delete()
+				PrimaryContactRelationship.objects.filter(source_patient=patient).delete()
+
+				return redirect('/fishfood/')
+	return HttpResponseBadRequest('Something went wrong')
 
 def patient_search_results(request, *args, **kwargs):
 	if request.GET:
 		q = request.GET['q']
-		results = PatientProfile.objects.filter(full_name__icontains=q).order_by('full_name')
+		results = PatientProfile.objects.filter(
+			Q(full_name__icontains=q) &
+			(Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW))
+		).order_by('full_name')
 		return render_to_response(
 			'fishfood/patient_search_results_list.html', 
 			{'patient_search_results_list':results}
@@ -129,8 +154,6 @@ def patient_reminder_list(request, *args, **kwargs):
 
 def create_reminder(request, *args, **kwargs):
 	# update if reminder exists, else create it
-	print request
-	print request.POST
 	if request.POST:
 		p_id = request.POST['p_id']
 		try:
@@ -138,30 +161,42 @@ def create_reminder(request, *args, **kwargs):
 		except PatientProfile.DoesNotExist:
 			return HttpResponseBadRequest("Something went wrong")
 		else:
-			dr_smartdose = DoctorProfile.objects.get_or_create(first_name="Smartdose", last_name="", primary_phone_number="+18569067308", birthday=datetime.date(2014, 1, 28))[0]
-			drug_name = request.POST['drug_name']
+			dr_smartdose = DoctorProfile.objects.get_or_create(
+				first_name="Smartdose", last_name="", 
+				primary_phone_number="+18569067308", 
+				birthday=datetime.date(2014, 1, 28))[0]
+			drug_name = request.POST['drug_name'].strip().lower()
 			drug = Drug.objects.get_or_create(name=drug_name)[0]
 			prescription = Prescription.objects.get_or_create(
 				prescriber=dr_smartdose, patient=patient, drug=drug, filled=False)[0]
 			reminder_time_str = request.POST['reminder_time']
 			reminder_time = datetime.datetime.strptime(reminder_time_str, '%H:%M').time()
+			existing_reminders = ReminderTime.objects.filter(
+				to=patient, prescription__drug__name__iexact=drug_name)
 			for idx, day in enumerate(('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')):
 				if request.POST.get(day, None):
-					today = datetime.datetime.today()
-					if today.weekday() == idx:
-						send_datetime = datetime.datetime.combine(today.date(), reminder_time)
-					else:
-						send_datetime = datetime.datetime.combine(
-							next_weekday(today.date(), idx), reminder_time
-						)
-					med_reminder = ReminderTime.objects.get_or_create(
-						to=patient, 
-						reminder_type=ReminderTime.MEDICATION,
-						send_time = send_datetime, 
-						repeat=ReminderTime.DAILY, 
-						prescription=prescription)[0]
-					med_reminder.day_of_week = idx + 1
-					med_reminder.save()
+					existing_reminders_for_day = existing_reminders.filter(day_of_week=idx+1)
+					skip_day = False
+					for r in existing_reminders_for_day:
+						if r.send_time.hour == reminder_time.hour and r.send_time.minute == reminder_time.minute:
+							skip_day = True
+							break
+					if not skip_day:
+						today = datetime.datetime.today()
+						if today.weekday() == idx:
+							send_datetime = datetime.datetime.combine(today.date(), reminder_time)
+						else:
+							send_datetime = datetime.datetime.combine(
+								next_weekday(today.date(), idx), reminder_time
+							)
+						med_reminder = ReminderTime.objects.get_or_create(
+							to=patient, 
+							reminder_type=ReminderTime.MEDICATION,
+							send_time = send_datetime, 
+							repeat=ReminderTime.DAILY, 
+							prescription=prescription)[0]
+						med_reminder.day_of_week = idx + 1
+						med_reminder.save()
 			# create a refill reminder for the patient
 			refill_reminder = ReminderTime.objects.get_or_create(
 				to=patient, 
@@ -176,4 +211,25 @@ def update_reminder(request, *args, **kwargs):
 	pass
 
 def delete_reminder(request, *args, **kwargs):
-	pass
+	if request.POST:
+		p_id = request.POST['p_id']
+		try:
+			patient = PatientProfile.objects.get(id=int(p_id))
+		except PatientProfile.DoesNotExist:
+			return HttpResponseBadRequest('Something went wrong')
+		else:
+			drug_name = request.POST['drug_name']
+			reminder_time = request.POST['reminder_time'].replace(' ', '').strip()
+			reminder_time = datetime.datetime.strptime(reminder_time, '%I:%M%p').time()
+			reminders = ReminderTime.objects.filter(
+				to=patient, prescription__drug__name__iexact=drug_name, 
+				reminder_type=ReminderTime.MEDICATION)
+			reminders_for_deletion = []
+			for r in reminders:
+				if r.send_time.time() == reminder_time:
+					reminders_for_deletion.append(r)
+			for r in reminders_for_deletion:
+				r.delete()
+			return HttpResponse('')
+	return HttpResponseBadRequest('Something went wrong')
+

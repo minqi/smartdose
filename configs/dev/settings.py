@@ -129,6 +129,7 @@ MIDDLEWARE_CLASSES = (
     #'django_pdb.middleware.PdbMiddleware'
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'lockdown.middleware.LockdownMiddleware',
 )
 
 AUTH_USER_MODEL = 'common.UserProfile'
@@ -166,6 +167,7 @@ INSTALLED_APPS = (
     # external apps
     'djcelery',
     'django_nose',
+    'lockdown',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -236,3 +238,5 @@ LOGGING = {
         },
     }
 }
+
+LOCKDOWN_PASSWORDS = ('4266cc_thisisthewifipassword',)

@@ -1,4 +1,8 @@
 <div id="patientView" data-id={{ patient.id }}>
+	<div class="deletePatientButton">Delete</div>
+	<div class="deletePatientConfirmYes no_display">Yes</div>
+	<div class="deletePatientConfirmNo no_display">No</div>
+	<div class="deletePatientConfirm no_display">Really delete patient?</div>
 	<div class="greeting">Here's the medical record for</div>
 	<div id="patientProfileHeader">
 		<div class="patientListItemPhoto"></div>
@@ -8,6 +12,7 @@
 		</div>
 		<div class="clearfix"></div>
 	</div>
+	<div class="clearfix"></div>
 	<div id="addReminderButtonContainer">
 		<div id="addReminderButton"></div>
 		<div id="addReminderButtonLabel">Add reminder</div>
@@ -31,3 +36,4 @@
 	<p/>
 	{% include 'fishfood/patient_reminders_list.html' %}
 </div>
+{% include 'fishfood/add_patient_view.html' %}

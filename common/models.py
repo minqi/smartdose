@@ -140,5 +140,8 @@ class Drug(models.Model):
 	name = models.CharField(max_length=64, blank=False)
 	# AI(minqi): add appropriate fields
 
-
-
+	def __init__(self, *args, **kwargs):
+		super(Drug, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.name = self.name.lower()
