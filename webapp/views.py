@@ -184,30 +184,51 @@ def create_reminder(request, *args, **kwargs):
 			reminder_time = datetime.datetime.strptime(reminder_time_str, '%H:%M').time()
 			existing_reminders = ReminderTime.objects.filter(
 				to=patient, prescription__drug__name__iexact=drug_name)
-			for idx, day in enumerate(('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')):
-				if request.POST.get(day, None):
-					existing_reminders_for_day = existing_reminders.filter(day_of_week=idx+1)
-					skip_day = False
-					for r in existing_reminders_for_day:
-						if r.send_time.hour == reminder_time.hour and r.send_time.minute == reminder_time.minute:
-							skip_day = True
-							break
-					if not skip_day:
-						today = datetime.datetime.today()
-						if today.weekday() == idx:
-							send_datetime = datetime.datetime.combine(today.date(), reminder_time)
-						else:
-							send_datetime = datetime.datetime.combine(
-								next_weekday(today.date(), idx), reminder_time
-							)
-						med_reminder = ReminderTime.objects.get_or_create(
-							to=patient, 
-							reminder_type=ReminderTime.MEDICATION,
-							send_time = send_datetime, 
-							repeat=ReminderTime.DAILY, 
-							prescription=prescription)[0]
-						med_reminder.day_of_week = idx + 1
-						med_reminder.save()
+
+			# check if it's a daily reminder
+			is_daily_reminder = True
+			days = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+			for day in days):
+				if not request.POST.get(day, None):
+					is_daily_reminder = False
+					break
+			med_reminder = None
+			if is_daily_reminder:
+				send_datetime = datetime.datetime.combine(today.date(), reminder_time)
+				med_reminder = ReminderTime.objects.get_or_create(
+					to=patient, 
+					reminder_type=ReminderTime.MEDICATION,
+					send_time = send_datetime, 
+					repeat=ReminderTime.DAILY, 
+					prescription=prescription)[0]
+				med_reminder.update_to_next_send_time()
+
+			# otherwise, schedule weekly reminders
+			else:
+				for idx, day in enumerate(days):
+					if request.POST.get(day, None):
+						existing_reminders_for_day = existing_reminders.filter(day_of_week=idx+1)
+						skip_day = False
+						for r in existing_reminders_for_day:
+							if r.send_time.hour == reminder_time.hour and r.send_time.minute == reminder_time.minute:
+								skip_day = True
+								break
+						if not skip_day:
+							today = datetime.datetime.today()
+							if today.weekday() == idx:
+								send_datetime = datetime.datetime.combine(today.date(), reminder_time)
+							else:
+								send_datetime = datetime.datetime.combine(
+									next_weekday(today.date(), idx), reminder_time
+								)
+							med_reminder = ReminderTime.objects.get_or_create(
+								to=patient, 
+								reminder_type=ReminderTime.MEDICATION,
+								send_time = send_datetime, 
+								repeat=ReminderTime.WEEKLY, 
+								prescription=prescription)[0]
+							med_reminder.day_of_week = idx + 1
+							med_reminder.save()
 			# create a refill reminder for the patient
 			refill_reminder = ReminderTime.objects.get_or_create(
 				to=patient, 
