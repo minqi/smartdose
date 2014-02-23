@@ -237,12 +237,19 @@ def delete_reminder(request, *args, **kwargs):
 			reminders = ReminderTime.objects.filter(
 				to=patient, prescription__drug__name__iexact=drug_name, 
 				reminder_type=ReminderTime.MEDICATION)
+			num_med_reminders = len(reminders)
 			reminders_for_deletion = []
 			for r in reminders:
 				if r.send_time.time() == reminder_time:
 					reminders_for_deletion.append(r)
+			if len(reminders_for_deletion) == num_med_reminders:
+				# if no more reminders for this drug, also delete any refill reminders for it
+				ReminderTime.objects.filter(
+					to=patient, prescription__drug__name__iexact=drug_name, 
+					reminder_type=ReminderTime.REFILL).delete()
 			for r in reminders_for_deletion:
 				r.delete()
+			
 			return HttpResponse('')
 	return HttpResponseBadRequest('Something went wrong')
 
