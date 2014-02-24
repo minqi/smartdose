@@ -125,7 +125,8 @@ class ResponseCenter(object):
 		""" Returns an HttpResponse object. Changes state of system based on action and sender's message
 		"""
 
-		if action == ResponseCenter.ACTION.NOT_VALID_MESSAGE:
+		if action == ResponseCenter.ACTION.NOT_VALID_MESSAGE or \
+			(sender and sender.did_quit() and action != ResponseCenter.ACTION.RESUME):
 			return self._process_not_valid_response()
 		elif action == ResponseCenter.ACTION.ACK:
 			return self._process_ack_response(sender, message)

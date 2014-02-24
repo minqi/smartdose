@@ -257,7 +257,6 @@ class MessageManager(models.Manager):
 	def create(self, patient):
 		# Calculate the appropriate message number
 		# Number of hours in the past to allow acking of messages. 
-		# (MESSAGE_CUTOFF == 23 hours avoids rounding problems and still gives a full days time to ack)
 		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
 		# Calculate the message number to assign to new message
 		new_message_number = 1

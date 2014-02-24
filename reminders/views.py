@@ -4,7 +4,7 @@ from reminders.response_center import ResponseCenter
 def handle_text(request):
 	try:
 		patient = PatientProfile.objects.get(primary_phone_number=request.GET['from'])
-	except:
+	except PatientProfile.DoesNotExist:
 		patient = None
 	rc = ResponseCenter()
 	action = rc.parse_message_to_action(patient, request.GET['body'])
