@@ -67,7 +67,7 @@ class NotificationCenterTest(TestCase):
 	def test_send_message(self):
 		self.patient1.status = UserProfile.ACTIVE
 		self.nc.send_message(to=self.patient1, notifications=self.med_reminders,
-			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)})
+			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)}, requires_ack=True)
 
 		# see if the right messages are created
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)

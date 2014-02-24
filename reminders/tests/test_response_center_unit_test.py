@@ -21,7 +21,7 @@ class RenderResponseFromActionTest(TestCase):
 	def test_ack_valid(self):
 		message_number = 1
 		ack_number = message_number
-		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED)
+		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, requires_ack=True)
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
@@ -40,7 +40,7 @@ class RenderResponseFromActionTest(TestCase):
 	def test_ack_invalid(self):
 		message_number = 1
 		ack_number = 2
-		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED)
+		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, requires_ack=True)
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
