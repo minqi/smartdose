@@ -13,7 +13,7 @@ Managing Postgresql:
 sudo -u postgres psql
 
 Start rabbitmq-server:
-sudo rabbitmq-server start
+sudo rabbitmq-server -detached
 
 Run a celery worker with embedded beat scheduler:
 celery -A celery_app worker -B -l info &
