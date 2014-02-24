@@ -1,0 +1,39 @@
+<div id="patientView" data-id={{ patient.id }}>
+	<div class="deletePatientButton">Delete</div>
+	<div class="deletePatientConfirmYes no_display">Yes</div>
+	<div class="deletePatientConfirmNo no_display">No</div>
+	<div class="deletePatientConfirm no_display">Really delete patient?</div>
+	<div class="greeting">Here's the medical record for</div>
+	<div id="patientProfileHeader">
+		<div class="patientListItemPhoto"></div>
+		<div class="patientListItemInfo">
+			<div class="patientListItemFullName">{{ patient.full_name }}</div>
+			<div class="patientListItemPhoneNumber">{{ patient.primary_phone_number }}</div>
+		</div>
+		<div class="clearfix"></div>
+	</div>
+	<div class="clearfix"></div>
+	<div id="addReminderButtonContainer">
+		<div id="addReminderButton"></div>
+		<div id="addReminderButtonLabel">Add reminder</div>
+		<div class="clearfix"></div>
+	</div>
+	<form id="addReminderForm" class="no_display"><p/>
+		{% csrf_token %}
+		<input id="addReminderName" type="text" name="drug_name" placeholder="Drug name"/><p/>
+		<input id="addReminderTime" type="time" name="reminder_time"/><p/>
+		<input type="checkbox" class="dayBubble" name="mon"/>Mon
+		<input type="checkbox" class="dayBubble" name="tue"/>Tue
+		<input type="checkbox" class="dayBubble" name="wed"/>Wed
+		<input type="checkbox" class="dayBubble" name="thu"/>Thu
+		<input type="checkbox" class="dayBubble" name="fri"/>Fri
+		<input type="checkbox" class="dayBubble" name="sat"/>Sat
+		<input type="checkbox" class="dayBubble" name="sun"/>Sun
+		<p/>
+		<div id="addReminderCancel">Cancel</div>
+		<input type="submit" id="addReminderSubmit" value="Done"/>
+	</form>
+	<p/>
+	{% include 'fishfood/patient_reminders_list.html' %}
+</div>
+{% include 'fishfood/add_patient_view.html' %}

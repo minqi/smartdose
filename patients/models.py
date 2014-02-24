@@ -3,10 +3,7 @@ from django.db import models
 from django.db import transaction
 from django.template.loader import render_to_string
 from common.models import UserProfile, UserProfileManager
-from common.utilities import sendTextMessageToNumber
-from reminders.models import Message, SentReminder, ReminderTime, Prescription
 from django.core.exceptions import ValidationError
-# from reminders.notification_center import NotificationCenter
 
 class SafetyNetRelationship(models.Model):
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship

@@ -1,0 +1,17 @@
+<div id="addPatientView" class="no_display">
+	<form id="addPatientForm" action="/fishfood/patients/new/" method="post">
+		{% csrf_token %}
+		<div class="greeting">Create a new medical record for</div>
+		<div id="patientProfileHeader">
+			<div class="patientListItemPhoto"></div>
+			<div class="patientListItemInfo">
+					<input id="id_full_name" type="text" name="full_name" placeholder="Name"/>
+					<input id="id_primary_phone_number" type="tel" name="primary_phone_number" 
+						placeholder="555-555-5555"/>
+			</div>
+			<div class="clearfix"></div>
+		</div>
+		<div id="addPatientCancel">Cancel</div>
+		<input id="addPatientSubmit" type="submit" value="Done"></input>
+	</form>
+</div>

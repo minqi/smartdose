@@ -1,19 +1,18 @@
 import datetime, calendar
-
 from django.db import models
 from django.db.models import Q
 from doctors.models import DoctorProfile
+from patients.models import PatientProfile
 from common.models import Drug
-from common.utilities import weekOfMonth, lastWeekOfMonth
 from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
 	prescriber     				= models.ForeignKey(DoctorProfile, blank=False)
-	patient        				= models.ForeignKey('patients.PatientProfile', blank=False)
+	patient        				= models.ForeignKey(PatientProfile, blank=False)
 	drug           				= models.ForeignKey(Drug, blank=False)
+	
 	safety_net_on				= models.BooleanField(default=False)
-
 	with_food      				= models.BooleanField(default=False)
 	with_water     				= models.BooleanField(default=False)
 	last_edited    				= models.DateTimeField(auto_now=True)
@@ -135,7 +134,7 @@ class ReminderTime(models.Model):
 	LAST_WEEK_OF_MONTH = 5
 
 	# required fields:
-	to       			= models.ForeignKey('patients.PatientProfile', null=False, blank=False)
+	to       			= models.ForeignKey(PatientProfile, null=False, blank=False)
 	reminder_type		= models.CharField(max_length=4,
 									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
 	repeat 				= models.CharField(max_length=2,
@@ -289,7 +288,7 @@ class Message(models.Model):
 		(ACKED, 	'a'),
 		(EXPIRED,	'e'))
 
-	patient        = models.ForeignKey('patients.PatientProfile', blank=False)
+	patient        = models.ForeignKey(PatientProfile, blank=False)
 	time_sent      = models.DateTimeField(auto_now_add=True)
 	message_number = models.PositiveIntegerField(blank=False, null=False, default=1)
 	state          = models.CharField(max_length=2,

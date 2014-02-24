@@ -1,10 +1,12 @@
-Django==1.6.1
+Django==1.6.2
 Werkzeug==0.9.4
 amqp==1.4.2
 anyjson==0.3.3
 billiard==3.3.0.14
 celery==3.1.8
 django-celery==3.1.1
+django-localflavor==1.0
+django-lockdown==1.0
 django-nose==1.2
 fake-factory==0.3.2
 freezegun==0.1.12

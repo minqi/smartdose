@@ -9,8 +9,8 @@ from django.template.loader import render_to_string
 from django.db.models import Q
 from reminders.models import ReminderTime, Message, SentReminder
 from common.models import UserProfile
-from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
+from patients.models import PatientProfile, SafetyNetRelationship
 from reminders.notification_center import NotificationCenter
 
 FAKE_CSV = False # Use fake patient csv data for 

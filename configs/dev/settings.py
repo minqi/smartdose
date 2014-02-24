@@ -21,8 +21,8 @@ REMINDER_MERGE_INTERVAL = 3600 # seconds
 TEST_ALL_APPS = True
 
 if TEST_ALL_APPS:
-    TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
-    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+    # TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
+    TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -99,6 +99,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    os.path.join(PROJECT_ROOT, "static"),
 )
 
 # List of finder classes that know how to find static files in
@@ -128,6 +129,7 @@ MIDDLEWARE_CLASSES = (
     #'django_pdb.middleware.PdbMiddleware'
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'lockdown.middleware.LockdownMiddleware',
 )
 
 AUTH_USER_MODEL = 'common.UserProfile'
@@ -141,7 +143,7 @@ ROOT_URLCONF = 'configs.urls'
 WSGI_APPLICATION = 'common.wsgi.application'
 
 TEMPLATE_DIRS = (
-    PROJECT_ROOT + '/templates/'
+    PROJECT_ROOT + '/templates/',
 )
 
 INSTALLED_APPS = (
@@ -158,7 +160,7 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
 
     # smartdose apps
-    'landing',
+    'webapp',
     'common',
     'doctors',
     'patients',
@@ -167,6 +169,7 @@ INSTALLED_APPS = (
     # external apps
     'djcelery',
     'django_nose',
+    'lockdown',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -237,3 +240,5 @@ LOGGING = {
         },
     }
 }
+
+LOCKDOWN_PASSWORDS = ('beta',)
