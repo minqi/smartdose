@@ -72,7 +72,7 @@ def sendTextMessageToNumber(body, to):
 		try: 
 			# just send first 160 char for now; plan to support concatenation in the future
 			body = body[:settings.TWILIO_MAX_SMS_LEN] #
-			message = twilio_client.sms.messages.create(body=body, to=to, from_=twilio_number)
+			message = twilio_client.messages.create(body=body, to=to, from_=twilio_number)
 		except twilio.TwilioRestException as e:
 			print e
 
