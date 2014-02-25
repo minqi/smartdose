@@ -2,7 +2,7 @@ from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
     url(r'^$', 'webapp.views.landing_page', name='landing'),
-    url(r'^textmessage_response/', 'reminders.views.handle_text'),
+    url(r'^textmessage_response/$', 'reminders.views.handle_text'),
 
     # Fishfood URLs
     url(r'^fishfood/$', 'webapp.views.fishfood'),

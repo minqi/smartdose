@@ -2,6 +2,7 @@ from patients.models import PatientProfile
 from reminders.response_center import ResponseCenter
 
 def handle_text(request):
+	print 'got in here!!'
 	try:
 		patient = PatientProfile.objects.get(primary_phone_number=request.GET['From'])
 	except:

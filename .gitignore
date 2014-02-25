@@ -1,6 +1,9 @@
 *.pyc
+*.png
 *~
 .venv/
 fake_datasources/*
 celerybeat-schedule
-*.png
+text_message_output
+message_output
+
