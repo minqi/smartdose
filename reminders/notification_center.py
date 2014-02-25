@@ -38,7 +38,7 @@ class NotificationCenter(object):
 			return tuple(chunks)
 		return
 
-	def send_message(self, to, notifications, requires_ack, body=None, template=None, context=None):
+	def send_message(self, to, notifications, body=None, template=None, context=None):
 		"""
 		Send text message to patient <to>, where message body is a message template <template> 
 		filled with values from dictionary <context>
@@ -49,7 +49,7 @@ class NotificationCenter(object):
 		if notifications.__class__ == ReminderTime:
 			notifications = [notifications]
 
-		message = Message.objects.create(patient=to, requires_ack=requires_ack)
+		message = Message.objects.create(patient=to, message_type=notifications[0].reminder_type)
 		if context:
 			context['message_number'] = message.message_number
 		else:
@@ -78,12 +78,11 @@ class NotificationCenter(object):
 		Send welcome notification in QuerySet <notifications> to recipient <to>
 		"""
 		notifications = notifications.filter(to=to, reminder_type=ReminderTime.WELCOME)
-		requires_ack = False
 		if notifications.exists() and to.status == PatientProfile.NEW:
 			welcome_notification = list(notifications.order_by('send_time'))[0]
 			context = {'patient_first_name':to.first_name}
 			self.send_message(to=to, notifications=welcome_notification, 
-				template='messages/welcome_reminder.txt', context=context, requires_ack=requires_ack)
+				template='messages/welcome_reminder.txt', context=context)
 
 			# officially active recipient user's account
 			to.status = UserProfile.ACTIVE 
@@ -94,14 +93,13 @@ class NotificationCenter(object):
 		Send refill notifications in QuerySet <notifications> to recipient <to>
 		"""
 		notifications = notifications.filter(to=to, reminder_type=ReminderTime.REFILL)
-		requires_ack = True
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
 			for group in notification_groups:
 				context = {'reminder_list': group}
 				self.send_message(to=to, notifications=group,
-					template='messages/refill_reminder.txt', context=context, requires_ack=requires_ack)
+					template='messages/refill_reminder.txt', context=context)
 
 	def send_medication_notifications(self, to, notifications):
 		"""
@@ -109,25 +107,23 @@ class NotificationCenter(object):
 		"""
 		notifications = notifications.filter(to=to,
 			reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
-		requires_ack = True
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
 			for group in notification_groups:
 				context = {'reminder_list': group}
 				self.send_message(to=to, notifications=group,
-					template='messages/medication_reminder.txt', context=context, requires_ack=requires_ack)
+					template='messages/medication_reminder.txt', context=context)
 
 	def send_safetynet_notifications(self, to, notifications):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
 		notifications = notifications.filter(to=to, reminder_type=ReminderTime.SAFETY_NET)
-		requires_ack = False
 		if notifications.exists() and to.status in (PatientProfile.NEW, PatientProfile.ACTIVE):
 			notifications = notifications.order_by("send_time")
 			for notification in notifications:
-				self.send_message(to=to, notifications=notification, body=notification.text, requires_ack=requires_ack)
+				self.send_message(to=to, notifications=notification, body=notification.text)
 
 	def send_notifications(self, to, notifications):
 		"""

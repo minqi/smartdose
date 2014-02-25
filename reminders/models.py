@@ -60,8 +60,8 @@ class ReminderManager(models.Manager):
 														 prescription=prescription)[0]
 		med_reminder = ReminderTime.objects.get_or_create(to=to,
 												  reminder_type=ReminderTime.MEDICATION,
-										  		  repeat=ReminderTime.DAILY,
-										  		  prescription=prescription)[0]
+												  repeat=ReminderTime.DAILY,
+												  prescription=prescription)[0]
 		return (refill_reminder, med_reminder)
 
 
@@ -253,8 +253,8 @@ class ReminderTime(models.Model):
 
 
 class MessageManager(models.Manager):
-	def create(self, patient, requires_ack):
-		if requires_ack:
+	def create(self, patient, message_type):
+		if message_type in [Message.REFILL, Message.MEDICATION]:
 			# Calculate the appropriate message number
 			# Number of hours in the past to allow acking of messages.
 			expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
@@ -276,7 +276,7 @@ class MessageManager(models.Manager):
 			expired_messages.update(state=Message.EXPIRED)
 		else:
 			new_message_number = None
-		return super(MessageManager, self).create(patient=patient, message_number=new_message_number, requires_ack=requires_ack)
+		return super(MessageManager, self).create(patient=patient, message_number=new_message_number, message_type=message_type)
 
 class Message(models.Model):
 	"""Model for messages that have been sent to users"""
@@ -289,16 +289,29 @@ class Message(models.Model):
 	STATE_CHOICES = (
 		(UNACKED, 	'u'),
 		(ACKED, 	'a'),
-		(EXPIRED,	'e'))
+		(EXPIRED,   'e'),
+	)
 
-	patient        = models.ForeignKey(PatientProfile, blank=False)
-	time_sent      = models.DateTimeField(auto_now_add=True)
-	message_number = models.PositiveIntegerField(blank=True, null=True, default=1)
-	state          = models.CharField(max_length=2,
+	WELCOME     = 'w'
+	MEDICATION 	= 'm'
+	REFILL 		= 'r'
+	SAFETY_NET  = 's'
+	REMINDER_TYPE_CHOICES = (
+		(WELCOME,    'welcome'),
+		(MEDICATION, 'medication'),
+		(REFILL,	 'refill'),
+		(SAFETY_NET, 'safety_net'),
+	)
+
+	patient         = models.ForeignKey(PatientProfile, blank=False)
+	time_sent       = models.DateTimeField(auto_now_add=True)
+	message_number  = models.PositiveIntegerField(blank=True, null=True, default=1)
+	state           = models.CharField(max_length=2,
 											   choices=STATE_CHOICES,
 											   default=UNACKED)
-	requires_ack    = models.BooleanField(blank=False, null=False)
-	objects		   = MessageManager()
+	message_type    = models.CharField(max_length=4,
+	                                        choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	objects		    = MessageManager()
 
 	def processAck(self):
 		self.state = Message.ACKED

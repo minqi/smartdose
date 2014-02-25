@@ -67,7 +67,7 @@ class NotificationCenterTest(TestCase):
 	def test_send_message(self):
 		self.patient1.status = UserProfile.ACTIVE
 		self.nc.send_message(to=self.patient1, notifications=self.med_reminders,
-			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)}, requires_ack=True)
+			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)})
 
 		# see if the right messages are created
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
@@ -97,6 +97,9 @@ class NotificationCenterTest(TestCase):
 		# see if message is sent
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
 
+		# see if message number is not set
+		self.assertEqual(Message.objects.filter(patient=self.patient1)[0].message_number, None)
+
 		# see if the patient's status is changed from NEW to ACTIVE
 		self.assertTrue(self.patient1.status == UserProfile.ACTIVE)
 
@@ -114,6 +117,9 @@ class NotificationCenterTest(TestCase):
 		self.patient2.status = UserProfile.ACTIVE
 		self.nc.send_notifications(to=self.patient2, notifications=self.refill_reminder)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 1)
+
+		# see if message number is set
+		self.assertEqual(Message.objects.filter(patient=self.patient2)[0].message_number, 1)
 
 		# check that send_time is properly incremented
 		self.refill_reminder = ReminderTime.objects.get(pk=self.refill_reminder.pk)
@@ -135,6 +141,9 @@ class NotificationCenterTest(TestCase):
 		self.prescription2.save()
 		self.nc.send_notifications(to=self.patient2, notifications=self.med_reminder)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 1)
+
+		# see if message number is set
+		self.assertEqual(Message.objects.filter(patient=self.patient2)[0].message_number, 1)
 		# # check that send_time is properly incremented
 		self.med_reminder = ReminderTime.objects.get(pk=self.med_reminder.pk)
 		self.assertTrue(self.med_reminder.send_time.day > datetime.datetime.now().day)
@@ -144,6 +153,9 @@ class NotificationCenterTest(TestCase):
 		self.patient1.status = UserProfile.ACTIVE
 		self.nc.send_notifications(to=self.patient1, notifications=self.safetynet_notification)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
+
+		# see if message number is not set
+		self.assertEqual(Message.objects.filter(patient=self.patient1)[0].message_number, None)
 
 		# check that safety-net notification is deactivated
 		self.safetynet_notification = ReminderTime.objects.get(pk=self.safetynet_notification.pk)
