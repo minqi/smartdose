@@ -25,15 +25,34 @@ class RenderResponseFromActionTest(TestCase):
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
-			if message_number is "1":
+			if message_number == "1":
 				return valid_message_as_list
-			elif message_number is not None:
+			elif message_number != None:
 				return []
 			else:
 				raise Exception("Must specify message_number here")
 		self.assertEqual(valid_message.state, Message.UNACKED)
 		with mock.patch('reminders.models.Message.objects.filter', fake_filter):
 			response = self.rc.render_response_from_action(ResponseCenter.ACTION.ACK, self.minqi, str(ack_number))
+			self.assertEqual("Your family will be happy to know that you're taking care of your health.", response.content)
+			self.assertEqual(valid_message.state, Message.ACKED)
+
+	def test_ack_valid_quotes_in_message(self):
+		message_number = 1
+		response_message = "\'" + str(message_number) + "\'"
+		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, message_type=Message.REFILL)
+		valid_message_as_list = [valid_message]
+		# Create a fake Message.objects.filter method to patch into our code.
+		def fake_filter(message_number, **kwargs):
+			if message_number == "1":
+				return valid_message_as_list
+			elif message_number != None:
+				return []
+			else:
+				raise Exception("Must specify message_number here")
+		self.assertEqual(valid_message.state, Message.UNACKED)
+		with mock.patch('reminders.models.Message.objects.filter', fake_filter):
+			response = self.rc.render_response_from_action(ResponseCenter.ACTION.ACK, self.minqi, response_message)
 			self.assertEqual("Your family will be happy to know that you're taking care of your health.", response.content)
 			self.assertEqual(valid_message.state, Message.ACKED)
 
@@ -44,9 +63,9 @@ class RenderResponseFromActionTest(TestCase):
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
-			if message_number is "1":
+			if message_number == "1":
 				return valid_message_as_list
-			elif message_number is not None:
+			elif message_number != None:
 				return []
 			else:
 				raise Exception("Must specify message_number here")
@@ -119,15 +138,6 @@ class RenderResponseFromActionTest(TestCase):
 
 
 class ParseMessageToActionTest(TestCase):
-	#TODO(mgaba): Write tests for SMSResponsesToReminders:
-	#TODO(mgaba): Test "hello" response
-	#TODO(mgaba): Test number and letter response
-	#TODO(mgaba): Test proper acknowledgment
-	#TODO(mgaba): Test acknowledgment of just-acknowledged message
-	#TODO(mgaba): Test acknowledgment with wrong message number
-	#TODO(mgaba): Test a text from an unknown number
-	#TODO(mgaba): Test an ack of a pharmacy refill reminder
-	#TODO(mgaba): Test opt-out interaction
 	def setUp(self):
 		self.rc = ResponseCenter()
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
@@ -141,6 +151,16 @@ class ParseMessageToActionTest(TestCase):
 	def test_parse_message_to_action_ack_standard_ack(self):
 		sender = self.minqi
 		message = "1"
+		self.assertEqual(self.rc.parse_message_to_action(sender, message), ResponseCenter.ACTION.ACK)
+
+	def test_parse_message_to_action_ack_double_quotes_in_message(self):
+		sender = self.minqi
+		message = "\"1\""
+		self.assertEqual(self.rc.parse_message_to_action(sender, message), ResponseCenter.ACTION.ACK)
+
+	def test_parse_message_to_action_ack_single_quotes_in_message(self):
+		sender = self.minqi
+		message = "\'1\'"
 		self.assertEqual(self.rc.parse_message_to_action(sender, message), ResponseCenter.ACTION.ACK)
 
 	def test_parse_message_to_action_ack_zero_ack(self):

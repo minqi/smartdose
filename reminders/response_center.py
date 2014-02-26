@@ -13,6 +13,7 @@ class ResponseCenter(object):
 	def _parse_is_ack(self, message):
 		""" Returns true if the message is an acknowledgment message
 		"""
+		message = message.replace("\'", "").replace("\"", "") # Users may reply with quotation marks, so remove quotes
 		try:
 			if float(message) >= 0:
 				return True
@@ -43,7 +44,7 @@ class ResponseCenter(object):
 			sender is a PatientProfile object.
 			message is the content of the text message sent to Smartdose
 		"""
-		if message is None or sender is None:
+		if message == None or sender == None:
 			return ResponseCenter.ACTION.NOT_VALID_MESSAGE
 
 		if self._parse_is_ack(message):
@@ -86,7 +87,8 @@ class ResponseCenter(object):
 	def _process_not_valid_response(self):
 		return HttpResponseNotFound()
 
-	def _process_ack_response(self, sender, message_number):
+	def _process_ack_response(self, sender, message):
+		message_number = message.replace("\'", "").replace("\"", "") # Users may reply with quotation marks, so remove quotes
 		acked_messages = Message.objects.filter(patient=sender,
 												message_number=message_number,
 												state=Message.UNACKED)

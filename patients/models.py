@@ -81,7 +81,7 @@ class PatientProfile(UserProfile):
 		super(PatientProfile, self).__init__(*args, **kwargs)
 		if self.id:
 			return
-		if self.primary_phone_number is None and self.has_primary_contact is False:
+		if self.primary_phone_number == None and self.has_primary_contact == False:
 			raise ValidationError('Must provide either a primary phone number or primary contact')
 
 	def quit(self):
