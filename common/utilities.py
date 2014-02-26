@@ -1,3 +1,4 @@
+import json
 from configs.dev import settings
 from twilio.rest import TwilioRestClient
 import datetime as datetime_orig
@@ -26,21 +27,17 @@ class SMSLogger():
 	def _decode_log(string):
 		if string == "" or string == None or string == "\n":
 			return None
-		# Decode datetime from log
-		datetime_sent = datetime_orig.datetime.strptime(string[0:string.index(SMSLogger.DATETIME_DELIMITER)], '%Y-%m-%d %H:%M:%S')
-		# Decode to number from log
-		to = string[string.index(SMSLogger.DATETIME_DELIMITER)+1:string.index(SMSLogger.TO_NUMBER_DELIMITER)]
-		# Decode content from log
-		content = string[string.index(SMSLogger.TO_NUMBER_DELIMITER)+1:string.index(SMSLogger.CONTENT_DELIMITER)]
-		message_log_entry = type('message_log_entry', (object,),
-			{'datetime_sent':datetime_sent, 'to':to, 'content':content})()
-		return message_log_entry
+		log_data = json.loads(string)
+		datetime = datetime_orig.datetime.strptime(log_data['datetime_sent'], '%Y-%m-%d %H:%M:%S')
+		log_data['datetime_sent'] = datetime
+		return log_data
+
 	@staticmethod
 	def getLastSentMessage():
 		if not settings.DEBUG:
 			raise Exception("getLastSentMessageContent should only be used in test setting")
 
-		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'r', encoding=settings.SMS_ENCODING)
+		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'r')
 		# Iterate through file until we get to last line of file
 		line = ""
 		for line in f:pass
@@ -51,7 +48,7 @@ class SMSLogger():
 		if not settings.DEBUG:
 			raise Exception("getLastNSentMessageContent should only be used in test setting")
 		l = []
-		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'r', encoding=settings.SMS_ENCODING)
+		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'r')
 		# Iterate through file until we get to last line of file
 		for message in f: l.append(message.rstrip('\n'))
 		f.close()
@@ -62,9 +59,9 @@ class SMSLogger():
 		return messages
 	@staticmethod
 	def log(to_number, content, datetime_sent):
-		log_body = content.replace('\n', SMSLogger.NEWLINE_ENCODER) # Replace '\n' with "Information seperator four" in the logs so that '\n' will only be used to serialize messages
-		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'a', encoding=settings.SMS_ENCODING)
-		f.write(str(datetime_sent) + SMSLogger.DATETIME_DELIMITER + to_number + SMSLogger.TO_NUMBER_DELIMITER + log_body + SMSLogger.CONTENT_DELIMITER + "\n")
+		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'a')
+		log_data = {'datetime_sent': str(datetime_sent), 'to': to_number, 'content':content}
+		f.write(json.dumps(log_data)+"\n")
 		f.close()
 
 def sendTextMessageToNumber(body, to):

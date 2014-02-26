@@ -70,20 +70,20 @@ class TestReminderDelivery(TestCase):
 		# Time is now expected_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, expected_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], expected_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Advance time by a day
 		old_delivery_time = expected_delivery_time
 		expected_delivery_time = expected_delivery_time + datetime.timedelta(hours=24)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, expected_delivery_time, datetime.timedelta(hours=1))
 		# Make sure no reminders were sent in that time
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Time is now expected_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, expected_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], expected_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
 	# TEST 2: Test that a prescription reminder is delivered bi-weekly.
 	def test_biweekly_delivery(self):
@@ -109,20 +109,20 @@ class TestReminderDelivery(TestCase):
 		# Time is now sunday_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, sunday_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], sunday_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Next sunday's delivery time is a week away
 		old_delivery_time = sunday_delivery_time
 		sunday_delivery_time = sunday_delivery_time + datetime.timedelta(weeks=1)
 		# Advance to tuesday_delivery_time
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, tuesday_delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Time is now tuesday_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, tuesday_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], tuesday_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
 		# Test the second weeks worth of messages
 		# Next Tuesday's delivery time is a week away, so increment
@@ -130,23 +130,23 @@ class TestReminderDelivery(TestCase):
 		tuesday_delivery_time = tuesday_delivery_time + datetime.timedelta(weeks=1)
 		# Advance to second week, sunday_delivery_time
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, sunday_delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Time is now sunday_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, sunday_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], sunday_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Advance to tuesday_delivery_time
 		old_delivery_time = sunday_delivery_time
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, tuesday_delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# This time, we should send the message at the appropriate time
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, tuesday_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], tuesday_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
 	# TEST 3: Test that a prescription reminder is delivered monthly
 	def test_monthly_delivery(self):
@@ -171,20 +171,20 @@ class TestReminderDelivery(TestCase):
 		# Time is now expected_delivery_time, so make sure the message is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, expected_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], expected_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Advance to next month
 		old_delivery_time = expected_delivery_time
 		# First reminder is sent on 10/13/2013. Second reminder will be sent a month later on 11/13/2013
 		expected_delivery_time = datetime.datetime.combine(datetime.date(year=2013, month=11, day=13), expected_delivery_time.time())
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, expected_delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		# Time is now expected_delivery_time, so make sure the message is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, expected_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
+		self.assertEqual(message['datetime_sent'], expected_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
 	# TEST 4: Test the behavior after a user acks a refill reminder
 	def test_refill_ack_and_medication_reminder(self):
@@ -208,9 +208,9 @@ class TestReminderDelivery(TestCase):
 		refill_content = "It's important you fill your " + self.vitamin.name + " prescription as soon as possible. Reply '1' when you've received your medicine."
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		self.assertEqual(message.datetime_sent, delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
-		self.assertEqual(message.content, refill_content)
+		self.assertEqual(message['datetime_sent'], delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], refill_content)
 		# User acknowledges they have received their prescription an hour after receiving refill reminder
 		self.current_time = self.current_time + datetime.timedelta(hours=1)
 		self.freezer = freeze_time(self.current_time)
@@ -221,17 +221,17 @@ class TestReminderDelivery(TestCase):
 		old_delivery_time = delivery_time
 		delivery_time = delivery_time + datetime.timedelta(hours=24)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message.datetime_sent, old_delivery_time)
-		self.assertEqual(message.to, self.minqi.primary_phone_number)
-		self.assertEqual(message.content, refill_content)
+		self.assertEqual(message['datetime_sent'], old_delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], refill_content)
 		# Time is now delivery_time, so be sure the appropriate medication reminder is sent
 		medicine_content = "Time to take your " + self.vitamin.name + ". Reply '1' when you finish."
 		reminder_tasks.sendRemindersForNow()
 		# Test the two most recent messages to be sure the med reminder was sent and a new refill reminder did not slip in there.
 		messages = SMSLogger.getLastNSentMessages(2)
-		self.assertEqual(messages[1].datetime_sent, delivery_time)
-		self.assertEqual(messages[1].to, self.minqi.primary_phone_number)
-		self.assertEqual(messages[1].content, medicine_content)
-		self.assertEqual(messages[0].datetime_sent, old_delivery_time)
-		self.assertEqual(messages[0].to, self.minqi.primary_phone_number)
-		self.assertEqual(messages[0].content, refill_content)
+		self.assertEqual(messages[1]['datetime_sent'], delivery_time)
+		self.assertEqual(messages[1]['to'], self.minqi.primary_phone_number)
+		self.assertEqual(messages[1]['content'], medicine_content)
+		self.assertEqual(messages[0]['datetime_sent'], old_delivery_time)
+		self.assertEqual(messages[0]['to'], self.minqi.primary_phone_number)
+		self.assertEqual(messages[0]['content'], refill_content)
