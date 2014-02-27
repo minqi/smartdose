@@ -98,6 +98,13 @@ def is_today(dt): #TODO(minqi):test
 	today = datetime_orig.datetime.now().date()
 	return dt_time == today
 
+def is_integer(s):
+	try:
+		int(s)
+		return True
+	except ValueError:
+		return False
+
 def list_to_queryset(l):
 	"""
 	Takes a list of instances all of the same Model subclass

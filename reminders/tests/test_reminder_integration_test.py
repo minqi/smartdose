@@ -216,7 +216,7 @@ class TestReminderDelivery(TestCase):
 		self.freezer = freeze_time(self.current_time)
 		self.freezer.start()
 		c = Client()
-		c.get('/textmessage_response/', {'from': self.minqi.primary_phone_number, 'body': '1'})
+		c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': '1'})
 		# Advance time another day and be sure no reminders are sent
 		old_delivery_time = delivery_time
 		delivery_time = delivery_time + datetime.timedelta(hours=24)

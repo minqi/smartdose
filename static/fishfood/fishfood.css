@@ -181,6 +181,10 @@ body {
 	cursor:pointer;
 }
 
+#addReminderName {
+	float: left;
+}
+
 #addReminderButtonLabel {
 	font-family: "HelveticaNeue-Medium";
 	font-size: 32px;
@@ -237,6 +241,10 @@ body {
 	text-align: center;
 	line-height: 30px;
 	color: #777;
+}
+
+#sendRefillReminderCheckbox {
+	float: left;
 }
 
 .selectedDay {

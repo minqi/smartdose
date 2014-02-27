@@ -1,10 +1,12 @@
 import datetime
+
 from django.db import models
 from django.db import transaction
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.contrib.auth import hashers
-from django.db.models.signals import pre_save
+from django.core.exceptions import ValidationError
 from django.dispatch import receiver
+
 from common.utilities import convert_to_e164
 
 class Country(models.Model):
@@ -114,7 +116,12 @@ class UserProfile(AbstractBaseUser):
 			return
 		self.username = self.get_unique_username(self)
 		self.full_name = self.get_full_name()
-		self.primary_phone_number = convert_to_e164(self.primary_phone_number) 
+		self.primary_phone_number = convert_to_e164(self.primary_phone_number)
+
+	def save(self, *args, **kwargs):
+		if len(self.first_name) == 0:
+			raise ValidationError('UserProfile must have a first name')
+		super(UserProfile, self).save(*args, **kwargs)
 
 	@staticmethod
 	def get_unique_username(obj):

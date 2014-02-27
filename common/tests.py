@@ -80,8 +80,8 @@ class TestListToQuerySet(TestCase):
 		result = list_to_queryset(test_list)
 		self.assertTrue(result == None)
 
-class baseUserTest(TestCase):
-	def test_create_user(self):
+class BaseUserTest(TestCase):
+	def test_create_new_user(self):
 		# UserProfile is abstract so we'll test creating patients and doctors
 		p = PatientProfile.objects.create(primary_phone_number="2147094720", 
 			first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
@@ -103,7 +103,15 @@ class baseUserTest(TestCase):
 			DoctorProfile.objects.create(primary_phone_number="2147094720", 
 				first_name="Matthew", last_name="Gaba", birthday=datetime.date(year=2013, month=10, day=13))
 
-class templateFilterTest(TestCase):
+	def test_create_existing_user(self):
+		# should not create new user if user already exists
+		pass
+
+	def test_retrieve_user(self):
+		# should be case insensitive
+		pass
+
+class TemplateFilterTest(TestCase):
 	def test_divide_filter(self):
 		context = Context({'value':10 })
 		t = Template('{% load utilities %}{{ value|divide:20 }}')
@@ -132,7 +140,7 @@ class templateFilterTest(TestCase):
 			t = Template('{% load utilities %}{{ value|multiply:20 }}')
 			t.render(context)
 
-class messageUtilitiesTest(TestCase):
+class MessageUtilitiesTest(TestCase):
 	def setUp(self):
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
@@ -142,7 +150,7 @@ class messageUtilitiesTest(TestCase):
 			f = open(settings.MESSAGE_LOG_FILENAME, 'w') # Open file with 'w' permission to clear log file.
 			f.close() 
 
-class datetimeUtilitiesTest(TestCase):
+class DatetimeUtilitiesTest(TestCase):
 	def test_week_of_month(self):
 		testtime = datetime.datetime(year=2013, month=11, day=17)
 		# 11/17/2013 is the third Sunday of the month

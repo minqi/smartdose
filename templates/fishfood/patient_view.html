@@ -20,7 +20,10 @@
 	</div>
 	<form id="addReminderForm" class="no_display"><p/>
 		{% csrf_token %}
-		<input id="addReminderName" type="text" name="drug_name" placeholder="Drug name"/><p/>
+		<input id="addReminderName" type="text" name="drug_name" placeholder="Drug name"/>
+		<input type="checkbox" id="sendRefillReminderCheckbox" name="send_refill_reminder"/>
+		Send refill reminder
+		<p/>
 		<input id="addReminderTime" type="time" name="reminder_time"/><p/>
 		<input type="checkbox" class="dayBubble" name="mon"/>Mon
 		<input type="checkbox" class="dayBubble" name="tue"/>Tue

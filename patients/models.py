@@ -139,7 +139,9 @@ class PatientProfile(UserProfile):
 	def validate_unique(self, *args, **kwargs):
 		super(PatientProfile, self).validate_unique(*args, **kwargs)
 		if not self.id:
-			if self.__class__.objects.filter(primary_phone_number=self.primary_phone_number, birthday=self.birthday, first_name=self.first_name, last_name=self.last_name).exists():
+			if self.__class__.objects.filter(
+				primary_phone_number=self.primary_phone_number, birthday=self.birthday, 
+				first_name__iexact=self.first_name, last_name__iexact=self.last_name).exists():
 				raise ValidationError('This patient already exists.')
 
 	def save(self, *args, **kwargs):
