@@ -60,8 +60,8 @@ class ReminderManager(models.Manager):
 														 prescription=prescription)[0]
 		med_reminder = ReminderTime.objects.get_or_create(to=to,
 												  reminder_type=ReminderTime.MEDICATION,
-										  		  repeat=ReminderTime.DAILY,
-										  		  prescription=prescription)[0]
+												  repeat=ReminderTime.DAILY,
+												  prescription=prescription)[0]
 		return (refill_reminder, med_reminder)
 
 
@@ -253,28 +253,30 @@ class ReminderTime(models.Model):
 
 
 class MessageManager(models.Manager):
-	def create(self, patient):
-		# Calculate the appropriate message number
-		# Number of hours in the past to allow acking of messages. 
-		# (MESSAGE_CUTOFF == 23 hours avoids rounding problems and still gives a full days time to ack)
-		expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
-		# Calculate the message number to assign to new message
-		new_message_number = 1
-		active_messages = self.filter(time_sent__gte=expired_time, patient=patient).exclude(state=Message.ACKED)
-		if active_messages:
-			# Loop through active messages to find the lowest non-active message number.
-			# There should never be too many active_messages for any person (no more than 4 or 5), so this is safe.
-			active_message_length = active_messages.count()
-			while new_message_number <= active_message_length:
-				# If there is no active message with the message_number, then give that message number to the message
-				# being created
-				if not active_messages.filter(message_number=new_message_number):
-					break
-				new_message_number += 1
-		# Mark all unacked messages with this number as expired
-		expired_messages = self.filter(time_sent__lte=expired_time, state=Message.UNACKED)
-		expired_messages.update(state=Message.EXPIRED)
-		return super(MessageManager, self).create(patient=patient, message_number=new_message_number)
+	def create(self, patient, message_type):
+		if message_type in [Message.REFILL, Message.MEDICATION]:
+			# Calculate the appropriate message number
+			# Number of hours in the past to allow acking of messages.
+			expired_time = datetime.datetime.now() - datetime.timedelta(hours=MESSAGE_CUTOFF)
+			# Calculate the message number to assign to new message
+			new_message_number = 1
+			active_messages = self.filter(time_sent__gte=expired_time, patient=patient).exclude(state=Message.ACKED)
+			if active_messages:
+				# Loop through active messages to find the lowest non-active message number.
+				# There should never be too many active_messages for any person (no more than 4 or 5), so this is safe.
+				active_message_length = active_messages.count()
+				while new_message_number <= active_message_length:
+					# If there is no active message with the message_number, then give that message number to the message
+					# being created
+					if not active_messages.filter(message_number=new_message_number):
+						break
+					new_message_number += 1
+			# Mark all unacked messages with this number as expired
+			expired_messages = self.filter(time_sent__lte=expired_time, state=Message.UNACKED)
+			expired_messages.update(state=Message.EXPIRED)
+		else:
+			new_message_number = None
+		return super(MessageManager, self).create(patient=patient, message_number=new_message_number, message_type=message_type)
 
 class Message(models.Model):
 	"""Model for messages that have been sent to users"""
@@ -287,15 +289,29 @@ class Message(models.Model):
 	STATE_CHOICES = (
 		(UNACKED, 	'u'),
 		(ACKED, 	'a'),
-		(EXPIRED,	'e'))
+		(EXPIRED,   'e'),
+	)
 
-	patient        = models.ForeignKey(PatientProfile, blank=False)
-	time_sent      = models.DateTimeField(auto_now_add=True)
-	message_number = models.PositiveIntegerField(blank=False, null=False, default=1)
-	state          = models.CharField(max_length=2,
+	WELCOME     = 'w'
+	MEDICATION 	= 'm'
+	REFILL 		= 'r'
+	SAFETY_NET  = 's'
+	REMINDER_TYPE_CHOICES = (
+		(WELCOME,    'welcome'),
+		(MEDICATION, 'medication'),
+		(REFILL,	 'refill'),
+		(SAFETY_NET, 'safety_net'),
+	)
+
+	patient         = models.ForeignKey(PatientProfile, blank=False)
+	time_sent       = models.DateTimeField(auto_now_add=True)
+	message_number  = models.PositiveIntegerField(blank=True, null=True, default=1)
+	state           = models.CharField(max_length=2,
 											   choices=STATE_CHOICES,
 											   default=UNACKED)
-	objects		   = MessageManager()
+	message_type    = models.CharField(max_length=4,
+	                                        choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	objects		    = MessageManager()
 
 	def processAck(self):
 		self.state = Message.ACKED

@@ -49,7 +49,7 @@ class NotificationCenter(object):
 		if notifications.__class__ == ReminderTime:
 			notifications = [notifications]
 
-		message = Message.objects.create(patient=to)
+		message = Message.objects.create(patient=to, message_type=notifications[0].reminder_type)
 		if context:
 			context['message_number'] = message.message_number
 		else:
@@ -66,10 +66,12 @@ class NotificationCenter(object):
 				sent_reminder = SentReminder.objects.create(reminder_time=notification, 
 					message=message, prescription=notification.prescription)
 				notification.update_to_next_send_time()
-			else:
+			elif notification.reminder_type in (ReminderTime.WELCOME, ReminderTime.SAFETY_NET):
 				sent_reminder = SentReminder.objects.create(reminder_time=notification, message=message)
 				notification.active = False
 				notification.save()
+			else:
+				raise Exception("You probably added a new reminder_type. Must specify logic for updating after sending a message")
 
 	def send_welcome_notifications(self, to, notifications):
 		"""
@@ -103,7 +105,7 @@ class NotificationCenter(object):
 		"""
 		Send medication notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, 
+		notifications = notifications.filter(to=to,
 			reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')

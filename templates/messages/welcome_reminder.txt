@@ -1,1 +1,1 @@
-Hi, {{ patient_first_name }}! Your doctor enrolled you in Smartdose. Smartdose will send you med reminders to make sure you get the most out of your meds. Text back 'q' to quit Smartdose. 
+Hi, {{ patient_first_name }}! Your doctor enrolled you in Smartdose to receive simple med reminders that fit into your life. Text back 'q' to quit Smartdose.
