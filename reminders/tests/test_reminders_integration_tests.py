@@ -194,9 +194,11 @@ class TestReminderDelivery(TestCase):
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=3)
 		reminder_schedule = [[ReminderTime.DAILY, delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		(refill_reminder, reminder_times) = \
+			ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(
+				to=self.minqi,
+				prescription=prescription,
+				reminder_schedule=reminder_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
@@ -216,6 +218,12 @@ class TestReminderDelivery(TestCase):
 		self.freezer.start()
 		c = Client()
 		c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': '1'})
+
+		updated_reminder = ReminderTime.objects.get(pk=reminder_times[0].pk)
+		if delivery_time < self.current_time + datetime.timedelta(hours=1):
+			self.assertTrue((updated_reminder.send_time.date() - delivery_time.date()).days == 1)
+		else:
+			self.assertTrue((updated_reminder.send_time.date() - delivery_time.date()).days == 0)
 		# Advance time another day and be sure no reminders are sent
 		old_delivery_time = delivery_time
 		delivery_time = delivery_time + datetime.timedelta(hours=24)
