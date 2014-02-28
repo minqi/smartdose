@@ -1,6 +1,9 @@
 import datetime, calendar
+from itertools import groupby
+
 from django.db import models
 from django.db.models import Q
+
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from common.models import Drug
@@ -37,18 +40,22 @@ class ReminderManager(models.Manager):
 		reminders_at_time = super(ReminderManager, self).get_query_set().filter(
 			Q(active=True) &
 			Q(send_time__lte=now_datetime)
-		)
-		latest_reminder = None
-		if reminders_at_time.exists():
-			latest_reminder = reminders_at_time.latest()
-		if latest_reminder:
-			max_send_time_for_batch = latest_reminder.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
-			reminders_at_time = super(ReminderManager, self).get_queryset().filter(
-				Q(active=True) &
-				Q(send_time__lt=max_send_time_for_batch)
-			)
+		).order_by('to', 'send_time') # order by recipient's full name, then by send_time
 
-		return reminders_at_time
+		all_reminders_at_time = ReminderTime.objects.none()
+		if reminders_at_time.exists():
+			for recipient, recipient_group in groupby(reminders_at_time, lambda x: x.to):
+				latest_reminder = None
+				for latest_reminder in recipient_group: # get latest reminder in group
+					pass
+				max_send_time_for_batch = latest_reminder.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
+				reminders_at_time_for_user = super(ReminderManager, self).get_queryset().filter(
+					Q(to=recipient) &
+					Q(active=True) &
+					Q(send_time__lt=max_send_time_for_batch)
+				)
+				all_reminders_at_time = all_reminders_at_time | reminders_at_time_for_user
+		return all_reminders_at_time
 
 	def create_prescription_reminders(self, to, repeat, prescription):
 		"""STUB: Schedule both a refill reminder and a medication reminder for a prescription"""
@@ -162,6 +169,7 @@ class ReminderTime(models.Model):
 		if self.repeat == self.DAILY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=1)
+			self.send_time += dt
 			while self.send_time <= now:
 				self.send_time += dt
 			self.save()
@@ -170,6 +178,7 @@ class ReminderTime(models.Model):
 		if self.repeat == self.WEEKLY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=7)
+			self.send_time += dt
 			while self.send_time <= now:
 				self.send_time += dt
 			self.save()
@@ -180,12 +189,15 @@ class ReminderTime(models.Model):
 			next_date = self.send_time.date()
 			year = next_date.year
 			month = next_date.month
+			next_month = next_date.month % 12 + 1
+			next_year = next_date.year + next_month / 12
+			next_day = min(next_date.day,calendar.monthrange(next_year,next_month)[1])
+			next_date = datetime.date(next_year, next_month, next_day)
+
 			while next_date <= now_date:
 				next_month = next_date.month % 12 + 1
 				next_year = next_date.year + next_month / 12
-
 				next_day = min(next_date.day,calendar.monthrange(next_year,next_month)[1])
-
 				next_date = datetime.date(next_year, next_month, next_day)
 
 			if self.week_of_month == 5:
@@ -204,6 +216,7 @@ class ReminderTime(models.Model):
 			year  = date.year
 			month = date.month
 			day = date.day
+			year += 1
 			while year <= now_year:
 				year += 1
 

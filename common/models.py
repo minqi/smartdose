@@ -107,6 +107,9 @@ class UserProfile(AbstractBaseUser):
 	def get_short_name(self):
 		return self.first_name
 
+	class Meta:
+		ordering = ['full_name']
+
 	def __unicode__(self):
 		return self.get_full_name()
 

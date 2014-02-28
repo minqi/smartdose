@@ -11,7 +11,6 @@ from common.utilities import SMSLogger
 from configs.dev import settings
 import datetime
 
-
 class TestHelper():
 	@staticmethod
 	def advance_test_time_to_end_time_and_emulate_reminder_periodic_task(test, end_time, period):
