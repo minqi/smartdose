@@ -412,6 +412,19 @@ class CreateReminderTest(TestCase):
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
 
+	def test_create_reminder_without_refill_reminder(self):
+		response = c.post('/fishfood/reminders/new/', 
+			{'p_id':str(self.patient1.id), 'drug_name':'drug3', 
+			'reminder_time':'9:00', 'mon':True})
+		self.assertEqual(response.status_code, 200)
+
+		refill_reminder_count = len(ReminderTime.objects.filter(
+			reminder_type=ReminderTime.REFILL)) 
+		self.assertEqual(refill_reminder_count, 0)
+
+		# if reminder created w/o refill reminder, filled should be true
+		self.assertTrue(Prescription.objects.get(drug__name='drug3').filled, True)
+
 # Unit tests for delete reminder
 class DeleteReminderTest(TestCase):
 	def setUp(self):

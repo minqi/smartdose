@@ -322,8 +322,9 @@ class Message(models.Model):
 	state           = models.CharField(max_length=2,
 											   choices=STATE_CHOICES,
 											   default=UNACKED)
-	message_type    = models.CharField(max_length=4,
-	                                        choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	message_type    = models.CharField(
+		max_length=4, choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	
 	objects		    = MessageManager()
 
 	def processAck(self):

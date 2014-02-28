@@ -293,8 +293,8 @@ def create_reminder(request, *args, **kwargs):
 				first_name="Smartdose", last_name="", 
 				primary_phone_number="+18569067308", 
 				birthday=datetime.date(2014, 1, 28))[0]
-			prescription = Prescription.objects.get_or_create(
-				prescriber=dr_smartdose, patient=patient, drug=drug)[0]
+			(prescription, prescription_created) = Prescription.objects.get_or_create(
+				prescriber=dr_smartdose, patient=patient, drug=drug)
 
 			reminder_time = form.cleaned_data['reminder_time']
 			existing_reminders = ReminderTime.objects.filter(
@@ -356,6 +356,9 @@ def create_reminder(request, *args, **kwargs):
 					reminder_type=ReminderTime.REFILL, 
 					repeat=ReminderTime.DAILY, 
 					prescription=prescription)[0]
+			elif not send_refill_reminder and prescription_created:
+				prescription.filled = True
+				prescription.save()
 			return HttpResponse('')
 	return HttpResponseBadRequest()
 
