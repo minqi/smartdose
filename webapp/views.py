@@ -167,7 +167,7 @@ def create_patient(request, *args, **kwargs):
 			else:
 				c = RequestContext(request)
 				c['patient'] = patient
-				if not created and patient.status == PatientProfile.QUIT:
+				if created or patient.status == PatientProfile.QUIT:
 					patient.status = PatientProfile.NEW
 					patient.save()
 					ReminderTime.objects.create_welcome_notification(to=patient)
