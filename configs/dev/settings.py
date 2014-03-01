@@ -19,11 +19,11 @@ MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 
 TEST_ALL_APPS = False
-
+"""
 if TEST_ALL_APPS:
     TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
-    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+"""
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
     ('minqi', 'mnqjng@gmail.com'),

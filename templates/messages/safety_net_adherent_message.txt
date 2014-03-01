@@ -1,3 +1,4 @@
-{% load utilities %}Your {{ patient_relationship }}, {{ patient_first }} {{ patient_last }}, successfully took the following medication from {{ window_start|date:"m/d" }} to {{ window_finish|date:"m/d" }}:
-{% for prescription in prescriptions %}{% if not forloop.last %}{{ prescription.0.drug.name }}: {{ prescription.1|divide:prescription.2|multiply:100|floatformat:"0" }}% ({{ prescription.1 }}/{{ prescription.2 }})
-{% else %}{{ prescription.0.drug.name }}: {{ prescription.1|divide:prescription.2|multiply:100|floatformat:"0" }}% ({{ prescription.1 }}/{{ prescription.2 }}){% endif %}{% endfor %}
+{% if adherence_percentage > threshold %} Your {{ patient_relationship }}, {{ patient_first }}, has been doing well with meds this week ({{ adherence_percentage }}%). Give them a call and let them know you're proud!
+{% else %} Your {{ patient_relationship }}, {{ patient_first }}, has had some trouble with meds this week ({{ adherence_percentage }}%). Maybe you should give them a call?
+{% endif %}
+

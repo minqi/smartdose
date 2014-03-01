@@ -43,74 +43,61 @@ def sendRemindersForNow():
 		# p.sendReminders(p_reminders)
 		nc.send_notifications(to=p, notifications=p_reminders)
 
-def compute_adherent_and_nonadherent_patient_to_prescription_dict(window_start, window_finish, threshold, timeout):
-	""" Returns two dictionaries as a tuple. The first dictionary maps patients to prescriptions for which the patient
-		is adherent. The second dictionary maps patients to prescriptions for which the patient is non-adherent.
+
+def compute_adherence_percentage_by_patients(window_start, window_finish, time, timeout):
 	"""
-	# Get all acked reminders in the timeframe
-	acked_reminders = SentReminder.objects.filter(
+	Returns a list of [patient, missed_dose] tuples for doses missed between window_start and window_finish at time time
+	A dose is considered missed if it's gone unacknowledged for longer than timeout.
+	"""
+	reminders = SentReminder.objects.filter(
 		time_sent__gte=window_start,
 		time_sent__lte=window_finish,
-		ack=True)
-	# Get all expired reminders in the timeframe
-	expired_reminders = SentReminder.objects.filter(
-		time_sent__gte=window_start,
-		time_sent__lte=window_finish,
-		ack=False).exclude(time_sent__gte=datetime.datetime.now() - timeout)
-	# Get all prescriptions with expired reminders
-	prescription_reminders = expired_reminders.distinct('prescription')
+		reminder_time__reminder_type=ReminderTime.MEDICATION).exclude(time_sent__gte=time - timeout)
+	# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
+	reminders = reminders.prefetch_related('reminder_time').prefetch_related('reminder_time__prescription')
 
-	# for each prescription with a safety net compile a list of adherent and non-adherent prescriptions
-	patient_nonadherent_dict = {}
-	patient_adherent_dict = {}
-	for prescription_reminder in prescription_reminders:
-		prescription = prescription_reminder.prescription
-		if not prescription.safety_net_on:
-			continue
-		# compute expired / acked+expired reminders
-		expired_count = expired_reminders.filter(prescription=prescription).count()
-		acked_count = acked_reminders.filter(prescription=prescription).count()
-		total_count = expired_count + acked_count
-		ratio = acked_count / total_count
-		# if the computed number is less than threshold add it to the dictionary
-		if ratio < threshold:
-			patient_nonadherent_dict.setdefault(prescription.patient, []).append((prescription, acked_count, total_count)) # Use setdefault to avoid KeyError
-			prescription.last_contacted_safety_net = datetime.datetime.now()
-			prescription.save()
-		else:
-			patient_adherent_dict.setdefault(prescription.patient, []).append((prescription, acked_count, total_count))
+	patients = PatientProfile.objects.all()
+	adherence_percentage_for_patients_list = []
+	for patient in patients:
+		dose_count = 0
+		missed_dose_count = 0
+		patient_reminders = reminders.filter(reminder_time__to=patient)
+		for patient_reminder in patient_reminders:
+			if (patient_reminder.prescription.safety_net_on):
+				dose_count += 1
+				if (patient_reminder.ack == False):
+					missed_dose_count += 1
+		adherence_percentage_for_patients_list.append([patient, dose_count/missed_dose_count])
 
-	return patient_adherent_dict, patient_nonadherent_dict
 
-def schedule_safety_net_messages_from_prescription_dict(prescription_dict, window_start, window_finish, template_string):
+def schedule_safety_net_messages_from_adherence_percentage_list(adherence_percentage_by_patients_list, threshold):
 	""" Schedules notifications to safety net members.
-		prescription_dict is a dictionary of patients' per-prescription adherence rates.
-		template_string is the string of the template to use (e.g., safety_net_nonadherent_message.txt or safety_net_adherent_message.txt
+		threshold is a threshold we use to calculate the cutoff of the adherence message to a patient
 	"""
-	# Schedule messages to safety net members expressing patient's adherence
-	for patient, prescriptions in prescription_dict.iteritems():
+	for adherence_percentage_by_patient in adherence_percentage_by_patients_list:
+		patient = adherence_percentage_by_patient[0]
+		adherence_percentage = adherence_percentage_by_patient[1]
 		# render prescriptions to template
 		dictionary = {
-		'prescriptions':prescriptions,
+		'adherence_percentage':adherence_percentage,
+		'threshold':threshold,
 		'patient_first':patient.first_name,
-		'patient_last' :patient.last_name,
-		'window_start' :window_start,
-		'window_finish':window_finish
 		}
 		safety_net_members = patient.safety_net_members.all()
 		for safety_net_member in safety_net_members:
-			# queue safety net notifications here
 			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(source_patient=patient, target_patient=safety_net_member).patient_relationship
-			message_body = render_to_string(template_string, dictionary)
-			# send the message to the safety net
+			message_body = render_to_string('templates/messages/safety_net_adherent_message.txt', dictionary)
 			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
+
+
 
 def contactSafetyNet(window_start, window_finish, threshold, timeout):
 	"""
-	Sends a message to a safety net member to notify about a missed dose. Safety net member will be notified if the patient 
-	takes fewer than threshold (a ratio of taken medications to total medications) between window_start, window_finish. A 
-	medication is considered not taken if it has gone unacknowledged for longer than timeout.
+	Sends a message to a safety net member to notify about missed doses. Safety net member will be notified of the number of
+	doses missed between window_start and window_finish. A  medication is considered not taken if it has gone
+	unacknowledged for longer than timeout. threshold is a percentage and represents the cutoff between adherence and non adherence
 	"""
-	patient_adherent_dict, patient_nonadherent_dict = compute_adherent_and_nonadherent_patient_to_prescription_dict(window_start, window_finish, threshold, timeout)
-	schedule_safety_net_messages_from_prescription_dict(patient_adherent_dict, window_start, window_finish, 'messages/`safety_net_adherent_message.txt')
-	schedule_safety_net_messages_from_prescription_dict(patient_nonadherent_dict, window_start, window_finish, 'messages/`safety_net_nonadherent_message.txt')
+	adherence_percentage_by_patients_list = compute_adherence_percentage_by_patients(window_start, window_finish, datetime.datetime.now(), timeout)
+	schedule_safety_net_messages_from_adherence_percentage_list(adherence_percentage_by_patients_list, threshold)
+
+
