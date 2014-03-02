@@ -9,3 +9,4 @@ def divide(value, arg):
 @register.filter
 def multiply(value, arg): 
 	return float(value) * float(arg)
+

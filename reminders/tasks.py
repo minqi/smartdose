@@ -5,6 +5,7 @@ import datetime
 import common.datasources as datasources
 
 from celery import shared_task
+from django.conf import Settings
 from django.template.loader import render_to_string
 from django.db.models import Q
 from reminders.models import ReminderTime, Message, SentReminder
@@ -12,6 +13,7 @@ from common.models import UserProfile
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile, SafetyNetRelationship
 from reminders.notification_center import NotificationCenter
+from reminders.safety_net_center import SafetyNetCenter
 
 FAKE_CSV = False # Use fake patient csv data for 
 
@@ -43,61 +45,14 @@ def sendRemindersForNow():
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
 		nc.send_notifications(to=p, notifications=p_reminders)
 
-
-def compute_adherence_percentage_by_patients(window_start, window_finish, time, timeout):
+@shared_task()
+def schedule_safety_net_messages():
 	"""
-	Returns a list of [patient, missed_dose] tuples for doses missed between window_start and window_finish at time time
-	A dose is considered missed if it's gone unacknowledged for longer than timeout.
+	Called weekly from schedule.
+	Schedules safety net messages to safety net members for all patients
 	"""
-	reminders = SentReminder.objects.filter(
-		time_sent__gte=window_start,
-		time_sent__lte=window_finish,
-		reminder_time__reminder_type=ReminderTime.MEDICATION).exclude(time_sent__gte=time - timeout)
-	# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
-	reminders = reminders.prefetch_related('reminder_time').prefetch_related('reminder_time__prescription')
-
-	patients = PatientProfile.objects.all()
-	adherence_percentage_for_patients_list = []
-	for patient in patients:
-		dose_count = 0
-		missed_dose_count = 0
-		patient_reminders = reminders.filter(reminder_time__to=patient)
-		for patient_reminder in patient_reminders:
-			if (patient_reminder.prescription.safety_net_on):
-				dose_count += 1
-				if (patient_reminder.ack == False):
-					missed_dose_count += 1
-		adherence_percentage_for_patients_list.append([patient, dose_count/missed_dose_count])
-
-
-def schedule_safety_net_messages_from_adherence_percentage_list(adherence_percentage_by_patients_list, threshold):
-	""" Schedules notifications to safety net members.
-		threshold is a threshold we use to calculate the cutoff of the adherence message to a patient
-	"""
-	for adherence_percentage_by_patient in adherence_percentage_by_patients_list:
-		patient = adherence_percentage_by_patient[0]
-		adherence_percentage = adherence_percentage_by_patient[1]
-		# render prescriptions to template
-		dictionary = {
-		'adherence_percentage':adherence_percentage,
-		'threshold':threshold,
-		'patient_first':patient.first_name,
-		}
-		safety_net_members = patient.safety_net_members.all()
-		for safety_net_member in safety_net_members:
-			dictionary['patient_relationship'] = SafetyNetRelationship.objects.get(source_patient=patient, target_patient=safety_net_member).patient_relationship
-			message_body = render_to_string('templates/messages/safety_net_adherent_message.txt', dictionary)
-			ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
-
-
-
-def contactSafetyNet(window_start, window_finish, threshold, timeout):
-	"""
-	Sends a message to a safety net member to notify about missed doses. Safety net member will be notified of the number of
-	doses missed between window_start and window_finish. A  medication is considered not taken if it has gone
-	unacknowledged for longer than timeout. threshold is a percentage and represents the cutoff between adherence and non adherence
-	"""
-	adherence_percentage_by_patients_list = compute_adherence_percentage_by_patients(window_start, window_finish, datetime.datetime.now(), timeout)
-	schedule_safety_net_messages_from_adherence_percentage_list(adherence_percentage_by_patients_list, threshold)
+	snc = SafetyNetCenter()
+	now = datetime.datetime.now()
+	snc.schedule_safety_net_messages(now - SafetyNetCenter.SAFETY_NET_WINDOW, now, SafetyNetCenter.SAFETY_NET_THRESHOLD, SafetyNetCenter.SAFETY_NET_TIMEOUT)
 
 

@@ -209,7 +209,11 @@ CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULE = {
     'send-reminders': {
         'task' : 'reminders.tasks.sendRemindersForNow',
-        'schedule': crontab(minute='*/1')
+        'schedule': crontab(minute='*/1'),
+    },
+    'schedule-safety-net': {
+	    'task' : 'reminders.tasks.schedule_safety_net_messages',
+        'schedule': crontab(minute=0, hour=10, day_of_week=1) # Schedule safety net messages weekly at 10am on Monday
     }
 }
 USE_TZ = False

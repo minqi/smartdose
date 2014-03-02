@@ -161,11 +161,11 @@ class DeletePatientTest(TestCase):
 			to=self.patient1, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
 			prescription=self.prescription1, send_time=datetime.datetime.now())
 
-		self.patient1.add_safetynet_member(
-			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
+		self.patient1.add_safety_net_member(
+			patient_relationship='friend', first_name='Matt', last_name='Gaba',
 			primary_phone_number='+12147094720', birthday='1989-10-13')
 		self.patient1.add_primary_contact_member(
-			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
+			patient_relationship='friend', first_name='Matt', last_name='Gaba',
 			primary_phone_number='+12147094720', birthday='1989-10-13')
 
 	def test_invalid_request(self):

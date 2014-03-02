@@ -274,14 +274,91 @@ class TestHelper():
 			test.freezer = freeze_time(test.current_time)
 			test.freezer.start()
 
-class TestSafetyNet(TestCase):
-	#TODO(mgaba): Write tests for safety net
-	#TODO(mgaba): Test case where safety net member is adherent
-	#TODO(mgaba): Test case where safety net member is non-adherent
-	#TODO(mgaba): Test the adding to safety net SMS
-	#TODO(mgaba): Test safety net opt-out message
-	def setUp(self):
-		return
+class TestSafetyNetTemplate(TestCase):
+
+	def test_adherent_template_male_response(self):
+		dictionary = {
+			'adherence_percentage':100,
+		    'threshold':80,
+		    'patient_first':'Matthew',
+		    'patient_gender':PatientProfile.MALE,
+		    'patient_relationship':'son'
+		}
+		correct_message = "Your son, Matthew, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_adherent_template_female_response(self):
+		dictionary = {
+		'adherence_percentage':100,
+		'threshold':80,
+		'patient_first':'Marge',
+		'patient_gender':PatientProfile.FEMALE,
+		'patient_relationship':'mother'
+		}
+		correct_message = "Your mother, Marge, has been doing well with her meds this week (100% taken). Give her a call and let her know you're proud!"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_adherent_template_gender_neutral_response(self):
+		dictionary = {
+		'adherence_percentage':100,
+		'threshold':80,
+		'patient_first':'Pat',
+		'patient_gender':PatientProfile.UNKNOWN,
+		'patient_relationship':'sibling'
+		}
+		correct_message = "Your sibling, Pat, has been doing well with their meds this week (100% taken). Give them a call and let them know you're proud!"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_borderline_adherent_template_female_response(self):
+		dictionary = {
+		'adherence_percentage':80,
+		'threshold':80,
+		'patient_first':'Marge',
+		'patient_gender':PatientProfile.FEMALE,
+		'patient_relationship':'mother'
+		}
+		correct_message = "Your mother, Marge, has been doing well with her meds this week (80% taken). Give her a call and let her know you're proud!"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_nonadherent_template_male_response(self):
+		dictionary = {
+		'adherence_percentage':30,
+		'threshold':80,
+		'patient_first':'John',
+		'patient_gender':PatientProfile.MALE,
+		'patient_relationship':'grandfather'
+		}
+		correct_message = "Your grandfather, John, has had some trouble with his meds this week (30% taken). Maybe you should give him a call?"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_nonadherent_template_female_response(self):
+		dictionary = {
+		'adherence_percentage':30,
+		'threshold':80,
+		'patient_first':'Jane',
+		'patient_gender':PatientProfile.FEMALE,
+		'patient_relationship':'grandmother'
+		}
+		correct_message = "Your grandmother, Jane, has had some trouble with her meds this week (30% taken). Maybe you should give her a call?"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
+
+	def test_nonadherent_template_gender_neutral_response(self):
+		dictionary = {
+		'adherence_percentage':30,
+		'threshold':80,
+		'patient_first':'Jan',
+		'patient_gender':PatientProfile.UNKNOWN,
+		'patient_relationship':'grandparent'
+		}
+		correct_message = "Your grandparent, Jan, has had some trouble with their meds this week (30% taken). Maybe you should give them a call?"
+		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		self.assertEqual(message_body, correct_message)
 
 class TestPrimaryContact(TestCase):
 	#TODO(mgaba): Write tests for primary contact

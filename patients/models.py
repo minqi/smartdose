@@ -5,16 +5,183 @@ from django.template.loader import render_to_string
 from common.models import UserProfile, UserProfileManager
 from django.core.exceptions import ValidationError
 
+class PatientUtilities():
+	FRIEND          = 'friend'
+
+	MOTHER          = 'mother'
+	FATHER          = 'father'
+	PARENT          = 'parent'
+
+	DAUGHTER        = 'daughter'
+	SON             = 'son'
+	CHILD           = 'child'
+
+	GRANDMOTHER     = 'grandma'
+	GRANDFATHER     = 'grandpa'
+	GRANDPARENT     = 'grandparent'
+
+	GRANDDAUGHTER   = 'granddaughter'
+	GRANDSON        = 'grandson'
+	GRANDCHILD      = 'grandchild'
+
+	WIFE            = 'wife'
+	HUSBAND         = 'husband'
+	SPOUSE          = 'spouse'
+
+	SISTER          = 'sister'
+	BROTHER         = 'brother'
+	SIBLING         = 'sibling'
+
+	OTHER           = 'other'
+
+	RELATIONSHIP_CHOICES = (
+	(FRIEND, 'friend'),
+
+	(MOTHER, 'mother'),
+	(FATHER, 'father'),
+	(PARENT, 'parent'),
+
+	(SON, 'son'),
+	(DAUGHTER, 'daughter'),
+	(CHILD, 'child'),
+
+	(GRANDMOTHER, 'grandma'),
+	(GRANDFATHER, 'grandpa'),
+	(GRANDPARENT, 'grandparent'),
+
+	(GRANDDAUGHTER, 'granddaughter'),
+	(GRANDSON, 'grandson'),
+	(GRANDCHILD, 'grandchild'),
+
+	(HUSBAND, 'husband'),
+	(WIFE, 'wife'),
+	(SPOUSE, 'spouse'),
+
+	(BROTHER, 'brother'),
+	(SISTER, 'sister'),
+	(SIBLING, 'sibling'),
+
+	(OTHER, 'other'),
+	)
+
+	#A map of relationships for a female. For example, a woman is a daughter of a mother
+	FEMALE_RELATIONSHIPS = {
+		FRIEND:FRIEND,
+
+		MOTHER:DAUGHTER,
+	    FATHER:DAUGHTER,
+	    PARENT:DAUGHTER,
+
+	    DAUGHTER:MOTHER,
+		SON:MOTHER,
+	    CHILD:MOTHER,
+
+	    GRANDMOTHER:GRANDDAUGHTER,
+		GRANDFATHER:GRANDDAUGHTER,
+	    GRANDPARENT:GRANDDAUGHTER,
+
+	    GRANDDAUGHTER:GRANDMOTHER,
+	    GRANDSON:GRANDMOTHER,
+	    GRANDCHILD:GRANDMOTHER,
+
+	    WIFE:WIFE,
+	    HUSBAND:WIFE,
+	    SPOUSE:WIFE,
+
+	    SISTER:SISTER,
+	    BROTHER:SISTER,
+	    SIBLING:SISTER,
+
+	    OTHER:OTHER
+	}
+
+	#A map of relationships for a male. For example, a man is a son of a mother
+	MALE_RELATIONSHIPS = {
+		FRIEND:FRIEND,
+
+		MOTHER:SON,
+		FATHER:SON,
+	    PARENT:SON,
+
+		DAUGHTER:FATHER,
+		SON:FATHER,
+	    CHILD:FATHER,
+
+		GRANDMOTHER:GRANDSON,
+		GRANDFATHER:GRANDSON,
+	    GRANDPARENT:GRANDSON,
+
+		GRANDDAUGHTER:GRANDFATHER,
+		GRANDSON:GRANDFATHER,
+	    GRANDCHILD:GRANDFATHER,
+
+		WIFE:HUSBAND,
+		HUSBAND:HUSBAND,
+	    SPOUSE:HUSBAND,
+
+		SISTER:BROTHER,
+		BROTHER:BROTHER,
+	    SIBLING:BROTHER,
+
+		OTHER:OTHER
+	}
+
+	#A map of relationships for a gender neutral. For example, a gender neutral is a child of a mother
+	GENDER_NEUTRAL_RELATIONSHIPS = {
+	FRIEND:FRIEND,
+
+	MOTHER:CHILD,
+	FATHER:CHILD,
+	PARENT:CHILD,
+
+	DAUGHTER:PARENT,
+	SON:PARENT,
+	CHILD:PARENT,
+
+	GRANDMOTHER:GRANDCHILD,
+	GRANDFATHER:GRANDCHILD,
+	GRANDPARENT:GRANDCHILD,
+
+	GRANDDAUGHTER:GRANDPARENT,
+	GRANDSON:GRANDPARENT,
+	GRANDCHILD:GRANDPARENT,
+
+	WIFE:SPOUSE,
+	HUSBAND:SPOUSE,
+	SPOUSE:SPOUSE,
+
+	SISTER:SIBLING,
+	BROTHER:SIBLING,
+	SIBLING:SIBLING,
+
+	OTHER:OTHER
+	}
+	@staticmethod
+	def lookup_backwards_relationship(relationship,patient):
+		""" Given a relationship to a patient, return the inverse of that relationship.
+		For example, if the relationship is a mother, and the patient is a male, then the inverse is "son" to the mother
+		"""
+		if patient.gender == patient.FEMALE:
+			return PatientUtilities.FEMALE_RELATIONSHIPS[relationship]
+		elif patient.gender == patient.MALE:
+			return PatientUtilities.MALE_RELATIONSHIPS[relationship]
+		else:
+			return PatientUtilities.GENDER_NEUTRAL_RELATIONSHIPS[relationship]
+
+
 class SafetyNetRelationship(models.Model):
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship
-	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
-	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
-	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
+
+	source_patient 				        = models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
+	target_patient 			         	= models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
+	source_to_target_relationship		= models.CharField(null=False, blank=False, max_length="20", choices=PatientUtilities.RELATIONSHIP_CHOICES)
+	target_to_source_relationship       = models.CharField(null=False, blank=False, max_length="20", choices=PatientUtilities.RELATIONSHIP_CHOICES)
 
 class PrimaryContactRelationship(models.Model):
 	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_primary_contacts')
 	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_primary_contacts')
-	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
+	source_to_target_relationship		= models.CharField(null=False, blank=False, max_length="20", choices=PatientUtilities.RELATIONSHIP_CHOICES)
+	target_to_source_relationship       = models.CharField(null=False, blank=False, max_length="20", choices=PatientUtilities.RELATIONSHIP_CHOICES)
 
 class PatientManager(UserProfileManager):
 	"""Manager for performing operations on PatientProfile records"""
@@ -49,9 +216,10 @@ class PatientProfile(UserProfile):
 
 	# Patient specific fields
 	age 		= models.PositiveIntegerField(default=0)
-	gender 		= models.CharField(max_length=1,
-							  choices=GENDER_CHOICES,
-							  default=UNKNOWN)
+	gender 		= models.CharField(null=False, blank=False,
+	                            max_length=1,
+							    choices=GENDER_CHOICES,
+							    default=UNKNOWN)
 	height 		= models.PositiveIntegerField(default=0)
 	height_unit = models.CharField(max_length=2,
 								   choices=HEIGHT_UNIT_CHOICES,
@@ -93,10 +261,9 @@ class PatientProfile(UserProfile):
 		self.status = PatientProfile.ACTIVE
 		self.save()
 
-	def add_safetynet_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
+	def add_safety_net_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
 		"""Returns a tuple of the safety_net_member and whether the safety_net_member was created or not"""
 		#TODO: Figure out what happens when a user adds a safety net member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
-		#TODO: Add a way to create a backward-relationship
 		created = True
 		try: 
 			sn = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
@@ -107,7 +274,8 @@ class PatientProfile(UserProfile):
 													   first_name=first_name,
 													   last_name=last_name,
 													   birthday=birthday)
-		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, patient_relationship=patient_relationship)
+		target_to_source_relationship = PatientUtilities.lookup_backwards_relationship(patient_relationship, self)
+		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, source_to_target_relationship=patient_relationship, target_to_source_relationship=target_to_source_relationship)
 		self.has_safety_net = True
 		self.save()
 
@@ -128,7 +296,8 @@ class PatientProfile(UserProfile):
 													   first_name=first_name,
 													   last_name=last_name,
 													   birthday=birthday)
-		PrimaryContactRelationship.objects.create(source_patient=self, target_patient=pc, patient_relationship=patient_relationship)
+		target_to_source_relationship = PatientUtilities.lookup_backwards_relationship(patient_relationship, self)
+		PrimaryContactRelationship.objects.create(source_patient=self, target_patient=pc, source_to_target_relationship=patient_relationship, target_to_source_relationship=target_to_source_relationship)
 		self.has_primary_contact = True
 		self.save()
 
