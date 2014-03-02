@@ -322,8 +322,9 @@ class Message(models.Model):
 	state           = models.CharField(max_length=2,
 											   choices=STATE_CHOICES,
 											   default=UNACKED)
-	message_type    = models.CharField(max_length=4,
-	                                        choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	message_type    = models.CharField(
+		max_length=4, choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	
 	objects		    = MessageManager()
 
 	def processAck(self):
@@ -352,9 +353,11 @@ class SentReminder(models.Model):
 			self.prescription.save()
 			reminder_times = self.prescription.remindertime_set.all()
 			# Advance medication reminder send times to a point after the refill reminder is ack'd
+			now = datetime.datetime.now()
 			for reminder_time in reminder_times:
 				if reminder_time.reminder_type == ReminderTime.MEDICATION:
-					reminder_time.update_to_next_send_time()
+					if reminder_time.send_time < now:
+						reminder_time.update_to_next_send_time()
 			self.reminder_time.active = False
 			self.reminder_time.save()
 

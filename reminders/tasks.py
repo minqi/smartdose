@@ -35,12 +35,12 @@ def sendRemindersForNow():
 	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
+
 	# Send a reminder to each patient with the pills they need to take
 	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
-		# p.sendReminders(p_reminders)
 		nc.send_notifications(to=p, notifications=p_reminders)
 
 

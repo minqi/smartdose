@@ -1,4 +1,0 @@
-{% if adherence_percentage > threshold %} Your {{ patient_relationship }}, {{ patient_first }}, has been doing well with meds this week ({{ adherence_percentage }}%). Give them a call and let them know you're proud!
-{% else %} Your {{ patient_relationship }}, {{ patient_first }}, has had some trouble with meds this week ({{ adherence_percentage }}%). Maybe you should give them a call?
-{% endif %}
-

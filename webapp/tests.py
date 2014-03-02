@@ -50,6 +50,11 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.full_name, "Matt Gaba")
 		self.assertEqual(patient.primary_phone_number, '+12147094720')
 
+		# make sure welcome message is sent
+		welcome_count = len(ReminderTime.objects.filter(
+			to=patient, reminder_type=ReminderTime.WELCOME))
+		self.assertEqual(welcome_count, 1)
+
 	def test_create_existing_patient(self):
 		response = c.post('/fishfood/patients/new/', 
 			{'full_name':'Minqi Jiang', 'primary_phone_number':'8569067308'})
@@ -63,6 +68,10 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.first_name, 'Minqi')
 		self.assertEqual(patient.last_name, 'Jiang')
 		self.assertEqual(patient.primary_phone_number, '+18569067308')
+
+		welcome_count = len(ReminderTime.objects.filter(
+			to=patient, reminder_type=ReminderTime.WELCOME))
+		self.assertEqual(welcome_count, 0)
 
 # Unit tests for retrieve patient
 class RetrievePatientTest(TestCase):
@@ -402,6 +411,19 @@ class CreateReminderTest(TestCase):
 		refill_reminder_count = len(ReminderTime.objects.filter(
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
+
+	def test_create_reminder_without_refill_reminder(self):
+		response = c.post('/fishfood/reminders/new/', 
+			{'p_id':str(self.patient1.id), 'drug_name':'drug3', 
+			'reminder_time':'9:00', 'mon':True})
+		self.assertEqual(response.status_code, 200)
+
+		refill_reminder_count = len(ReminderTime.objects.filter(
+			reminder_type=ReminderTime.REFILL)) 
+		self.assertEqual(refill_reminder_count, 0)
+
+		# if reminder created w/o refill reminder, filled should be true
+		self.assertTrue(Prescription.objects.get(drug__name='drug3').filled, True)
 
 # Unit tests for delete reminder
 class DeleteReminderTest(TestCase):

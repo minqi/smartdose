@@ -66,6 +66,7 @@ class NotificationCenterTest(TestCase):
 
 	def test_send_message(self):
 		self.patient1.status = UserProfile.ACTIVE
+		sent_time = datetime.datetime.now()
 		self.nc.send_message(to=self.patient1, notifications=self.med_reminders,
 			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)})
 
@@ -79,7 +80,7 @@ class NotificationCenterTest(TestCase):
 			self.assertTrue(n.reminder_time in self.med_reminders)
 
 		ReminderTime.objects.update()
-		self.assertTrue((self.med_reminders[0].send_time.day - datetime.datetime.now().day) == 1)
+		self.assertTrue((self.med_reminders[0].send_time.date() - sent_time.date()).days == 1)
 
 	def test_send_welcome_notifications(self):
 		# check that the patient's status is NEW
@@ -110,6 +111,7 @@ class NotificationCenterTest(TestCase):
 	def test_send_refill_notifications(self):
 		# see if you can send refill notification
 		self.assertTrue(self.patient2.status == UserProfile.NEW)
+		sent_time = datetime.datetime.now()
 		self.nc.send_notifications(to=self.patient2, notifications=self.refill_reminder)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 0)
 		
@@ -123,11 +125,12 @@ class NotificationCenterTest(TestCase):
 
 		# check that send_time is properly incremented
 		self.refill_reminder = ReminderTime.objects.get(pk=self.refill_reminder.pk)
-		self.assertTrue(self.refill_reminder.send_time.day > datetime.datetime.now().day)
+		self.assertTrue((self.refill_reminder.send_time.date() - sent_time.date()).days == 1)
 
 	def test_send_medication_notifications(self):
 		# see if you can send medication notification
 		self.assertTrue(self.patient1.status == UserProfile.NEW)
+		sent_time = datetime.datetime.now()
 		self.nc.send_notifications(to=self.patient1, notifications=self.med_reminder)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient2)), 0)
 		
@@ -146,7 +149,7 @@ class NotificationCenterTest(TestCase):
 		self.assertEqual(Message.objects.filter(patient=self.patient2)[0].message_number, 1)
 		# # check that send_time is properly incremented
 		self.med_reminder = ReminderTime.objects.get(pk=self.med_reminder.pk)
-		self.assertTrue(self.med_reminder.send_time.day > datetime.datetime.now().day)
+		self.assertTrue((self.med_reminder.send_time.date() - sent_time.date()).days == 1)
 
 	def test_send_safetynet_notifications(self):
 		# # see if safetynet notification is sent
