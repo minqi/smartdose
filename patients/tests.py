@@ -24,7 +24,6 @@ class PatientTest(TestCase):
 		self.assertEqual(minqi.safety_net_members.all().count(), 0)
 		# Add Matthew to Minqi's safety net
 		minqi.add_safetynet_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
-								 birthday=date(year=1989, month=10, day=13), 
 								 patient_relationship="friend")
 		matt = PatientProfile.objects.get(primary_phone_number="+12147094720")
 		minqi = PatientProfile.objects.get(id=minqi.id)
@@ -62,7 +61,6 @@ class PrimaryContactTest(TestCase):
 		                                      city="San Francisco", state_province="CA", country_iso_code="US",
 		                                      has_primary_contact=True)
 		minqi.add_primary_contact_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba",
-		                            birthday=date(year=1989, month=10, day=13),
 		                            patient_relationship="friend")
 		matt = PatientProfile.objects.get(primary_phone_number="+12147094720")
 		minqi = PatientProfile.objects.get(id=minqi.id)

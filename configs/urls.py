@@ -6,6 +6,9 @@ urlpatterns = patterns('',
 
     # Fishfood URLs
     url(r'^fishfood/$', 'webapp.views.fishfood'),
+    url(r'^fishfood/login/$', 'webapp.views.user_login'),
+    url(r'^fishfood/signup/$', 'webapp.views.user_registration'),
+    url(r'^fishfood/logout/$', 'webapp.views.user_logout'),  
 	url(r'^fishfood/patients/search/$', 'webapp.views.patient_search_results'),
     url(r'^fishfood/patients/new/$', 'webapp.views.create_patient'),
     url(r'^fishfood/patients/$', 'webapp.views.retrieve_patient', name="retrieve_patient"),

@@ -133,7 +133,11 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTH_USER_MODEL = 'common.UserProfile'
-AUTHENTICATION_BACKENDS = ('common.authentication.SettingsBackend',)
+AUTHENTICATION_BACKENDS = (
+    'common.authentication.SettingsBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+ANONYMOUS_USER_ID = -1
 
 SMS_ENCODING = 'utf-16-le'
 
@@ -168,6 +172,7 @@ INSTALLED_APPS = (
 
     # external apps
     'djcelery',
+    'guardian',
     'django_nose',
     'lockdown',
 )
@@ -243,4 +248,6 @@ LOGGING = {
     }
 }
 
+LOGIN_URL = '/fishfood/login/'
 LOCKDOWN_PASSWORDS = ('4266cesarchavez__',)
+

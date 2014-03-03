@@ -2,7 +2,7 @@ import datetime
 
 from django.db import models
 from django.db import transaction
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, Group, Permission, PermissionsMixin
 from django.contrib.auth import hashers
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
@@ -41,7 +41,7 @@ class UserProfileManager(BaseUserManager):
 # Models that implement UserProfile
 # doctors.models.DoctorProfile
 # patients.models.PatientProfile
-class UserProfile(AbstractBaseUser):
+class UserProfile(AbstractBaseUser, PermissionsMixin):
 	"""Model for implementing custom base User model"""
 	
 	# status
@@ -65,6 +65,7 @@ class UserProfile(AbstractBaseUser):
 	birthday 				= models.DateField(blank=True, null=True)
 	is_admin				= models.BooleanField(default=False)
 	join_datetime			= models.DateTimeField(auto_now_add=True)
+	is_active			    = models.BooleanField(default=True)
 
 	# Formula for computing probability that at least one of N users accounts with password of CHAR_SPACE are compromised in T minutes. 
 	# 1 - ((1-1/CHAR_SPACE^AUTH_TOKEN_LENGTH)^(AUTH_TOKEN_MAX_LOGIN_ATTEMPTS*T/AUTH_TOKEN_WAIT_PERIOD))^N
@@ -102,7 +103,7 @@ class UserProfile(AbstractBaseUser):
 	objects				= UserProfileManager()
 
 	def get_full_name(self):
-		return self.first_name + " " + self.last_name
+		return (self.first_name + " " + self.last_name).strip()
 
 	def get_short_name(self):
 		return self.first_name
@@ -117,14 +118,18 @@ class UserProfile(AbstractBaseUser):
 		super(UserProfile, self).__init__(*args, **kwargs)
 		if self.id:
 			return
+
+		if not self.first_name and not self.last_name and self.full_name:
+			name_tokens = self.full_name.split()
+			self.first_name = name_tokens[0].strip()
+			self.last_name = "".join(name_tokens[1:]).strip()
+
+		elif (self.first_name or self.last_name) and not self.full_name:
+			self.full_name = self.get_full_name()
+
 		self.username = self.get_unique_username(self)
 		self.full_name = self.get_full_name()
 		self.primary_phone_number = convert_to_e164(self.primary_phone_number)
-
-	def save(self, *args, **kwargs):
-		if len(self.first_name) == 0:
-			raise ValidationError('UserProfile must have a first name')
-		super(UserProfile, self).save(*args, **kwargs)
 
 	@staticmethod
 	def get_unique_username(obj):

@@ -67,4 +67,3 @@ for i in range(12):
 		send_time=now + i*timedelta(hours=1), 
 		reminder_type=ReminderTime.MEDICATION)
 
-

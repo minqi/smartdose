@@ -7,30 +7,21 @@
 		<meta name="referer" content="default" id="mref"/>
 		<link rel="shortcut icon" href="" />
 		<link type="text/css" rel="stylesheet" media="screen" href="/static/fishfood/fishfood.css">
-		<title>Smartdose - Fishfood</title>
+		<title>Smartdose - Login</title>
 	</head>
 	<body>
 		<div id="globalContainer">
-			<div id="topNavBar">
-				<input type="text" id="patient_search_box" placeholder="Search Smartdose"></input>
-			</div>
-			<div id="leftCol">
-				<div id="leftMenu">
-					<div id="add_patient_button">+Add a patient</div>
-					<ul id="patient_search_results">
-						{% include 'fishfood/patient_search_results_list.html' %}
-					</ul>
-				</div>
-				<form id="#logoutButton" action="/fishfood/logout/" method="post">
-					{% csrf_token %}
-					<input type="submit" value="Logout">
-				</form>
-			</div>
 			<div id="mainContainer">
 				<div id="mainCol">
 					<div id="mainContentView">
 						Welcome to the Smartdose fishfood :)
-						{% include 'fishfood/add_patient_view.html' %}
+						<form id="loginForm" action="/fishfood/login/" method="post">
+							{% csrf_token %}
+							<input type="text" class="loginField" 
+								placeholder="555-555-5555" name="primary_phone_number"/>
+							<input type="password" name="password"/>
+							<input type="submit" class="loginSubmitButton" value="Next"/>
+						</form>
 					</div>
 				</div>
 			</div>

@@ -17,12 +17,23 @@ from reminders.models import Prescription, ReminderTime, Message
 from webapp.views import create_patient, retrieve_patient, \
 	delete_patient, update_patient, create_reminder, delete_reminder
 
+from guardian.shortcuts import assign_perm
+
+# set up test client
 c = Client()
+
 
 class CreatePatientTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create(
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
-			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
+			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
+			num_caregivers=1)
 
 	def test_invalid_request(self):
 		# empty full name
@@ -49,6 +60,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.last_name, 'Gaba')
 		self.assertEqual(patient.full_name, "Matt Gaba")
 		self.assertEqual(patient.primary_phone_number, '+12147094720')
+		self.assertEqual(patient.num_caregivers, 1)
 
 		# make sure welcome message is sent
 		welcome_count = len(ReminderTime.objects.filter(
@@ -58,7 +70,7 @@ class CreatePatientTest(TestCase):
 	def test_create_existing_patient(self):
 		response = c.post('/fishfood/patients/new/', 
 			{'full_name':'Minqi Jiang', 'primary_phone_number':'8569067308'})
-		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.status_code, 400)
 
 		result = PatientProfile.objects.filter(first_name='Minqi')
 		self.assertTrue(result.exists())
@@ -68,14 +80,23 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.first_name, 'Minqi')
 		self.assertEqual(patient.last_name, 'Jiang')
 		self.assertEqual(patient.primary_phone_number, '+18569067308')
+		self.assertEqual(patient.num_caregivers, 1)
 
 		welcome_count = len(ReminderTime.objects.filter(
 			to=patient, reminder_type=ReminderTime.WELCOME))
 		self.assertEqual(welcome_count, 0)
 
+
 # Unit tests for retrieve patient
 class RetrievePatientTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create (
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		self.client_user = client_user
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
 
@@ -85,16 +106,30 @@ class RetrievePatientTest(TestCase):
 		self.assertEqual(response.status_code, 400)
 
 	def test_retrieve_nonexistent_patient(self):
-		response = c.get('/fishfood/patients/', {'p_id':'5'})
+		response = c.get('/fishfood/patients/', {'p_id':'100'})
 		self.assertEqual(response.status_code, 400)
 
 	def test_retrieve_existing_patient(self):
+		# no permission
+		response = c.get('/fishfood/patients/', {'p_id':str(self.patient1.id)})
+		self.assertEqual(response.status_code, 400)
+
+		# with permission
+		assign_perm('manage_patient_profile', self.client_user, self.patient1)
 		response = c.get('/fishfood/patients/', {'p_id':str(self.patient1.id)})
 		self.assertEqual(response.status_code, 200)
+
 
 # Unit tests for update patient
 class UpdatePatientTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create (
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		self.client_user = client_user
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
 
@@ -124,10 +159,19 @@ class UpdatePatientTest(TestCase):
 		response = c.post('/fishfood/patients/update/', 
 			{'full_name':'Non Existent', 
 			'primary_phone_number':'5555555555',
-			'p_id':str(self.patient1.id + 1)})
+			'p_id':str(self.patient1.id + 10)})
 		self.assertEqual(response.status_code, 400)
 
 	def test_update_existing_patient(self):
+		# without permission
+		response = c.post('/fishfood/patients/update/', 
+			{'full_name':'Minch Jiang', 
+			'primary_phone_number':'555-555-5555',
+			'p_id':str(self.patient1.id)})
+		self.assertEqual(response.status_code, 400)
+
+		# with permission
+		assign_perm('manage_patient_profile', self.client_user, self.patient1)
 		response = c.post('/fishfood/patients/update/', 
 			{'full_name':'Minch Jiang', 
 			'primary_phone_number':'555-555-5555',
@@ -143,13 +187,20 @@ class UpdatePatientTest(TestCase):
 # Unit tests for delete patient
 class DeletePatientTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create (
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		self.client_user = client_user
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
-			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
-		self.doctor = DoctorProfile.objects.create(
-			first_name='Test', last_name='Doctor', primary_phone_number='+15555555555')
+			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
+			num_caregivers=1)
+		self.prescriber = client_user
 		self.drug1 = Drug.objects.create(name='drug1')
 		self.prescription1 = Prescription.objects.create(
-			prescriber=self.doctor, patient=self.patient1, drug=self.drug1)
+			prescriber=self.prescriber, patient=self.patient1, drug=self.drug1)
 
 		self.welcome_reminder = ReminderTime.objects.create(
 			to=self.patient1, reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY,
@@ -163,10 +214,33 @@ class DeletePatientTest(TestCase):
 
 		self.patient1.add_safetynet_member(
 			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
-			primary_phone_number='+12147094720', birthday='1989-10-13')
+			primary_phone_number='+12147094720')
 		self.patient1.add_primary_contact_member(
 			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
-			primary_phone_number='+12147094720', birthday='1989-10-13')
+			primary_phone_number='+12147094720')
+
+		self.patient2 = PatientProfile.objects.create(
+					first_name='A', last_name='Patient', primary_phone_number='+15555555555',
+					num_caregivers=2, status=PatientProfile.ACTIVE)
+		self.prescription2 = Prescription.objects.create(
+			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
+
+		self.welcome_reminder2 = ReminderTime.objects.create(
+			to=self.patient2, reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.DAILY,
+			send_time=datetime.datetime.now())
+		self.refill_reminder2 = ReminderTime.objects.create(
+			to=self.patient2, reminder_type=ReminderTime.REFILL, repeat=ReminderTime.DAILY,
+			prescription=self.prescription2, send_time=datetime.datetime.now())
+		self.medication_reminder2 = ReminderTime.objects.create(
+			to=self.patient2, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
+			prescription=self.prescription2, send_time=datetime.datetime.now())
+
+		self.patient2.add_safetynet_member(
+			patient_relationship='Friend', first_name='Minqi', last_name='Jiang',
+			primary_phone_number='+18569067308')
+		self.patient2.add_primary_contact_member(
+			patient_relationship='Friend', first_name='Minqi', last_name='Jiang',
+			primary_phone_number='+18569067308')
 
 	def test_invalid_request(self):
 		# no patient id
@@ -174,10 +248,16 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(response.status_code, 400)
 
 	def test_delete_nonexistent_patient(self):
-		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient1.id + 1})
+		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient1.id + 10})
 		self.assertEqual(response.status_code, 400)
 
 	def test_delete_existing_patient(self):
+		# no permission
+		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient1.id})
+		self.assertEqual(response.status_code, 400) 
+
+		# with permission
+		assign_perm('manage_patient_profile', self.client_user, self.patient1)
 		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient1.id})
 		self.assertEqual(response.status_code, 302) # redirected to main fishfood view
 
@@ -186,6 +266,7 @@ class DeletePatientTest(TestCase):
 
 		patient = result.first()
 		self.assertTrue(patient.status == PatientProfile.QUIT)
+		self.assertTrue(patient.num_caregivers == 0)
 
 		self.assertEqual(len(Prescription.objects.filter(patient=self.patient1)), 0)
 		self.assertEqual(len(ReminderTime.objects.filter(to=self.patient1)), 0)
@@ -194,18 +275,47 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(PrimaryContactRelationship.objects.filter(
 			source_patient=self.patient1)), 0)
 
+	def test_delete_existing_patient_multiple_caregivers(self):
+		assign_perm('manage_patient_profile', self.client_user, self.patient2)
+		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient2.id})
+		self.assertEqual(response.status_code, 302)
+
+		result = PatientProfile.objects.filter(id=self.patient2.id)
+		self.assertTrue(result.exists())
+
+		patient = result.first()
+		self.assertTrue(patient.status == PatientProfile.ACTIVE)
+		self.assertTrue(patient.num_caregivers == 1)
+
+		self.assertEqual(len(Prescription.objects.filter(patient=self.patient2)), 1)
+		self.assertEqual(len(ReminderTime.objects.filter(to=self.patient2)), 3)
+		self.assertEqual(len(SafetyNetRelationship.objects.filter(
+			source_patient=self.patient2)), 1)
+		self.assertEqual(len(PrimaryContactRelationship.objects.filter(
+			source_patient=self.patient2)), 1)
+
+
 # Unit tests for create reminder
 class CreateReminderTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create (
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
-		self.doctor = DoctorProfile.objects.create(
-						first_name="Smartdose", last_name="", 
-						primary_phone_number="+18569067308", 
-						birthday=datetime.date(2014, 1, 28))
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Matt', last_name='Gaba', primary_phone_number='+12147094720')
+		self.prescriber = client_user
 		self.drug1 = Drug.objects.create(name='drug1')
 		self.prescription1 = Prescription.objects.create(
-			prescriber=self.doctor, patient=self.patient1, drug=self.drug1)
+			prescriber=self.prescriber, patient=self.patient1, drug=self.drug1)
+		self.prescription2 = Prescription.objects.create(
+			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
+
+		assign_perm('manage_patient_profile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient_id	
@@ -234,7 +344,7 @@ class CreateReminderTest(TestCase):
 
 	def test_create_for_nonexistent_patient(self):
 		response = c.post('/fishfood/reminders/new/', 
-			{'p_id':str(self.patient1.id + 1), 'drug_name':'drug1', 
+			{'p_id':str(self.patient1.id + 10), 'drug_name':'drug1', 
 			'reminder_time':'9:00 AM', 'mon':True})
 		self.assertEqual(response.status_code, 400)
 
@@ -248,7 +358,7 @@ class CreateReminderTest(TestCase):
 			repeat=ReminderTime.DAILY, 
 			prescription=self.prescription1,
 			day_of_week=1)
-		old_reminder_count = len(ReminderTime.objects.all())
+		old_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 
 		response = c.post('/fishfood/reminders/new/', 
 			{'p_id':str(self.patient1.id), 'drug_name':'drug1', 
@@ -257,12 +367,14 @@ class CreateReminderTest(TestCase):
 			'thu':True, 'fri':True, 'sat':True, 'sun':True})
 		self.assertEqual(response.status_code, 200)
 
-		new_reminder_count = len(ReminderTime.objects.all())
+		new_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 		self.assertEqual(old_reminder_count, new_reminder_count)
 
 		daily_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY))
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
@@ -277,7 +389,7 @@ class CreateReminderTest(TestCase):
 			repeat=ReminderTime.WEEKLY, 
 			prescription=self.prescription1,
 			day_of_week=1)
-		old_reminder_count = len(ReminderTime.objects.all())
+		old_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 
 		response = c.post('/fishfood/reminders/new/', 
 			{'p_id':str(self.patient1.id), 'drug_name':'drug1', 
@@ -286,12 +398,14 @@ class CreateReminderTest(TestCase):
 			'thu':True, 'fri':True, 'sat':True, 'sun':True})
 		self.assertEqual(response.status_code, 200)
 
-		new_reminder_count = len(ReminderTime.objects.all())
+		new_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 		self.assertEqual(old_reminder_count, new_reminder_count)
 
 		daily_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY))
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
@@ -307,19 +421,21 @@ class CreateReminderTest(TestCase):
 			repeat=ReminderTime.DAILY, 
 			prescription=self.prescription1,
 			day_of_week=1)
-		old_reminder_count = len(ReminderTime.objects.all())
+		old_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 
 		response = c.post('/fishfood/reminders/new/', 
 			{'p_id':str(self.patient1.id), 'drug_name':'drug1', 
 			'reminder_time':'9:00', 'mon':True})
 		self.assertEqual(response.status_code, 200)
 
-		new_reminder_count = len(ReminderTime.objects.all())
+		new_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 		self.assertEqual(old_reminder_count, new_reminder_count)
 
 		daily_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY))
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
@@ -334,19 +450,21 @@ class CreateReminderTest(TestCase):
 			repeat=ReminderTime.WEEKLY, 
 			prescription=self.prescription1,
 			day_of_week=1)
-		old_reminder_count = len(ReminderTime.objects.all())
+		old_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 
 		response = c.post('/fishfood/reminders/new/', 
 			{'p_id':str(self.patient1.id), 'drug_name':'drug1', 
 			'reminder_time':'9:00', 'mon':True})
 		self.assertEqual(response.status_code, 200)
 
-		new_reminder_count = len(ReminderTime.objects.all())
+		new_reminder_count = len(ReminderTime.objects.filter(to=self.patient1))
 		self.assertEqual(old_reminder_count, new_reminder_count)
 
 		daily_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY))
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(daily_reminder_count, 0)
 		self.assertEqual(weekly_reminder_count, 1)
@@ -358,10 +476,12 @@ class CreateReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 1)
 
@@ -375,10 +495,12 @@ class CreateReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
 
@@ -391,10 +513,12 @@ class CreateReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		daily_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY)) 
 		self.assertEqual(daily_reminder_count, 1)
 
 		refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
 
@@ -405,10 +529,12 @@ class CreateReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		weekly_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.WEEKLY)) 
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
 
@@ -419,24 +545,39 @@ class CreateReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL)) 
 		self.assertEqual(refill_reminder_count, 0)
 
 		# if reminder created w/o refill reminder, filled should be true
 		self.assertTrue(Prescription.objects.get(drug__name='drug3').filled, True)
 
+	def test_create_reminder_without_permission(self):
+		response = c.post('/fishfood/reminders/new/', 
+			{'p_id':str(self.patient2.id), 'drug_name':'drug1', 
+			'reminder_time':'9:00', 'mon':True})
+		self.assertEqual(response.status_code, 400)
+
+
 # Unit tests for delete reminder
 class DeleteReminderTest(TestCase):
 	def setUp(self):
+		client_user = PatientProfile.objects.create (
+			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+		client_user.set_password('testpassword')
+		client_user.save()
+		c.login(phone_number='+10000000000', password='testpassword')
+
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308')
-		self.doctor = DoctorProfile.objects.create(
-						first_name="Smartdose", last_name="", 
-						primary_phone_number="+18569067308", 
-						birthday=datetime.date(2014, 1, 28))
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Matt', last_name='Gaba', primary_phone_number='+12147094720')
+		self.prescriber = client_user
 		self.drug1 = Drug.objects.create(name='drug1')
 		self.prescription1 = Prescription.objects.create(
-			prescriber=self.doctor, patient=self.patient1, drug=self.drug1)
+			prescriber=self.prescriber, patient=self.patient1, drug=self.drug1)
+		self.prescription2 = Prescription.objects.create(
+			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
 
 		send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(9,0))
 		send_datetime = next_weekday(send_datetime, 0)
@@ -444,13 +585,13 @@ class DeleteReminderTest(TestCase):
 			to=self.patient1, 
 			reminder_type=ReminderTime.REFILL,
 			send_time = send_datetime, 
-			repeat=ReminderTime.DAILY, 
+			repeat=ReminderTime.WEEKLY, 
 			prescription=self.prescription1)
 		self.med_reminder1 = ReminderTime.objects.create(
 			to=self.patient1, 
 			reminder_type=ReminderTime.MEDICATION,
 			send_time = send_datetime, 
-			repeat=ReminderTime.DAILY, 
+			repeat=ReminderTime.WEEKLY, 
 			prescription=self.prescription1,
 			day_of_week=1)
 		send_datetime = next_weekday(send_datetime, 1)
@@ -458,7 +599,7 @@ class DeleteReminderTest(TestCase):
 			to=self.patient1, 
 			reminder_type=ReminderTime.MEDICATION,
 			send_time = send_datetime, 
-			repeat=ReminderTime.DAILY, 
+			repeat=ReminderTime.WEEKLY, 
 			prescription=self.prescription1,
 			day_of_week=2)
 		send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(10,0))
@@ -467,9 +608,19 @@ class DeleteReminderTest(TestCase):
 			to=self.patient1, 
 			reminder_type=ReminderTime.MEDICATION,
 			send_time = send_datetime, 
-			repeat=ReminderTime.WEEKLY, 
+			repeat=ReminderTime.DAILY, 
 			prescription=self.prescription1,
 			day_of_week=8)
+
+		self.med_reminder4 = ReminderTime.objects.create(
+			to=self.patient2, 
+			reminder_type=ReminderTime.MEDICATION,
+			send_time = send_datetime, 
+			repeat=ReminderTime.DAILY, 
+			prescription=self.prescription2,
+			day_of_week=8)
+
+		assign_perm('manage_patient_profile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient id
@@ -497,7 +648,7 @@ class DeleteReminderTest(TestCase):
 
 	def test_delete_for_nonexistent_patient(self):
 		response = c.post('/fishfood/reminders/delete/', 
-			{'p_id':str(self.patient1.id + 1), 'drug_name':'drug1', 
+			{'p_id':str(self.patient1.id + 10), 'drug_name':'drug1', 
 			'reminder_time':'9:00 AM'})
 		self.assertEqual(response.status_code, 400)
 
@@ -520,10 +671,12 @@ class DeleteReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		remaining_med_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 1)
 
 		remaining_refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 1)
 
@@ -539,9 +692,17 @@ class DeleteReminderTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 
 		remaining_med_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 0)
 
 		remaining_refill_reminder_count = len(ReminderTime.objects.filter(
+			to=self.patient1,
 			reminder_type=ReminderTime.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 0)
+
+	def test_delete_reminder_without_permission(self):
+		response = c.post('/fishfood/reminders/new/', 
+			{'p_id':str(self.patient2.id), 'drug_name':'drug1', 
+			'reminder_time':'10:00', 'mon':True})
+		self.assertEqual(response.status_code, 400)

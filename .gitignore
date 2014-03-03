@@ -4,6 +4,6 @@
 .venv/
 fake_datasources/*
 celerybeat-schedule
-text_message_output
+test_message_output
 message_output
 

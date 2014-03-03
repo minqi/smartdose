@@ -1,9 +1,11 @@
 import datetime
+
 from django.db import models
-from django.db import transaction
 from django.template.loader import render_to_string
-from common.models import UserProfile, UserProfileManager
 from django.core.exceptions import ValidationError
+
+from common.models import UserProfile, UserProfileManager
+
 
 class SafetyNetRelationship(models.Model):
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship
@@ -11,13 +13,17 @@ class SafetyNetRelationship(models.Model):
 	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
 	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
 
+
 class PrimaryContactRelationship(models.Model):
 	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_primary_contacts')
 	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_primary_contacts')
 	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
 
+
 class PatientManager(UserProfileManager):
 	"""Manager for performing operations on PatientProfile records"""
+	pass
+
 
 class PatientProfile(UserProfile):
 	"""Model for patient-specific information"""
@@ -70,22 +76,35 @@ class PatientProfile(UserProfile):
 
 	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
 	email 					= models.EmailField(blank=True, null=True, unique=True)
+	
+	# number of people with access to the patient's profile
+	num_caregivers			= models.IntegerField(default=0) 
 
 	# The time from when a user requests to quit that they can confirm the quit to unenroll
-	QUIT_RESPONSE_WINDOW = 60 #minutes
+	QUIT_RESPONSE_WINDOW    = 60 #minutes
 	quit_request_datetime   = models.DateTimeField(blank=True, null=True)
 	# Manager fields
 	objects = PatientManager()
+
+	class Meta:
+		ordering = ['full_name']
+		permissions = (
+			('manage_patient_profile', 'Manage patient profile'),
+		)
 
 	def __init__(self, *args, **kwargs):
 		super(PatientProfile, self).__init__(*args, **kwargs)
 		if self.id:
 			return
+		valid = True
 		if self.primary_phone_number == None and self.has_primary_contact == False:
+			valid = False
+		if not valid:
 			raise ValidationError('Must provide either a primary phone number or primary contact')
 
 	def quit(self):
 		self.status = PatientProfile.QUIT
+
 		self.record_quit_request()
 		self.save()
 
@@ -93,7 +112,7 @@ class PatientProfile(UserProfile):
 		self.status = PatientProfile.ACTIVE
 		self.save()
 
-	def add_safetynet_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
+	def add_safetynet_member(self, patient_relationship, first_name, last_name, primary_phone_number):
 		"""Returns a tuple of the safety_net_member and whether the safety_net_member was created or not"""
 		#TODO: Figure out what happens when a user adds a safety net member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
 		#TODO: Add a way to create a backward-relationship
@@ -103,10 +122,8 @@ class PatientProfile(UserProfile):
 			created = False
 		except PatientProfile.DoesNotExist:
 			sn = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
-													   username=primary_phone_number,
 													   first_name=first_name,
-													   last_name=last_name,
-													   birthday=birthday)
+													   last_name=last_name,)
 		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, patient_relationship=patient_relationship)
 		self.has_safety_net = True
 		self.save()
@@ -114,7 +131,7 @@ class PatientProfile(UserProfile):
 		#TODO: Send a message to a safety net member letting them know they've opted in.
 		return sn, created
 	
-	def add_primary_contact_member(self, patient_relationship, first_name, last_name, primary_phone_number, birthday):
+	def add_primary_contact_member(self, patient_relationship, first_name, last_name, primary_phone_number):
 		"""Returns a tuple of the primary_contact_member and whether the primary_contact_member was created or not"""
 		#TODO: Figure out what happens when a user adds a primary contact member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
 		#TODO: Add a way to create a backward-relationship
@@ -124,10 +141,8 @@ class PatientProfile(UserProfile):
 			created = False
 		except PatientProfile.DoesNotExist:
 			pc = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
-													   username=primary_phone_number,
 													   first_name=first_name,
-													   last_name=last_name,
-													   birthday=birthday)
+													   last_name=last_name,)
 		PrimaryContactRelationship.objects.create(source_patient=self, target_patient=pc, patient_relationship=patient_relationship)
 		self.has_primary_contact = True
 		self.save()

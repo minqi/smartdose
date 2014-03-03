@@ -6,13 +6,13 @@ from django.db.models import Q
 
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
-from common.models import Drug
+from common.models import UserProfile, Drug
 from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
-	prescriber     				= models.ForeignKey(DoctorProfile, blank=False)
-	patient        				= models.ForeignKey(PatientProfile, blank=False)
+	prescriber     				= models.ForeignKey(UserProfile, blank=False, related_name='prescriptions_given')
+	patient        				= models.ForeignKey(PatientProfile, blank=False, related_name='prescriptions_received')
 	drug           				= models.ForeignKey(Drug, blank=False)
 	
 	safety_net_on				= models.BooleanField(default=False)
@@ -134,7 +134,7 @@ class ReminderTime(models.Model):
 		(MONTHLY,  'monthly'),
 		(YEARLY,   'yearly'),
 		(CUSTOM,   'custom'),
-	)
+	)	
 
 	# If value of week_of_month is 5, it means "last day of month" 
 	# e.g., last Tuesday of every month
@@ -263,6 +263,10 @@ class ReminderTime(models.Model):
 
 	class Meta:
 		get_latest_by = 'send_time'
+		permissions = (
+			('view_notification', 'View notification'),
+			('change_notification', 'Change notification'),
+		)
 
 
 class MessageManager(models.Manager):

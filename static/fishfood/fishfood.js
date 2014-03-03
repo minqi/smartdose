@@ -22,7 +22,9 @@
 		var add_patient_view = $("#addPatientView");
 		var add_reminder_form = $("#addReminderForm");
 		var add_reminder_button = $("#addReminderButton");
+
 		// ===define and bind event-handlers===================================
+
 		// keystroke handler for patient search-box 
 		// instant search
 		function get_patient_search_results_list(e) {
@@ -48,7 +50,7 @@
 				url  : "/fishfood/patients/",
 				type : "get",
 				data : dynamicData,
-				success : function(data) {
+				success : function(data, request) {
 					$("#mainContentView").html(data).show();
 					add_patient_view.hide();
 				}
