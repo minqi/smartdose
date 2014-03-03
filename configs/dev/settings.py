@@ -19,11 +19,11 @@ MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 
 TEST_ALL_APPS = False
-
+"""
 if TEST_ALL_APPS:
     TEST_RUNNER = 'django.test.simple.DjangoTestSuiteRunner'
-    # TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+"""
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
     ('minqi', 'mnqjng@gmail.com'),
@@ -214,7 +214,11 @@ CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULE = {
     'send-reminders': {
         'task' : 'reminders.tasks.sendRemindersForNow',
-        'schedule': crontab(minute='*/1')
+        'schedule': crontab(minute='*/1'),
+    },
+    'schedule-safety-net': {
+	    'task' : 'reminders.tasks.schedule_safety_net_messages',
+        'schedule': crontab(minute=0, hour=10, day_of_week=1) # Schedule safety net messages weekly at 10am on Monday
     }
 }
 USE_TZ = False

@@ -212,7 +212,7 @@ class DeletePatientTest(TestCase):
 			to=self.patient1, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
 			prescription=self.prescription1, send_time=datetime.datetime.now())
 
-		self.patient1.add_safetynet_member(
+		self.patient1.add_safety_net_member(
 			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
 			primary_phone_number='+12147094720')
 		self.patient1.add_primary_contact_member(
@@ -235,7 +235,7 @@ class DeletePatientTest(TestCase):
 			to=self.patient2, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
 			prescription=self.prescription2, send_time=datetime.datetime.now())
 
-		self.patient2.add_safetynet_member(
+		self.patient2.add_safety_net_member(
 			patient_relationship='Friend', first_name='Minqi', last_name='Jiang',
 			primary_phone_number='+18569067308')
 		self.patient2.add_primary_contact_member(

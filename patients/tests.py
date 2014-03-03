@@ -1,13 +1,11 @@
-"""
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
+from datetime import date
 
-Replace this with more appropriate tests for your application.
-"""
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+
+from common.utilities import InterpersonalRelationship
 from patients.models import PatientProfile
-from datetime import date
+
 
 class PatientTest(TestCase):
 	def test_add_safety_net(self):
@@ -23,7 +21,7 @@ class PatientTest(TestCase):
 		self.assertEqual(minqi.has_safety_net, False)
 		self.assertEqual(minqi.safety_net_members.all().count(), 0)
 		# Add Matthew to Minqi's safety net
-		minqi.add_safetynet_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
+		minqi.add_safety_net_member(primary_phone_number="2147094720", first_name="Matthew", last_name="Gaba", 
 								 patient_relationship="friend")
 		matt = PatientProfile.objects.get(primary_phone_number="+12147094720")
 		minqi = PatientProfile.objects.get(id=minqi.id)
@@ -68,3 +66,46 @@ class PrimaryContactTest(TestCase):
 		self.assertEqual(minqi.primary_contact_members.all().count(), 1)
 		self.assertEqual(minqi.primary_contact_members.all()[0], matt)
 		self.assertEqual(matt.source_patient_primary_contacts.all()[0].source_patient, minqi)
+
+class LookupBackwardsRelationshipTest(TestCase):
+	def setUp(self):
+		self.male_patient = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                      primary_phone_number="+12147984729",
+		                                      birthday=date(year=1990, month=4, day=21),
+		                                      gender=PatientProfile.MALE,
+		                                      address_line1="4266 Cesar Chavez",
+		                                      postal_code="94131",
+		                                      city="San Francisco", state_province="CA", country_iso_code="US")
+		self.female_patient = PatientProfile.objects.create(first_name="Minqina", last_name="Jiang",
+														  primary_phone_number="+12147984720",
+		                                                  birthday=date(year=1990, month=4, day=21),
+		                                                  gender=PatientProfile.FEMALE,
+		                                                  address_line1="4266 Cesar Chavez",
+		                                                  postal_code="94131",
+		                                                  city="San Francisco", state_province="CA", country_iso_code="US")
+		self.gender_neutral_patient = PatientProfile.objects.create(first_name="Minq", last_name="Jiang",
+		                                                    primary_phone_number="+12147984721",
+		                                                    birthday=date(year=1990, month=4, day=21),
+		                                                    gender=PatientProfile.UNKNOWN,
+		                                                    address_line1="4266 Cesar Chavez",
+		                                                    postal_code="94131",
+		                                                    city="San Francisco", state_province="CA", country_iso_code="US")
+
+	def test_male_backwards_relationship(self):
+		self.assertEqual(InterpersonalRelationship.lookup_backwards_relationship(
+			InterpersonalRelationship.MOTHER, self.male_patient), InterpersonalRelationship.SON)
+		self.assertEqual(InterpersonalRelationship.lookup_backwards_relationship(
+			InterpersonalRelationship.SON, self.male_patient), InterpersonalRelationship.FATHER)
+
+	def test_female_backwards_relationship(self):
+		self.assertEqual(
+			InterpersonalRelationship.lookup_backwards_relationship(
+				InterpersonalRelationship.MOTHER, self.female_patient), InterpersonalRelationship.DAUGHTER)
+		self.assertEqual(InterpersonalRelationship.lookup_backwards_relationship(
+			InterpersonalRelationship.SON, self.female_patient), InterpersonalRelationship.MOTHER)
+
+	def test_gender_neutral_backwards_relationship(self):
+		self.assertEqual(InterpersonalRelationship.lookup_backwards_relationship(
+			InterpersonalRelationship.MOTHER, self.gender_neutral_patient), InterpersonalRelationship.CHILD)
+		self.assertEqual(InterpersonalRelationship.lookup_backwards_relationship(
+			InterpersonalRelationship.SON, self.gender_neutral_patient), InterpersonalRelationship.PARENT)

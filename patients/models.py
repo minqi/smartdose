@@ -4,20 +4,39 @@ from django.db import models
 from django.template.loader import render_to_string
 from django.core.exceptions import ValidationError
 
+from common.utilities import InterpersonalRelationship
 from common.models import UserProfile, UserProfileManager
 
 
 class SafetyNetRelationship(models.Model):
 	#TODO: Add fields for someone who has opted-out of the safety-net relationship
-	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
-	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
-	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
+
+	source_patient = models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
+	target_patient = models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
+
+	source_to_target_relationship		= \
+		models.CharField(null=False, blank=False, max_length="20", 
+			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
+
+	target_to_source_relationship       = \
+		models.CharField(null=False, blank=False, max_length="20", 
+			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
 
 class PrimaryContactRelationship(models.Model):
-	source_patient 				= models.ForeignKey('PatientProfile', related_name='target_patient_primary_contacts')
-	target_patient 				= models.ForeignKey('PatientProfile', related_name='source_patient_primary_contacts')
-	patient_relationship		= models.CharField(null=False, blank=False, max_length="20")
+	source_patient = models.ForeignKey('PatientProfile', 
+		related_name='target_patient_primary_contacts')
+
+	target_patient = models.ForeignKey('PatientProfile', 
+		related_name='source_patient_primary_contacts')
+
+	source_to_target_relationship		= \
+		models.CharField(null=False, blank=False, max_length="20", 
+			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
+
+	target_to_source_relationship       = \
+		models.CharField(null=False, blank=False, max_length="20", 
+			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
 
 class PatientManager(UserProfileManager):
@@ -55,9 +74,10 @@ class PatientProfile(UserProfile):
 
 	# Patient specific fields
 	age 		= models.PositiveIntegerField(default=0)
-	gender 		= models.CharField(max_length=1,
-							  choices=GENDER_CHOICES,
-							  default=UNKNOWN)
+	gender 		= models.CharField(null=False, blank=False,
+	                            max_length=1,
+							    choices=GENDER_CHOICES,
+							    default=UNKNOWN)
 	height 		= models.PositiveIntegerField(default=0)
 	height_unit = models.CharField(max_length=2,
 								   choices=HEIGHT_UNIT_CHOICES,
@@ -69,8 +89,10 @@ class PatientProfile(UserProfile):
 	
 	safety_net_members 		= models.ManyToManyField("self", 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
+
 	primary_contact_members = models.ManyToManyField("self", 
 		through='PrimaryContactRelationship', symmetrical=False, related_name='primary_contact')
+
 	has_safety_net 			= models.BooleanField(default=False)
 	has_primary_contact 	= models.BooleanField(default=False)
 
@@ -108,33 +130,48 @@ class PatientProfile(UserProfile):
 		self.record_quit_request()
 		self.save()
 
+
 	def resume(self):
 		self.status = PatientProfile.ACTIVE
 		self.save()
 
-	def add_safetynet_member(self, patient_relationship, first_name, last_name, primary_phone_number):
-		"""Returns a tuple of the safety_net_member and whether the safety_net_member was created or not"""
-		#TODO: Figure out what happens when a user adds a safety net member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
-		#TODO: Add a way to create a backward-relationship
+
+	def add_safety_net_member(self, patient_relationship, 
+		first_name, last_name, primary_phone_number):
+		"""
+		Returns a tuple of the safety_net_member and whether 
+		the safety_net_member was created or not
+		"""
+		#TODO: Figure out what happens when a user adds a safety net member with the
+		# same phone number as another member...we should probably present something 
+		# in the UI to the user and ask them to confirm it is the appropriate person.
 		created = True
 		try: 
 			sn = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
 			created = False
 		except PatientProfile.DoesNotExist:
 			sn = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
-													   first_name=first_name,
-													   last_name=last_name,)
-		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, patient_relationship=patient_relationship)
+				first_name=first_name, last_name=last_name)
+		target_to_source_relationship = \
+			InterpersonalRelationship.lookup_backwards_relationship(patient_relationship, self)
+		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, 
+			source_to_target_relationship=patient_relationship, 
+			target_to_source_relationship=target_to_source_relationship)
+
 		self.has_safety_net = True
 		self.save()
 
-		#TODO: Send a message to a safety net member letting them know they've opted in.
 		return sn, created
 	
-	def add_primary_contact_member(self, patient_relationship, first_name, last_name, primary_phone_number):
-		"""Returns a tuple of the primary_contact_member and whether the primary_contact_member was created or not"""
-		#TODO: Figure out what happens when a user adds a primary contact member with the same phone number as another member...we should probably present something in the UI to the user and ask them to confirm it is the appropriate person.
-		#TODO: Add a way to create a backward-relationship
+	def add_primary_contact_member(self, patient_relationship,
+		first_name, last_name, primary_phone_number):
+		"""
+		Returns a tuple of the primary_contact_member and 
+		whether the primary_contact_member was created or not
+		"""
+		#TODO: Figure out what happens when a user adds a safety net member with the
+		# same phone number as another member...we should probably present something 
+		# in the UI to the user and ask them to confirm it is the appropriate person.
 		created = True
 		try: 
 			pc = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
@@ -142,12 +179,18 @@ class PatientProfile(UserProfile):
 		except PatientProfile.DoesNotExist:
 			pc = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
 													   first_name=first_name,
-													   last_name=last_name,)
-		PrimaryContactRelationship.objects.create(source_patient=self, target_patient=pc, patient_relationship=patient_relationship)
+													   last_name=last_name)
+
+		target_to_source_relationship = \
+			InterpersonalRelationship.lookup_backwards_relationship(patient_relationship, self)
+		PrimaryContactRelationship.objects.create(
+			source_patient=self, target_patient=pc, 
+			source_to_target_relationship=patient_relationship, 
+			target_to_source_relationship=target_to_source_relationship)
+
 		self.has_primary_contact = True
 		self.save()
 
-		#TODO: Send a message to a primary contact member letting them know they've opted in.
 		return pc, created
 
 	# Note, code is shared across patient, doctor, and safety net models, so you should update in all places
@@ -164,9 +207,13 @@ class PatientProfile(UserProfile):
 		super(PatientProfile, self).save(*args, **kwargs)
 
 	def did_request_quit_within_quit_response_window(self):
-		""" Returns True if the patient initiated a quit message more recently than QUIT_RESPONSE_WINDOW
+		""" 
+		Returns True if the patient initiated a quit message 
+		more recently than QUIT_RESPONSE_WINDOW
 		"""
-		if self.quit_request_datetime and self.quit_request_datetime > datetime.datetime.now() - datetime.timedelta(minutes=PatientProfile.QUIT_RESPONSE_WINDOW):
+		time_diff = datetime.datetime.now() - \
+			datetime.timedelta(minutes=PatientProfile.QUIT_RESPONSE_WINDOW)
+		if self.quit_request_datetime and self.quit_request_datetime > time_diff:
 			return True
 		else:
 			return False
@@ -180,5 +227,4 @@ class PatientProfile(UserProfile):
 			return True
 		else:
 			return False
-
 

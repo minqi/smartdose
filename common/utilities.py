@@ -14,6 +14,7 @@ twilio_client = TwilioRestClient(settings.TWILIO_ACCOUNT_SID,
 								 settings.TWILIO_AUTH_TOKEN)
 twilio_number = settings.TWILIO_NUMBER
 
+
 class SMSLogger():
 	""" Used to log sent SMS content to a file and read back SMS content from file
 	"""
@@ -43,6 +44,7 @@ class SMSLogger():
 			pass
 		f.close()
 		return SMSLogger._decode_log(line)
+
 	@staticmethod
 	def getLastNSentMessages(n):
 		if not settings.DEBUG:
@@ -57,12 +59,14 @@ class SMSLogger():
 		for line in l:
 			messages.append(SMSLogger._decode_log(line))
 		return messages
+
 	@staticmethod
 	def log(to_number, content, datetime_sent):
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'a')
 		log_data = {'datetime_sent': str(datetime_sent), 'to': to_number, 'content':content}
 		f.write(json.dumps(log_data)+"\n")
 		f.close()
+
 
 def sendTextMessageToNumber(body, to):
 	if not settings.DEBUG:
@@ -76,10 +80,12 @@ def sendTextMessageToNumber(body, to):
 	SMSLogger.log(to, body, datetime_orig.datetime.now())
 	return True
 
+
 def weekOfMonth(dt):
 	"""Returns which week a day of a month falls in. 
 	For example, Thursday, May 9th, 2013 is the 2nd Tuesday of the month"""
 	return ceil(dt.day / 7.0)
+
 
 def lastWeekOfMonth(dt):
 	"""Returns whether the day for the given datetime fall in the last week of the month"""
@@ -89,11 +95,13 @@ def lastWeekOfMonth(dt):
 	else:
 		return True
 
+
 def is_today(dt): #TODO(minqi):test
 	"""Return True if dt is a time in today"""
 	dt_time = dt.date()
 	today = datetime_orig.datetime.now().date()
 	return dt_time == today
+
 
 def is_integer(s):
 	try:
@@ -101,6 +109,7 @@ def is_integer(s):
 		return True
 	except ValueError:
 		return False
+
 
 def list_to_queryset(l):
 	"""
@@ -121,6 +130,7 @@ def list_to_queryset(l):
 		return class_object.objects.filter(pk__in=item_pks)
 	return None
 
+
 def convert_to_e164(raw_phone):
 	"""
 	Convert a raw phone number string to E.164 format
@@ -140,6 +150,7 @@ def convert_to_e164(raw_phone):
 	return phonenumbers.format_number(phone_representation,
 		phonenumbers.PhoneNumberFormat.E164)
 
+
 def next_weekday(d, weekday):
 	"""
 	Get datetime of next day after datetime <d> that is a <weekday>
@@ -148,3 +159,168 @@ def next_weekday(d, weekday):
 	if days_ahead <= 0: # Target day already happened this week
 		days_ahead += 7
 	return d + datetime_orig.timedelta(days_ahead)
+
+
+class InterpersonalRelationship():
+	FRIEND          = 'friend'
+
+	MOTHER          = 'mother'
+	FATHER          = 'father'
+	PARENT          = 'parent'
+
+	DAUGHTER        = 'daughter'
+	SON             = 'son'
+	CHILD           = 'child'
+
+	GRANDMOTHER     = 'grandma'
+	GRANDFATHER     = 'grandpa'
+	GRANDPARENT     = 'grandparent'
+
+	GRANDDAUGHTER   = 'granddaughter'
+	GRANDSON        = 'grandson'
+	GRANDCHILD      = 'grandchild'
+
+	WIFE            = 'wife'
+	HUSBAND         = 'husband'
+	SPOUSE          = 'spouse'
+
+	SISTER          = 'sister'
+	BROTHER         = 'brother'
+	SIBLING         = 'sibling'
+
+	OTHER           = 'other'
+
+	RELATIONSHIP_CHOICES = (
+		(FRIEND, 'friend'),
+
+		(MOTHER, 'mother'),
+		(FATHER, 'father'),
+		(PARENT, 'parent'),
+
+		(SON, 'son'),
+		(DAUGHTER, 'daughter'),
+		(CHILD, 'child'),
+
+		(GRANDMOTHER, 'grandma'),
+		(GRANDFATHER, 'grandpa'),
+		(GRANDPARENT, 'grandparent'),
+
+		(GRANDDAUGHTER, 'granddaughter'),
+		(GRANDSON, 'grandson'),
+		(GRANDCHILD, 'grandchild'),
+
+		(HUSBAND, 'husband'),
+		(WIFE, 'wife'),
+		(SPOUSE, 'spouse'),
+
+		(BROTHER, 'brother'),
+		(SISTER, 'sister'),
+		(SIBLING, 'sibling'),
+
+		(OTHER, 'other'),
+	)
+
+	#A map of relationships for a female. For example, a woman is a daughter of a mother
+	FEMALE_RELATIONSHIPS = {
+		FRIEND:FRIEND,
+
+		MOTHER:DAUGHTER,
+	    FATHER:DAUGHTER,
+	    PARENT:DAUGHTER,
+
+	    DAUGHTER:MOTHER,
+		SON:MOTHER,
+	    CHILD:MOTHER,
+
+	    GRANDMOTHER:GRANDDAUGHTER,
+		GRANDFATHER:GRANDDAUGHTER,
+	    GRANDPARENT:GRANDDAUGHTER,
+
+	    GRANDDAUGHTER:GRANDMOTHER,
+	    GRANDSON:GRANDMOTHER,
+	    GRANDCHILD:GRANDMOTHER,
+
+	    WIFE:WIFE,
+	    HUSBAND:WIFE,
+	    SPOUSE:WIFE,
+
+	    SISTER:SISTER,
+	    BROTHER:SISTER,
+	    SIBLING:SISTER,
+
+	    OTHER:OTHER
+	}
+
+	#A map of relationships for a male. For example, a man is a son of a mother
+	MALE_RELATIONSHIPS = {
+		FRIEND:FRIEND,
+
+		MOTHER:SON,
+		FATHER:SON,
+	    PARENT:SON,
+
+		DAUGHTER:FATHER,
+		SON:FATHER,
+	    CHILD:FATHER,
+
+		GRANDMOTHER:GRANDSON,
+		GRANDFATHER:GRANDSON,
+	    GRANDPARENT:GRANDSON,
+
+		GRANDDAUGHTER:GRANDFATHER,
+		GRANDSON:GRANDFATHER,
+	    GRANDCHILD:GRANDFATHER,
+
+		WIFE:HUSBAND,
+		HUSBAND:HUSBAND,
+	    SPOUSE:HUSBAND,
+
+		SISTER:BROTHER,
+		BROTHER:BROTHER,
+	    SIBLING:BROTHER,
+
+		OTHER:OTHER
+	}
+
+	#A map of relationships for a gender neutral. For example, a gender neutral is a child of a mother
+	GENDER_NEUTRAL_RELATIONSHIPS = {
+		FRIEND:FRIEND,
+
+		MOTHER:CHILD,
+		FATHER:CHILD,
+		PARENT:CHILD,
+
+		DAUGHTER:PARENT,
+		SON:PARENT,
+		CHILD:PARENT,
+
+		GRANDMOTHER:GRANDCHILD,
+		GRANDFATHER:GRANDCHILD,
+		GRANDPARENT:GRANDCHILD,
+
+		GRANDDAUGHTER:GRANDPARENT,
+		GRANDSON:GRANDPARENT,
+		GRANDCHILD:GRANDPARENT,
+
+		WIFE:SPOUSE,
+		HUSBAND:SPOUSE,
+		SPOUSE:SPOUSE,
+
+		SISTER:SIBLING,
+		BROTHER:SIBLING,
+		SIBLING:SIBLING,
+
+		OTHER:OTHER
+	}
+	@staticmethod
+	def lookup_backwards_relationship(relationship,patient):
+		""" Given a relationship to a patient, return the inverse relationship.
+		For example, if the relationship is a mother, and the patient is a male, then the inverse is "son" to the mother
+		"""
+		relationship = relationship.lower()
+		if patient.gender == patient.FEMALE:
+			return InterpersonalRelationship.FEMALE_RELATIONSHIPS[relationship]
+		elif patient.gender == patient.MALE:
+			return InterpersonalRelationship.MALE_RELATIONSHIPS[relationship]
+		else:
+			return InterpersonalRelationship.GENDER_NEUTRAL_RELATIONSHIPS[relationship]

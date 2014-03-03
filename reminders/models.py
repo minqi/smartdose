@@ -81,7 +81,7 @@ class ReminderManager(models.Manager):
 			refill_reminder = ReminderTime.objects.get_or_create(to=to,
 																 reminder_type=ReminderTime.REFILL,
 																 repeat=ReminderTime.DAILY,
-																 send_time=reminder_schedule[0][1], #TODO(mgaba): Find the right way to make a proper default
+																 send_time=reminder_schedule[0][1], 
 																 prescription=prescription)[0]
 		reminder_times = []
 		for reminder_schedule_entry in reminder_schedule:
