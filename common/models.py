@@ -146,21 +146,24 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
 
 	@staticmethod
 	def get_unique_username(obj):
-		original_username = str(hash(obj.first_name + obj.last_name + str(datetime.datetime.now())))
+		original_username = str(hash(
+			str(obj.pk) + obj.first_name + obj.last_name + \
+			str(datetime.datetime.now())))
 		username = original_username
-		for i in range(0, 10000): #aribtrarily choose max range to be 10000 on the assumption that there will not be more than 10,000 collisions.
-			try:
-				UserProfile.objects.get(username=username)
-			except UserProfile.DoesNotExist:
-				return username
-			else:
-				username = original_username+str(i) # If there's a collision, add another integeter and begin incrementing
-		raise UsernameCollisionError
+
+		i = 0
+		while UserProfile.objects.filter(username=username).exists():
+			username = '%s%d' % (original_username, i)
+			i += 1
+
+		return username
 
 	def generate_auth_token(self):
 		self.auth_token_datetime = datetime.datetime.now()
 		self.auth_token_active = True
-		self.auth_token = UserProfile.objects.make_random_password(length=UserProfile.AUTH_TOKEN_LENGTH, allowed_chars='abcdefghjkmnpqrstuvwxyz23456789')
+		self.auth_token = UserProfile.objects.make_random_password(
+			length=UserProfile.AUTH_TOKEN_LENGTH, 
+			allowed_chars='abcdefghjkmnpqrstuvwxyz23456789')
 		self.save()
 
 class Drug(models.Model):
