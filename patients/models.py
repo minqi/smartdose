@@ -9,34 +9,23 @@ from common.models import UserProfile, UserProfileManager
 
 
 class SafetyNetRelationship(models.Model):
-	#TODO: Add fields for someone who has opted-out of the safety-net relationship
-
+	# what the patient calls this safety net contact
 	source_patient = models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
 	target_patient = models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
 
 	source_to_target_relationship		= \
-		models.CharField(null=False, blank=False, max_length="20", 
+		models.CharField(null=False, blank=False, max_length=20, 
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
 	target_to_source_relationship       = \
-		models.CharField(null=False, blank=False, max_length="20", 
+		models.CharField(null=False, blank=False, max_length=20, 
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
+	receives_all_reminders = models.BooleanField(default=False)
+	opt_out	               = models.BooleanField(default=False)
 
-class PrimaryContactRelationship(models.Model):
-	source_patient = models.ForeignKey('PatientProfile', 
-		related_name='target_patient_primary_contacts')
-
-	target_patient = models.ForeignKey('PatientProfile', 
-		related_name='source_patient_primary_contacts')
-
-	source_to_target_relationship		= \
-		models.CharField(null=False, blank=False, max_length="20", 
-			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
-
-	target_to_source_relationship       = \
-		models.CharField(null=False, blank=False, max_length="20", 
-			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
+	class Meta:
+		unique_together = (('source_patient', 'target_patient'),)
 
 
 class PatientManager(UserProfileManager):
@@ -87,24 +76,22 @@ class PatientProfile(UserProfile):
 									choices=HEIGHT_UNIT_CHOICES,
 									default=POUNDS)
 	
-	safety_net_members 		= models.ManyToManyField("self", 
+	safety_net_contacts 	= models.ManyToManyField('self', 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
-
-	primary_contact_members = models.ManyToManyField("self", 
-		through='PrimaryContactRelationship', symmetrical=False, related_name='primary_contact')
-
-	has_safety_net 			= models.BooleanField(default=False)
-	has_primary_contact 	= models.BooleanField(default=False)
 
 	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
 	email 					= models.EmailField(blank=True, null=True, unique=True)
 	
 	# number of people with access to the patient's profile
-	num_caregivers			= models.IntegerField(default=0) 
+	num_caregivers			= models.IntegerField(default=0)
+
+	# someone who receives messages on this patient's behalf
+	primary_contact         = models.ForeignKey('self', null=True)
 
 	# The time from when a user requests to quit that they can confirm the quit to unenroll
 	QUIT_RESPONSE_WINDOW    = 60 #minutes
 	quit_request_datetime   = models.DateTimeField(blank=True, null=True)
+
 	# Manager fields
 	objects = PatientManager()
 
@@ -119,88 +106,39 @@ class PatientProfile(UserProfile):
 		if self.id:
 			return
 		valid = True
-		if self.primary_phone_number == None and self.has_primary_contact == False:
+
+		if not self.primary_phone_number and not self.primary_contact:
 			valid = False
 		if not valid:
 			raise ValidationError('Must provide either a primary phone number or primary contact')
 
 	def quit(self):
 		self.status = PatientProfile.QUIT
-
 		self.record_quit_request()
 		self.save()
-
 
 	def resume(self):
 		self.status = PatientProfile.ACTIVE
 		self.save()
 
-
-	def add_safety_net_member(self, patient_relationship, 
-		first_name, last_name, primary_phone_number):
-		"""
-		Returns a tuple of the safety_net_member and whether 
-		the safety_net_member was created or not
-		"""
-		#TODO: Figure out what happens when a user adds a safety net member with the
-		# same phone number as another member...we should probably present something 
-		# in the UI to the user and ask them to confirm it is the appropriate person.
-		created = True
-		try: 
-			sn = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
-			created = False
-		except PatientProfile.DoesNotExist:
-			sn = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
-				first_name=first_name, last_name=last_name)
-		target_to_source_relationship = \
-			InterpersonalRelationship.lookup_backwards_relationship(patient_relationship, self)
-		SafetyNetRelationship.objects.create(source_patient=self, target_patient=sn, 
-			source_to_target_relationship=patient_relationship, 
-			target_to_source_relationship=target_to_source_relationship)
-
-		self.has_safety_net = True
-		self.save()
-
-		return sn, created
-	
-	def add_primary_contact_member(self, patient_relationship,
-		first_name, last_name, primary_phone_number):
-		"""
-		Returns a tuple of the primary_contact_member and 
-		whether the primary_contact_member was created or not
-		"""
-		#TODO: Figure out what happens when a user adds a safety net member with the
-		# same phone number as another member...we should probably present something 
-		# in the UI to the user and ask them to confirm it is the appropriate person.
-		created = True
-		try: 
-			pc = PatientProfile.objects.get(primary_phone_number=primary_phone_number)
-			created = False
-		except PatientProfile.DoesNotExist:
-			pc = PatientProfile.objects.create(primary_phone_number=primary_phone_number,
-													   first_name=first_name,
-													   last_name=last_name)
-
-		target_to_source_relationship = \
-			InterpersonalRelationship.lookup_backwards_relationship(patient_relationship, self)
-		PrimaryContactRelationship.objects.create(
-			source_patient=self, target_patient=pc, 
-			source_to_target_relationship=patient_relationship, 
-			target_to_source_relationship=target_to_source_relationship)
-
-		self.has_primary_contact = True
-		self.save()
-
-		return pc, created
-
-	# Note, code is shared across patient, doctor, and safety net models, so you should update in all places
-	def validate_unique(self, *args, **kwargs):
-		super(PatientProfile, self).validate_unique(*args, **kwargs)
-		if not self.id:
-			if self.__class__.objects.filter(
-				primary_phone_number=self.primary_phone_number, birthday=self.birthday, 
-				first_name__iexact=self.first_name, last_name__iexact=self.last_name).exists():
-				raise ValidationError('This patient already exists.')
+	def add_safety_net_contact(self, target_patient, relationship, 
+		receives_all_reminders=False):
+		reverse_relationship = \
+			InterpersonalRelationship.lookup_backwards_relationship(relationship, self)
+		defaults = {
+			'source_to_target_relationship':relationship, 
+			'target_to_source_relationship':reverse_relationship,
+			'receives_all_reminders':receives_all_reminders}
+		try:
+			sn_relation = SafetyNetRelationship.objects.get(
+				source_patient=self, target_patient=target_patient)
+			for key, value in defaults.iteritems():
+				setattr(sn_relation, key, value)
+			sn_relation.save()
+		except SafetyNetRelationship.DoesNotExist:
+			defaults.update({'source_patient':self, 'target_patient':target_patient})
+			sn_relation = SafetyNetRelationship(**defaults)
+			sn_relation.save()
 
 	def save(self, *args, **kwargs):
 		self.validate_unique()
@@ -227,4 +165,5 @@ class PatientProfile(UserProfile):
 			return True
 		else:
 			return False
+
 

@@ -319,8 +319,11 @@ class InterpersonalRelationship():
 		"""
 		relationship = relationship.lower()
 		if patient.gender == patient.FEMALE:
-			return InterpersonalRelationship.FEMALE_RELATIONSHIPS[relationship]
+			return InterpersonalRelationship.FEMALE_RELATIONSHIPS.get(
+				relationship, InterpersonalRelationship.OTHER)
 		elif patient.gender == patient.MALE:
-			return InterpersonalRelationship.MALE_RELATIONSHIPS[relationship]
+			return InterpersonalRelationship.MALE_RELATIONSHIPS.get(
+				relationship, InterpersonalRelationship.OTHER)
 		else:
-			return InterpersonalRelationship.GENDER_NEUTRAL_RELATIONSHIPS[relationship]
+			return InterpersonalRelationship.GENDER_NEUTRAL_RELATIONSHIPS.get(
+				relationship, InterpersonalRelationship.OTHER)

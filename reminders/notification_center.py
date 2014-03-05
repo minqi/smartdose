@@ -58,7 +58,9 @@ class NotificationCenter(object):
 		# send message
 		if not body and template:
 			body = render_to_string(template, context)
-		sendTextMessageToNumber(body, to.primary_phone_number)
+
+		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
+		sendTextMessageToNumber(body, primary_phone_number)
 
 		# perform necessary record-keeping and updates to sent notifications
 		for notification in notifications:

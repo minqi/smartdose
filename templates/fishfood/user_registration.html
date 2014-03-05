@@ -17,8 +17,10 @@
 						Welcome to the Smartdose fishfood :)
 						<form id="loginForm" action="/fishfood/signup/" method="post">
 							{% csrf_token %}
-							<input type="text" class="loginField" placeholder="Your name" 
+							<input type="text" class="loginField" placeholder="Name" 
 								name="full_name"/>
+							<input type="text" class="loginField" 
+								placeholder="Email" name="email"/>
 							<input type="text" class="loginField" 
 								placeholder="555-555-5555" name="primary_phone_number"/>
 							<input type="password" name="password1"/>

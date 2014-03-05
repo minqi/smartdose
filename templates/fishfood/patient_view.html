@@ -8,7 +8,11 @@
 		<div class="patientListItemPhoto"></div>
 		<div class="patientListItemInfo">
 			<div class="patientListItemFullName">{{ patient.full_name }}</div>
+			{% if patient.primary_phone_number %}
 			<div class="patientListItemPhoneNumber">{{ patient.primary_phone_number }}</div>
+			{% else %}
+			<div class="patientListItemPhoneNumber">{{ patient.primary_contact.primary_phone_number }}</div>
+			{% endif %}
 		</div>
 		<div class="clearfix"></div>
 	</div>

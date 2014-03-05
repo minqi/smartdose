@@ -62,13 +62,13 @@ class SafetyNetCenter(object):
 			'patient_first':patient.first_name,
 			'patient_gender':patient.gender
 			}
-			safety_net_members = patient.safety_net_members.all()
-			for safety_net_member in safety_net_members:
+			safety_net_contacts = patient.safety_net_contacts.all()
+			for safety_net_contact in safety_net_contacts:
 				dictionary['patient_relationship'] = \
 					SafetyNetRelationship.objects.get(source_patient=patient, 
-						target_patient=safety_net_member).target_to_source_relationship
+						target_patient=safety_net_contact).target_to_source_relationship
 				message_body = render_to_string('messages/safety_net_message.txt', dictionary)
-				ReminderTime.objects.create_safety_net_notification(to=safety_net_member, text=message_body)
+				ReminderTime.objects.create_safety_net_notification(to=safety_net_contact, text=message_body)
 
 	def schedule_safety_net_messages(self, window_start, window_finish, threshold, timeout):
 		"""

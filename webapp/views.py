@@ -15,11 +15,11 @@ from itertools import groupby
 
 from common.utilities import is_integer, next_weekday, convert_to_e164
 from common.models import Drug
-from patients.models import PatientProfile, SafetyNetRelationship, PrimaryContactRelationship
+from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import ReminderTime, Prescription, Message, SentReminder
 
-from guardian.shortcuts import assign_perm, get_objects_for_user
+from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 from guardian.models import UserObjectPermission, GroupObjectPermission
 from lockdown.decorators import lockdown
 
@@ -39,6 +39,7 @@ class UserLoginForm(forms.Form):
 
 class UserRegistrationForm(forms.Form):
 	full_name = forms.CharField(max_length=80) 
+	email = forms.EmailField()
 	primary_phone_number = USPhoneNumberField()
 	password1 = forms.CharField(widget=forms.PasswordInput())
 	password2 = forms.CharField(widget=forms.PasswordInput())
@@ -54,6 +55,7 @@ class UserRegistrationForm(forms.Form):
 		return convert_to_e164(primary_phone_number)
 
 	def clean(self):
+		cleaned_data = super(UserRegistrationForm, self).clean()
 		password1 = self.cleaned_data.get('password1')
 		password2 = self.cleaned_data.get('password2')
 
@@ -125,6 +127,7 @@ class NewReminderForm(forms.Form):
 		return drug_name
 
 	def clean(self):
+		cleaned_data = super(NewReminderForm, self).clean()
 		active_days_of_week = (
 			self.cleaned_data.get('mon', False),
 			self.cleaned_data.get('tue', False),
@@ -151,13 +154,15 @@ class DeleteReminderForm(forms.Form):
 		return drug_name
 
 	def clean(self):
-		p_id = self.cleaned_data.get('p_id', None)
+		cleaned_data = super(DeleteReminderForm, self).clean()
+		
+		p_id = self.cleaned_data.get('p_id')
 		patient = PatientProfile.objects.filter(id=p_id)
 		if not patient.exists():
 			raise ValidationError('Patient does not exist')
 		else:
 			patient = patient[0]
-		drug_name = self.cleaned_data.get('drug_name', None)
+		drug_name = self.cleaned_data.get('drug_name')
 
 		if not Prescription.objects.filter(patient=patient, drug__name=drug_name):
 			raise ValidationError('Reminder does not exist')
@@ -166,7 +171,7 @@ class DeleteReminderForm(forms.Form):
 			to=patient, prescription__drug__name__iexact=drug_name, 
 			reminder_type=ReminderTime.MEDICATION)
 		reminders_for_deletion = []
-		reminder_time = self.cleaned_data.get('reminder_time', None)
+		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
 			if r.send_time.time() == reminder_time:
 				reminders_for_deletion.append(r)
@@ -180,6 +185,40 @@ class DeleteReminderForm(forms.Form):
 		return self.cleaned_data
 
 
+class CreateSafetyNetContactForm(forms.Form):
+	p_id = forms.IntegerField()
+	full_name = forms.CharField(max_length=80)
+	relationship = forms.CharField(max_length=40)
+	primary_phone_number = USPhoneNumberField()
+	receives_all_reminders = forms.BooleanField(required=False)
+
+	def clean_p_id(self):
+		p_id = self.cleaned_data['p_id']
+		if not PatientProfile.objects.filter(id=p_id).exists():
+			raise ValidationError('Patient does not exist')
+		return p_id
+
+	def clean_full_name(self):
+		full_name = self.cleaned_data['full_name'].strip()
+		if len(full_name) == 0:
+			raise ValidationError('No full name provided')
+		return full_name
+
+	def clean_primary_phone_number(self):
+		primary_phone_number = self.cleaned_data['primary_phone_number'].strip()
+		return convert_to_e164(primary_phone_number)
+
+class DeleteSafetyNetContactForm(forms.Form):
+	p_id = forms.IntegerField()
+	target_p_id = forms.IntegerField()
+
+	def clean_p_id(self):
+		p_id = self.cleaned_data['p_id']
+		if not PatientProfile.objects.filter(id=p_id).exists():
+			raise ValidationError('Patient does not exist')
+		return p_id
+
+# @lockdown
 def user_registration(request):
 	c = RequestContext(request)
 	if request.method == 'GET':
@@ -189,30 +228,37 @@ def user_registration(request):
 		form = UserRegistrationForm(request.POST)
 		if form.is_valid():
 			full_name = form.cleaned_data['full_name']
+			email = form.cleaned_data['email']
 			primary_phone_number = form.cleaned_data['primary_phone_number']
 			password = form.cleaned_data['password1']
-			try: # only patient registration for now
-				(patient, created) = PatientProfile.objects.get_or_create(
-					full_name=full_name,
-					primary_phone_number=primary_phone_number,
-				)
-			except ValidationError:
-				pass
-			else:
-				if not created:
-					return HttpResponse('This patient already exists.')
-				else:
-					assign_perm('manage_patient_profile', patient, patient)
 
-					patient.set_password(password)
-					patient.is_claimed = True
-					patient.save()
-					patient = authenticate(phone_number=primary_phone_number, password=password)
-					login(request, patient)
-					return redirect('/fishfood/')
+			if PatientProfile.objects.filter(email=email).exists():
+				return HttpResponseBadRequest('This email is already in use')
+
+			if PatientProfile.objects.filter(primary_phone_number=primary_phone_number).exists():
+				return HttpResponseBadRequest('This number is already in use')
+
+			patient = PatientProfile.objects.create(
+				full_name=full_name,
+				email=email,
+				primary_phone_number=primary_phone_number,
+				# status=PatientProfile.PENDING, # for number validation
+			)
+
+			# TODO: Refactor into additional phone number verification view
+			patient.num_caregivers += 1
+			assign_perm('manage_patient_profile', patient, patient)
+			patient.set_password(password)
+			patient.save()
+			patient = authenticate(phone_number=primary_phone_number, password=password)
+			login(request, patient)
+
+			return redirect('/fishfood/')
+
 	return HttpResponseBadRequest('Something went wrong.')
 
 
+# @lockdown
 def user_login(request):
 	c = RequestContext(request)
 	if request.method == 'GET':
@@ -245,7 +291,6 @@ def user_logout(request):
 	return HttpResponseBadRequest('')
 
 
-# @lockdown()
 @login_required
 def fishfood(request):
 	if request.method == 'GET':
@@ -260,7 +305,7 @@ def fishfood(request):
 		return render_to_response('fishfood/fishfood.html', c)
 	return HttpResponseBadRequest('Something went wrong.')
 
-# @lockdown()
+
 # create new patient
 @login_required
 def create_patient(request, *args, **kwargs):
@@ -270,35 +315,52 @@ def create_patient(request, *args, **kwargs):
 		if form.is_valid():
 			full_name = form.cleaned_data['full_name']
 			primary_phone_number = form.cleaned_data['primary_phone_number']
-			# create new patient
-			try: 
-				(patient, created) = PatientProfile.objects.get_or_create(
-					full_name=full_name,
-					primary_phone_number=primary_phone_number,
-				)
-			except ValidationError:
-				pass
-			else:
-				# add permissions
-				if not patient.num_caregivers > 0:
-					assign_perm('manage_patient_profile', request.user, patient)
+
+			# does and actively managed patient with this number exist?
+			q = PatientProfile.objects.filter(
+				primary_phone_number=primary_phone_number, 
+				num_caregivers__gt=0)
+			
+			if q.exists():
+				# is the patient the request user?
+				if request.user.primary_phone_number == primary_phone_number:
+					if request.user.full_name == full_name:
+						return HttpResponseBadRequest('You are already in the system.')
+						# add request user as primary safety net for new patient
+					else:
+						request_user_patient = PatientProfile.objects.get(pk=request.user.pk)
+						patient = PatientProfile.objects.create(
+							full_name=full_name, primary_contact=request_user_patient)
+						patient.add_safety_net_contact(
+							target_patient=request_user_patient, relationship='other',
+							receives_all_reminders=True)
 				else:
 					# TODO(minqi): send request to become caregiver
-					return HttpResponseBadRequest('This user is already under management.')
+					return HttpResponseBadRequest('This user is already under management.')	
+			else:
+				# create patient profile
+				(patient, created) = PatientProfile.objects.get_or_create(
+					primary_phone_number=primary_phone_number,
+					defaults={'full_name':full_name}
+				)
+				patient.full_name = full_name
 
-				c = RequestContext(request)
-				c['patient'] = patient
-				if created or patient.status == PatientProfile.QUIT:
-					patient.status = PatientProfile.NEW
-					patient.num_caregivers += 1
-					patient.save()
-					ReminderTime.objects.create_welcome_notification(to=patient)
-				return render_to_response('fishfood/patient_view.html', c) # change to redirect
-			return HttpResponseBadRequest("This user already exists.")
+			# add permissions
+			assign_perm('manage_patient_profile', request.user, patient)
+
+			patient.status = PatientProfile.NEW
+			patient.num_caregivers += 1
+			ReminderTime.objects.create_welcome_notification(to=patient)
+			
+			patient.save()
+
+			c = RequestContext(request)
+			c['patient'] = patient
+			return render_to_response('fishfood/patient_view.html', c) # change to redirect
+
 	return HttpResponseBadRequest("Something went wrong.")
 
 
-# @lockdown()
 @login_required
 def retrieve_patient(request, *args, **kwargs):
 	if request.GET:
@@ -336,7 +398,6 @@ def retrieve_patient(request, *args, **kwargs):
 	return HttpResponseBadRequest("Something went wrong.")
 
 
-# @lockdown()
 @login_required
 def update_patient(request, *args, **kwargs):
 	if request.POST:
@@ -367,7 +428,6 @@ def update_patient(request, *args, **kwargs):
 	return HttpResponseBadRequest('Something went wrong')
 
 
-# @lockdown()
 @login_required
 def delete_patient(request, *args, **kwargs):
 	if request.POST:
@@ -394,7 +454,6 @@ def delete_patient(request, *args, **kwargs):
 				Prescription.objects.filter(patient=patient).delete()
 				ReminderTime.objects.filter(to=patient).delete()
 				SafetyNetRelationship.objects.filter(source_patient=patient).delete()
-				PrimaryContactRelationship.objects.filter(source_patient=patient).delete()
 				# delete permissions
 				filters = Q(content_type=ContentType.objects.get_for_model(patient), 
 			    	object_pk=patient.pk)
@@ -403,13 +462,12 @@ def delete_patient(request, *args, **kwargs):
 				patient.quit()
 
 			patient.save()
-
+			remove_perm('manage_patient_profile', request.user, patient)
 			return redirect('/fishfood/')
 
 	return HttpResponseBadRequest('Something went wrong')
 
 
-# @lockdown()
 @login_required
 def patient_search_results(request, *args, **kwargs):
 	if request.GET:
@@ -429,7 +487,6 @@ def patient_search_results(request, *args, **kwargs):
 		return HttpResponseBadRequest("Something went wrong")
 
 
-# @lockdown()
 @login_required
 def create_reminder(request, *args, **kwargs):
 	# update if reminder exists, else create it'
@@ -526,20 +583,18 @@ def create_reminder(request, *args, **kwargs):
 	return HttpResponseBadRequest()
 
 
-# @lockdown()
 @login_required
 def update_reminder(request, *args, **kwargs):
 	pass
 
 
-# @lockdown()
 @login_required
 def delete_reminder(request, *args, **kwargs):
 	if request.POST:
 		form = DeleteReminderForm(request.POST)
 		if form.is_valid():
 			p_id = form.cleaned_data['p_id']
-			patient = patient = PatientProfile.objects.get(id=p_id)
+			patient = PatientProfile.objects.get(id=p_id)
 			
 			if not request.user.has_perm('patients.manage_patient_profile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
@@ -553,4 +608,62 @@ def delete_reminder(request, *args, **kwargs):
 				r.delete()
 			return HttpResponse('')
 	return HttpResponseBadRequest('Something went wrong')
+
+
+@login_required
+def create_safety_net_contact(request):
+	if request.POST:
+		form = CreateSafetyNetContactForm(request.POST)
+		if form.is_valid():
+			# create safety net
+			p_id = form.cleaned_data['p_id']
+			patient = PatientProfile.objects.get(id=p_id)
+
+			if not request.user.has_perm('patients.manage_patient_profile', patient):
+				return HttpResponseBadRequest("You don't have access to this user's profile")
+
+			full_name = form.cleaned_data['full_name']
+			relationship = form.cleaned_data['relationship']
+			primary_phone_number = form.cleaned_data['primary_phone_number']
+			receives_all_reminders = form.cleaned_data.get(
+				'receives_all_reminders', False)
+
+			target_patient = PatientProfile.objects.get_or_create(
+				primary_phone_number=primary_phone_number,
+				defaults={'full_name':full_name}
+			)[0]
+			patient.add_safety_net_contact(
+				target_patient=target_patient,
+				relationship=relationship, 
+				receives_all_reminders=receives_all_reminders)
+
+			return HttpResponse('')
+
+	return HttpResponseBadRequest('Something went wrong')
+
+
+@login_required
+def delete_safety_net_contact(request):
+	if request.POST:
+		form = DeleteSafetyNetContactForm(request.POST)
+		if form.is_valid():
+			# delete safety net
+			p_id = form.cleaned_data['p_id']
+			patient = PatientProfile.objects.get(id=p_id)
+
+			target_p_id = form.cleaned_data['target_p_id']
+
+			if not request.user.has_perm('patients.manage_patient_profile', patient):
+				return HttpResponseBadRequest("You don't have access to this user's profile")
+
+			q = SafetyNetRelationship.objects.filter(
+				source_patient__id=p_id, target_patient__id=target_p_id)
+			if q.exists():
+				q.delete()
+				return HttpResponse('')
+			else:
+				return HttpResponseBadRequest('This safety-net relationship does not exist')
+
+	return HttpResponseBadRequest('something went wrong')
+
 

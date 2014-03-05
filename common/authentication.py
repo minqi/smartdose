@@ -53,6 +53,11 @@ class SettingsBackend(object):
 
 	def get_user(self, user_id):
 		try:
-			return UserProfile.objects.get(pk=user_id)
-		except UserProfile.DoesNotExist:
+			return PatientProfile.objects.get(pk=user_id)
+		except PatientProfile.DoesNotExist:
 			return None
+		else:
+			try: 
+				return DoctorProfile.objects.get(pk=user_id)
+			except DoctorProfile.DoesNotExist:
+				return None

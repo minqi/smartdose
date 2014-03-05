@@ -2,7 +2,8 @@ import datetime
 
 from django.db import models
 from django.db import transaction
-from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, Group, Permission, PermissionsMixin
+from django.contrib.auth.models import AbstractUser, AbstractBaseUser, BaseUserManager, \
+	Group, Permission, PermissionsMixin
 from django.contrib.auth import hashers
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
@@ -48,10 +49,12 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
 	NEW     = 'n'
 	ACTIVE	= 'a'
 	QUIT 	= 'q'
+	PENDING = 'p'
 	STATUS_CHOICES = (
-		(NEW,    'n'),
-		(ACTIVE, 'a'),
-		(QUIT,   'q'),
+		(NEW,     'n'),
+		(ACTIVE,  'a'),
+		(QUIT,    'q'),
+		(PENDING, 'p'),
 	)
 
 	# by default, new UserProfile instances are 'NEW'
@@ -107,6 +110,16 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
 
 	def get_short_name(self):
 		return self.first_name
+
+	def set_name(self, full_name='', first_name='', last_name=''):
+		if full_name:
+			name_tokens = self.full_name.split()
+			self.first_name = name_tokens[0].strip()
+			self.last_name = "".join(name_tokens[1:]).strip()
+		elif first_name or last_name:
+			self.first_name = first_name.strip()
+			self.last_name = last_name.strip()
+			self.full_name = self.get_full_name()
 
 	class Meta:
 		ordering = ['full_name']

@@ -22,7 +22,7 @@ class TestHelper():
 			test.freezer = freeze_time(test.current_time)
 			test.freezer.start()
 
-class TestReminderDelivery(TestCase):
+class ReminderDeliveryTest(TestCase):
 	def setUp(self):
 		self.vitamin = Drug.objects.create(name="vitamin")
 		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
@@ -243,6 +243,34 @@ class TestReminderDelivery(TestCase):
 		self.assertEqual(messages[0]['to'], self.minqi.primary_phone_number)
 		self.assertEqual(messages[0]['content'], refill_content)
 
+	def test_primary_contact_delivery(self):
+		# create a primary contact
+		primary_contact = PatientProfile.objects.create(
+			full_name='Test User', primary_phone_number='+10000000000')
+
+		# create patient with primary contact
+		self.minqi.primary_phone_number = ''
+		self.minqi.primary_contact = primary_contact
+
+		prescription = Prescription.objects.create(prescriber=self.bob,
+		                                           patient=self.minqi,
+		                                           drug=self.vitamin,
+		                                           note="To make you strong")
+		delivery_time = self.current_time + datetime.timedelta(hours=1)
+		reminder_schedule = [[ReminderTime.DAILY, delivery_time]]
+		(refill_reminder, reminder_times) = \
+			ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(
+				to=self.minqi,
+				prescription=prescription,
+				reminder_schedule=reminder_schedule)
+		self.minqi.status = PatientProfile.ACTIVE
+		self.minqi.save()
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
+		reminder_tasks.sendRemindersForNow()
+		message = SMSLogger.getLastSentMessage()
+		self.assertEqual(message['datetime_sent'], delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_contact.primary_phone_number)
+
 
 class TestSafetyNetDelivery(TestCase):
 	def setUp(self):
@@ -260,10 +288,11 @@ class TestSafetyNetDelivery(TestCase):
 		                                           address_line1="4266 Cesar Chavez",
 		                                           postal_code="94131",
 		                                           city="San Francisco", state_province="CA", country_iso_code="US")
-		self.minqis_safety_net = self.minqi.add_safety_net_member(patient_relationship="mother",
-		                                                      first_name="Jianna",
-		                                                      last_name="Jiang",
-		                                                      primary_phone_number="1234567890")[0]
+
+		self.minqis_safety_net = PatientProfile.objects.create(
+			first_name='Jianna', last_name='Jiang', primary_phone_number='1234567890')
+		self.minqi.add_safety_net_contact(
+			target_patient=self.minqis_safety_net, relationship='mother')
 		self.no_safety_net_patient = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
 		                                           primary_phone_number="8569067301",
 		                                           birthday=datetime.date(year=1990, month=4, day=21),

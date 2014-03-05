@@ -11,7 +11,7 @@ import mock
 
 from common.utilities import next_weekday
 from common.models import Drug
-from patients.models import PatientProfile, SafetyNetRelationship, PrimaryContactRelationship
+from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import Prescription, ReminderTime, Message
 from webapp.views import create_patient, retrieve_patient, \
@@ -22,28 +22,145 @@ from guardian.shortcuts import assign_perm
 # set up test client
 c = Client()
 
+class UserRegistrationTest(TestCase):
+	def setUp(self):
+		self.patient1 = PatientProfile.objects.create(
+			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
+			email='minqi@smartdose.co',
+			num_caregivers=1)
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Matt', last_name='Gaba', primary_phone_number='+12147094720',
+			email='matt@smartdose.co',
+			num_caregivers=1)
+
+	def test_invalid_request(self):
+		# no full name
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'', 'primary_phone_number':'1234567890', 
+			'email':'test@smartdose.co', 'password1':'testpassword',
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+		# no email
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			'email':'', 'password1':'testpassword', 'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+		# no primary phone number
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'', 
+			'email':'test@smartdose.co', 'password1':'testpassword',
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+		# no password
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			'email':'test@smartdose.co', 'password1':'', 
+			'password2':''})
+
+		# mismatched passwords
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			'email':'test@smartdose.co', 'password1':'test', 
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+	def test_register_existing_email(self):
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			'email':'minqi@smartdose.co', 'password1':'testpassword',
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+	def test_register_existing_phone_number(self):
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'8569067308', 
+			'email':'test@smartdose.co', 'password1':'testpassword',
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 400)
+
+	def test_register_new_user(self):
+		response = c.post('/fishfood/signup/', 
+			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			'email':'test@smartdose.co', 'password1':'testpassword',
+			'password2':'testpassword'})
+		self.assertEqual(response.status_code, 302)
+
+		q = PatientProfile.objects.filter(full_name='Test User')
+		self.assertTrue(q.exists())
+		self.assertEqual(q[0].num_caregivers, 1)
+
 
 class CreatePatientTest(TestCase):
 	def setUp(self):
 		client_user = PatientProfile.objects.create(
-			first_name='Test', last_name='User', primary_phone_number='+10000000000')
+			first_name='Test', last_name='User', primary_phone_number='+10000000000',
+			num_caregivers=1)
 		client_user.set_password('testpassword')
 		client_user.save()
 		c.login(phone_number='+10000000000', password='testpassword')
+		self.client_user = client_user
 
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
 			num_caregivers=1)
 
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Test', last_name='User2', primary_phone_number='+11111111111',
+			num_caregivers=1)
+
+		self.patient3 = PatientProfile.objects.create(
+			first_name='Test', last_name='User3', primary_phone_number='+11111111112',
+			num_caregivers=0)
+
 	def test_invalid_request(self):
 		# empty full name
 		response = c.post('/fishfood/patients/new/', 
-			{'full_name':'', 'primary_phone_number':'8569067308'})
+			{'full_name':'', 'primary_phone_number':'5555555555'})
 		self.assertEqual(response.status_code, 400)
 
 		# empty phone number
 		response = c.post('/fishfood/patients/new/', 
-			{'full_name':'Minqi Jiang', 'primary_phone_number':''})
+			{'full_name':'Matt Gaba', 'primary_phone_number':''})
+		self.assertEqual(response.status_code, 400)
+
+	def test_create_patient_as_primary_contact(self):
+		response = c.post('/fishfood/patients/new/', 
+			{'full_name':'Matt Gaba', 'primary_phone_number':'10000000000'})
+		self.assertEqual(response.status_code, 200)
+
+		q = PatientProfile.objects.filter(full_name='Matt Gaba')
+		self.assertTrue(q.exists())
+
+		p = q[0]
+		self.assertTrue(not p.primary_phone_number)
+		self.assertEqual(p.primary_contact, self.client_user)
+		self.assertEqual(p.num_caregivers, 1)
+		self.assertEqual(p.status, PatientProfile.NEW)
+
+		q = ReminderTime.objects.filter(to=p, reminder_type=ReminderTime.WELCOME)
+		self.assertEqual(len(q), 1)
+
+	def test_create_patient_existing_unmanaged_account(self):
+		response = c.post('/fishfood/patients/new/', 
+			{'full_name':'Test UserChanged', 'primary_phone_number':'11111111112'})
+		self.assertEqual(response.status_code, 200)
+
+		q = PatientProfile.objects.filter(primary_phone_number='+1111111112')
+		p = q[0]
+		self.assertTrue(q.exists())
+		self.assertEqual(p.full_name, 'Test UserChanged')
+		self.assertEqual(p.num_caregivers, 1)
+		self.assertEqual(p.status, PatientProfile.NEW)
+
+		q = ReminderTime.objects.filter(to=p, reminder_type=ReminderTime.WELCOME)
+		self.assertEqual(len(q), 1)
+
+	def test_create_patient_existing_managed_account(self):
+		response = c.post('/fishfood/patients/new/', 
+			{'full_name':'Test User2', 'primary_phone_number':'11111111111'})
 		self.assertEqual(response.status_code, 400)
 
 	def test_create_new_patient(self):
@@ -68,6 +185,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(welcome_count, 1)
 
 	def test_create_existing_patient(self):
+		# creating a patient that is already managed
 		response = c.post('/fishfood/patients/new/', 
 			{'full_name':'Minqi Jiang', 'primary_phone_number':'8569067308'})
 		self.assertEqual(response.status_code, 400)
@@ -212,13 +330,6 @@ class DeletePatientTest(TestCase):
 			to=self.patient1, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
 			prescription=self.prescription1, send_time=datetime.datetime.now())
 
-		self.patient1.add_safety_net_member(
-			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
-			primary_phone_number='+12147094720')
-		self.patient1.add_primary_contact_member(
-			patient_relationship='Friend', first_name='Matt', last_name='Gaba',
-			primary_phone_number='+12147094720')
-
 		self.patient2 = PatientProfile.objects.create(
 					first_name='A', last_name='Patient', primary_phone_number='+15555555555',
 					num_caregivers=2, status=PatientProfile.ACTIVE)
@@ -235,12 +346,8 @@ class DeletePatientTest(TestCase):
 			to=self.patient2, reminder_type=ReminderTime.MEDICATION, repeat=ReminderTime.DAILY,
 			prescription=self.prescription2, send_time=datetime.datetime.now())
 
-		self.patient2.add_safety_net_member(
-			patient_relationship='Friend', first_name='Minqi', last_name='Jiang',
-			primary_phone_number='+18569067308')
-		self.patient2.add_primary_contact_member(
-			patient_relationship='Friend', first_name='Minqi', last_name='Jiang',
-			primary_phone_number='+18569067308')
+		self.patient1.add_safety_net_contact(target_patient=self.patient2, relationship='Friend')
+		self.patient2.add_safety_net_contact(target_patient=self.patient1, relationship='Friend')
 
 	def test_invalid_request(self):
 		# no patient id
@@ -272,8 +379,6 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(ReminderTime.objects.filter(to=self.patient1)), 0)
 		self.assertEqual(len(SafetyNetRelationship.objects.filter(
 			source_patient=self.patient1)), 0)
-		self.assertEqual(len(PrimaryContactRelationship.objects.filter(
-			source_patient=self.patient1)), 0)
 
 	def test_delete_existing_patient_multiple_caregivers(self):
 		assign_perm('manage_patient_profile', self.client_user, self.patient2)
@@ -290,8 +395,6 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(Prescription.objects.filter(patient=self.patient2)), 1)
 		self.assertEqual(len(ReminderTime.objects.filter(to=self.patient2)), 3)
 		self.assertEqual(len(SafetyNetRelationship.objects.filter(
-			source_patient=self.patient2)), 1)
-		self.assertEqual(len(PrimaryContactRelationship.objects.filter(
 			source_patient=self.patient2)), 1)
 
 
@@ -706,3 +809,138 @@ class DeleteReminderTest(TestCase):
 			{'p_id':str(self.patient2.id), 'drug_name':'drug1', 
 			'reminder_time':'10:00', 'mon':True})
 		self.assertEqual(response.status_code, 400)
+
+
+class CreateSafetyNetContactTest(TestCase):
+	def setUp(self):
+		client_user = PatientProfile.objects.create(
+			first_name='Test', last_name='User', primary_phone_number='+10000000000',
+			num_caregivers=1)
+		client_user.set_password('testpassword')
+		client_user.save()
+		c.login(phone_number='+10000000000', password='testpassword')
+
+		self.patient1 = PatientProfile.objects.create(
+			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
+			num_caregivers=1)
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Matt', last_name='Gaba', primary_phone_number='+12147094720',
+			num_caregivers=1)
+		self.patient1.add_safety_net_contact(
+			target_patient=self.patient2, relationship='friend')
+
+		assign_perm('manage_patient_profile', client_user, self.patient1)
+
+	def test_invalid_request(self):
+		# no patient id
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':'', 'full_name':'Matt Gaba', 'relationship':'friend', 
+			'primary_phone_number':'+12147094720'})
+		self.assertEqual(response.status_code, 400)
+
+		# no full name
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':'100', 'full_name':'', 'relationship':'friend', 
+			'primary_phone_number':'+12147094720'})
+		self.assertEqual(response.status_code, 400)
+
+		# no relationship
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':'100', 'full_name':'Matt Gaba', 'relationship':'', 
+			'primary_phone_number':'+12147094720'})
+		self.assertEqual(response.status_code, 400)
+
+		# no primary phone number
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':'100', 'full_name':'Matt Gaba', 'relationship':'friend', 
+			'primary_phone_number':''})
+		self.assertEqual(response.status_code, 400)
+
+	def test_create_nonexistent_safety_net_contact(self):
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':self.patient1.id, 'full_name':'Matt Gaba', 'relationship':'friend', 
+			'primary_phone_number':'5555555555'})
+		self.assertEqual(response.status_code, 200)
+		q = PatientProfile.objects.filter(primary_phone_number='+15555555555')
+		self.assertTrue(q.exists())
+		self.assertEqual(q[0].num_caregivers, 0)
+
+	def test_create_existing_safety_net_contact(self):
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':self.patient1.id, 'full_name':'Matt Gaba', 'relationship':'friend', 
+			'primary_phone_number':'2147094720'})
+		self.assertEqual(response.status_code, 200)
+
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':self.patient1.id, 'full_name':'Matthew Gaba', 'relationship':'friend', 
+			'primary_phone_number':'2147094720'})
+		self.assertEqual(response.status_code, 200)
+		self.assertTrue(
+			not PatientProfile.objects.filter(full_name='Matthew Gaba').exists())
+
+	def test_create_safety_net_contact(self):
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':self.patient1.id, 'full_name':'Test User', 'relationship':'friend', 
+			'primary_phone_number':'0000000000'})
+		self.assertEqual(response.status_code, 200)
+
+	def test_create_safety_net_contact_without_permission(self):
+		response = c.post('/fishfood/patients/create_safety_net_contact/', 
+			{'p_id':self.patient2, 'full_name':'Test User', 'relationship':'friend', 
+			'primary_phone_number':'0000000000'})
+		self.assertEqual(response.status_code, 400)
+
+
+class DeleteSafetyNetContactTest(TestCase):
+	def setUp(self):
+		client_user = PatientProfile.objects.create(
+			first_name='Test', last_name='User', primary_phone_number='+10000000000',
+			num_caregivers=1)
+		client_user.set_password('testpassword')
+		client_user.save()
+		c.login(phone_number='+10000000000', password='testpassword')
+
+		self.patient1 = PatientProfile.objects.create(
+			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
+			num_caregivers=1)
+		self.patient2 = PatientProfile.objects.create(
+			first_name='Matt', last_name='Gaba', primary_phone_number='+12147094720',
+			num_caregivers=1)
+		self.patient1.add_safety_net_contact(
+			target_patient=self.patient2, relationship='friend')
+		self.patient2.add_safety_net_contact(
+			target_patient=self.patient1, relationship='friend')
+
+		assign_perm('manage_patient_profile', client_user, self.patient1)
+
+	def test_invalid_request(self):
+		# no patient id
+		response = c.post('/fishfood/patients/delete_safety_net_contact/',
+			{'p_id':'', 'target_p_id':self.patient2.id})
+		self.assertEqual(response.status_code, 400)
+
+		# no target patient id
+		response = c.post('/fishfood/patients/delete_safety_net_contact/',
+			{'p_id':self.patient1.id, 'target_p_id':''})
+		self.assertEqual(response.status_code, 400)
+
+	def test_delete_nonexistent_safety_net_contact(self):
+		response = c.post('/fishfood/patients/delete_safety_net_contact/',
+			{'p_id':self.patient1.id, 'target_p_id':self.patient2.id + 100})
+		self.assertEqual(response.status_code, 400)	
+
+	def test_delete_safety_net_contact_without_permission(self):
+		response = c.post('/fishfood/patients/delete_safety_net_contact/',
+			{'p_id':self.patient2.id, 'target_p_id':self.patient1.id})
+		self.assertEqual(response.status_code, 400)	
+
+	def test_delete_existing_safety_net_contact(self):
+		response = c.post('/fishfood/patients/delete_safety_net_contact/',
+			{'p_id':self.patient1.id, 'target_p_id':self.patient2.id})
+		self.assertEqual(response.status_code, 200)
+
+		q = SafetyNetRelationship.objects.filter(
+			source_patient=self.patient1, target_patient=self.patient2)
+		self.assertTrue(not q.exists())
+
+
