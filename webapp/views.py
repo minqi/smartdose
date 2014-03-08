@@ -297,7 +297,8 @@ def fishfood(request):
 		c = RequestContext(request)
 		user = request.user
 
-		results = get_objects_for_user(user, 'patients.manage_patient_profile')
+		# results = get_objects_for_user(user, 'patients.manage_patient_profile')
+		results = PatientProfile.objects.all()
 		results = results.filter(
 			Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW)).order_by('full_name')
 

@@ -13,9 +13,9 @@
 		}
 
 		// cache DOM elements of interest in local vars
-		var patient_search_box = $("#patient_search_box");
-		var patient_search_results = $("#patient_search_results");
-		var add_patient_button = $("#add_patient_button");
+		var patient_search_box = $("#patientSearchBox");
+		var patient_search_results = $("#patientSearchResults");
+		var add_patient_button = $("#addPatientButton");
 		var main_col = $("#mainCol")
 		var main_content_view = $("#mainContentView");
 		var patient_view = $("#patientView");

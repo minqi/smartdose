@@ -11,13 +11,21 @@
 	</head>
 	<body>
 		<div id="globalContainer">
-			<div id="topNavBar">
-				<input type="text" id="patient_search_box" placeholder="Search Smartdose"></input>
-			</div>
+<!-- 			<div id="topNavBar">
+				
+			</div> -->
 			<div id="leftCol">
+				<div id="smartdoseLogo">Smartdose</div>
+				<hr class="left-navigation-hr"></hr>
+				<div id="homeButton" class="leftMenuButton">Dashboard</div>
+				<hr class="left-navigation-hr"></hr>
+				<div id="myProfileButton" class="leftMenuButton">My profile</div>
+				<hr class="left-navigation-hr"></hr>
+				<div id="addPatientButton">+ Add a patient</div>
+				<hr class="left-navigation-hr"></hr>
+				<input type="text" id="patientSearchBox" placeholder="Search Smartdose"></input>
 				<div id="leftMenu">
-					<div id="add_patient_button">+Add a patient</div>
-					<ul id="patient_search_results">
+					<ul id="patientSearchResults">
 						{% include 'fishfood/patient_search_results_list.html' %}
 					</ul>
 				</div>
@@ -27,6 +35,7 @@
 				</form>
 			</div>
 			<div id="mainContainer">
+				<div id="main-header">Medication record</div>
 				<div id="mainCol">
 					<div id="mainContentView">
 						Welcome to the Smartdose fishfood :)

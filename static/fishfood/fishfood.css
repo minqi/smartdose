@@ -2,99 +2,157 @@
 
 html, body {
 	height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto
 }
 
 body {
 	direction:ltr;
 	font-family: "HelveticaNeue-Medium";
 	margin:0px;
+	background: #eceef1
 }
 
 #globalContainer {
+	/*border: 1px solid yellow;*/
 	width: 960px;
-	/*width: 100%;*/
+	float:left;
 	min-width:960px;
 	position: relative;
 	margin: 0 auto;
-	border: 1px solid yellow;
 }
 
 #mainContainer {
-	float:left;
+	/* border: 1px solid red; */
+	float: left;
 	position: relative;
 	min-height: 600px;
-	width:746px;
-	border: 1px solid red;
-	margin:0;
+	width: 746px;
+	margin: 0;
 	height: 100vh;
+	-webkit-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
+	-moz-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
+	 box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5); 
+	border-left: 1px solid #aaa;
+	/*border-top: 1px solid #aaa;*/
+	border-right: 1px solid #aaa;
+	border-radius: 3px;
+	margin-top: 10px;
+	background: #fff;
 }
 
-#topNavBar {
-	height:40px;
-	width:100vh;
-	padding:0px;
-	margin:0px;
+#main-header {
+	height: 36px;
+	width: 738px;
+	margin: 0;
+	padding: 0;
+	background: #169fda;
+	border-radius: 3px;
+	border-bottom-left-radius: 0px;
+	border-bottom-right-radius: 0px;
+	padding-left: 8px;
+	color: #fff;
+	line-height: 36px;
+	border: 1px solid #1178a4;
+	border-bottom: none;
+	margin-left: -1px;
+}
+
+#smartdoseLogo {
+	text-align: left;
+	font-size: 28px;
+	color: white;
+	margin-top: 10px;
+	margin-left: 10px;
+	color: #777;
 }
 
 #leftCol {
+	/*border: 1px solid green; */
 	float: left;
 	position: relative;
-	border: 1px solid green;
-	min-height:600px;
+	min-height: 600px;
 	height: 100vh;
+	background: #eceef1;
 }
 
 #leftMenu {
 }
 
-#patient_search_box {
-	position: relative;
-	float: left;
-	width: 200px;
-	height: 20px;
-	padding: 5px;
-	font-size: 14px;
-	border: 1px solid black;
-	top:3px;
-	outline: none;
+.left-navigation-hr {
+	border-left: 0;
+	border-top: 1px solid #ccc;
+	border-bottom: 1px solid #FFF;
+	margin: 2px 0;
 }
 
-#patient_search_results {
-	width:210px;
+.leftMenuButton {
+	/* border: solid 1px #ACE; */
+	width: 198px;
+	height: 40px;
+	line-height: 40px;
+	font-weight: bold;
+	padding-left: 10px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	cursor: pointer;
+	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
+	color: #444;
+}
+
+#patientSearchBox {
+	width: 170px;
+	height: 13px;
+	padding: 7px;
+	font-size: 12px;
+	margin-top: 5px;
+	outline: none;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	margin-left: 11px;
+	margin-top:10px;
+}
+
+#patientSearchResults {
 	list-style-type: none;
 	padding: 0;
 	margin: 0;
+	float:left;
 }
 
-#add_patient_button {
+#addPatientButton {
+	/*border: solid 1px brown;*/
 	position: relative;
 	width: 210px;
 	height: 40px;
 	line-height:40px;
-	border: solid 1px brown;
 	font-weight: bold;
 	padding-left:10px;
 	-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
 	-moz-box-sizing: border-box;    /* Firefox, other Gecko */
 	box-sizing: border-box;
 	cursor:pointer;
+	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
+	color: #444;
 }
 
-#patient_search_results .patient_result {
-	position: relative;
+#patientSearchResults .patientResult {
 	width: 210px;
 	height: 40px;
-	line-height:40px;
-	border: solid 1px brown;
-	padding-left:10px;
-	-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
-	-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+	line-height: 40px;
+	border-bottom: solid 1px #ccc;
+	padding-left: 10px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
 	box-sizing: border-box;
-	cursor:pointer;
+	cursor: pointer;
+	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
+	color: #444;
 }
 
 #mainCol {
-	border: 1px solid blue;
+	/*border: 1px solid blue;*/
 	float: left;
 	position: relative;
 	width: 525px;
@@ -113,7 +171,6 @@ body {
 	height: 62px;
 	width: 62px;
 	float: left;
-	/*border: 1px solid black;*/
 	background: url('/static/img/default-avatar.png');
 }
 
@@ -199,14 +256,17 @@ body {
 }
 
 .prescriptionsListItem {
-	border: 1px solid red;
-	float:left;
+	border: 1px solid #aaa;
+	float: left;
+	padding: 8px;
+	border-radius: 3px;
 }
 
 .remindersListContainer {
-	border: 1px solid pink;
 	float: left;
-	width:450px;
+	width: 450px;
+	padding: 0;
+	margin-top: 5px;
 }
 
 .deleteReminderButton {
@@ -227,7 +287,7 @@ body {
 	float:right;
 	margin-left: 5px;
 	cursor:pointer;
-	border-radius: ;
+	border-radius: 8px;
 }
 
 .remindersListItemDay {
