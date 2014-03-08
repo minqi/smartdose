@@ -98,6 +98,7 @@ class PatientProfile(UserProfile):
 	class Meta:
 		ordering = ['full_name']
 		permissions = (
+			('view_patient_profile', 'Manage patient profile'),
 			('manage_patient_profile', 'Manage patient profile'),
 		)
 

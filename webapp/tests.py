@@ -179,6 +179,12 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.primary_phone_number, '+12147094720')
 		self.assertEqual(patient.num_caregivers, 1)
 
+		q = SafetyNetRelationship.objects.filter(
+			source_patient__id=patient.id, target_patient__id=self.client_user.id)
+		self.assertTrue(q.exists())
+
+		self.assertTrue(self.client_user.has_perm('manage_patient_profile', patient))
+
 		# make sure welcome message is sent
 		welcome_count = len(ReminderTime.objects.filter(
 			to=patient, reminder_type=ReminderTime.WELCOME))
@@ -380,6 +386,12 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(SafetyNetRelationship.objects.filter(
 			source_patient=self.patient1)), 0)
 
+		q = SafetyNetRelationship.objects.filter(
+			source_patient__id=patient.id, target_patient__id=self.client_user.id)
+		self.assertTrue(not q.exists())
+		self.assertTrue(not self.client_user.has_perm('view_patient_profile', patient))
+		self.assertTrue(not self.client_user.has_perm('manage_patient_profile', patient))
+
 	def test_delete_existing_patient_multiple_caregivers(self):
 		assign_perm('manage_patient_profile', self.client_user, self.patient2)
 		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient2.id})
@@ -396,6 +408,8 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(ReminderTime.objects.filter(to=self.patient2)), 3)
 		self.assertEqual(len(SafetyNetRelationship.objects.filter(
 			source_patient=self.patient2)), 1)
+		self.assertTrue(not self.client_user.has_perm('view_patient_profile', patient))
+		self.assertTrue(self.client_user.has_perm('manage_patient_profile', patient))
 
 
 # Unit tests for create reminder
@@ -884,6 +898,11 @@ class CreateSafetyNetContactTest(TestCase):
 			'primary_phone_number':'0000000000'})
 		self.assertEqual(response.status_code, 200)
 
+		target_patient = PatientProfile.objects.get(full_name='Test User')
+
+		self.assertTrue(target_patient.has_perm('view_patient_profile', self.patient1))
+		self.assertTrue(target_patient.has_perm('manage_patient_profile', self.patient1))
+
 	def test_create_safety_net_contact_without_permission(self):
 		response = c.post('/fishfood/patients/create_safety_net_contact/', 
 			{'p_id':self.patient2, 'full_name':'Test User', 'relationship':'friend', 
@@ -899,6 +918,7 @@ class DeleteSafetyNetContactTest(TestCase):
 		client_user.set_password('testpassword')
 		client_user.save()
 		c.login(phone_number='+10000000000', password='testpassword')
+		self.client_user = client_user
 
 		self.patient1 = PatientProfile.objects.create(
 			first_name='Minqi', last_name='Jiang', primary_phone_number='+18569067308',
@@ -942,5 +962,8 @@ class DeleteSafetyNetContactTest(TestCase):
 		q = SafetyNetRelationship.objects.filter(
 			source_patient=self.patient1, target_patient=self.patient2)
 		self.assertTrue(not q.exists())
+
+		self.assertTrue(not self.patient2.has_perm('view_patient_profile', self.patient1))
+		self.assertTrue(not self.patient2.has_perm('manage_patient_profile', self.patient1))
 
 

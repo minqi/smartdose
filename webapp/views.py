@@ -321,6 +321,7 @@ def create_patient(request, *args, **kwargs):
 				primary_phone_number=primary_phone_number, 
 				num_caregivers__gt=0)
 			
+			request_user_patient = PatientProfile.objects.get(pk=request.user.pk)
 			if q.exists():
 				# is the patient the request user?
 				if request.user.primary_phone_number == primary_phone_number:
@@ -328,12 +329,8 @@ def create_patient(request, *args, **kwargs):
 						return HttpResponseBadRequest('You are already in the system.')
 						# add request user as primary safety net for new patient
 					else:
-						request_user_patient = PatientProfile.objects.get(pk=request.user.pk)
 						patient = PatientProfile.objects.create(
 							full_name=full_name, primary_contact=request_user_patient)
-						patient.add_safety_net_contact(
-							target_patient=request_user_patient, relationship='other',
-							receives_all_reminders=True)
 				else:
 					# TODO(minqi): send request to become caregiver
 					return HttpResponseBadRequest('This user is already under management.')	
@@ -346,7 +343,13 @@ def create_patient(request, *args, **kwargs):
 				patient.full_name = full_name
 
 			# add permissions
+			assign_perm('view_patient_profile', request.user, patient)
 			assign_perm('manage_patient_profile', request.user, patient)
+
+			# add request user as a safety net contact
+			patient.add_safety_net_contact(
+				target_patient=request_user_patient, relationship='other',
+				receives_all_reminders=True)
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
@@ -462,7 +465,16 @@ def delete_patient(request, *args, **kwargs):
 				patient.quit()
 
 			patient.save()
-			remove_perm('manage_patient_profile', request.user, patient)
+
+			# remove request user from safety net
+			request_user_patient = PatientProfile.objects.get(pk=request.user.pk)
+			SafetyNetRelationship.objects.filter(
+				target_patient__id=request.user.id,
+				source_patient=patient).delete()
+			
+			# don't show the patient in the request user's patient list anymore
+			remove_perm('view_patient_profile', request.user, patient)
+
 			return redirect('/fishfood/')
 
 	return HttpResponseBadRequest('Something went wrong')
@@ -637,6 +649,10 @@ def create_safety_net_contact(request):
 				relationship=relationship, 
 				receives_all_reminders=receives_all_reminders)
 
+			# give the safety-net contact permission to see/manage patient
+			assign_perm('view_patient_profile', target_patient, patient)
+			assign_perm('manage_patient_profile', target_patient, patient)
+
 			return HttpResponse('')
 
 	return HttpResponseBadRequest('Something went wrong')
@@ -660,6 +676,9 @@ def delete_safety_net_contact(request):
 				source_patient__id=p_id, target_patient__id=target_p_id)
 			if q.exists():
 				q.delete()
+				target_patient = PatientProfile.objects.get(id=target_p_id)
+				remove_perm('view_patient_profile', target_patient, patient)
+				remove_perm('manage_patient_profile', target_patient, patient)
 				return HttpResponse('')
 			else:
 				return HttpResponseBadRequest('This safety-net relationship does not exist')
