@@ -3,7 +3,7 @@
 html, body {
 	height: 100%;
 	overflow-x: hidden;
-	overflow-y: auto
+	overflow-y:hidden;
 }
 
 body {
@@ -22,27 +22,35 @@ body {
 	margin: 0 auto;
 }
 
-#mainContainer {
+#main-container {
+	float: left;
+	min-height:700px;
+	height:100vh;
+}
+
+#main-view {
 	/* border: 1px solid red; */
 	float: left;
-	position: relative;
+	position: absolute;
 	min-height: 600px;
 	width: 746px;
 	margin: 0;
-	height: 100vh;
-	-webkit-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
+/*	-webkit-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
 	-moz-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
-	 box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5); 
+	 box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5); */
 	border-left: 1px solid #aaa;
 	/*border-top: 1px solid #aaa;*/
 	border-right: 1px solid #aaa;
 	border-radius: 3px;
-	margin-top: 10px;
+	border-bottom-right-radius: 0px;
+	border-bottom-left-radius: 0px;
+	top: 10px;
+	bottom:0px;
 	background: #fff;
 }
 
 #main-header {
-	height: 36px;
+	height: 34px;
 	width: 738px;
 	margin: 0;
 	padding: 0;
@@ -54,7 +62,7 @@ body {
 	color: #fff;
 	line-height: 36px;
 	border: 1px solid #1178a4;
-	border-bottom: none;
+	border-bottom: 2px solid #1178a4;
 	margin-left: -1px;
 }
 
@@ -65,6 +73,11 @@ body {
 	margin-top: 10px;
 	margin-left: 10px;
 	color: #777;
+/*	width:100px;
+	height:60px;
+	background-image: url('/static/img/smartdose-logo-color.png');
+	background-size:100%;
+	background-repeat:no-repeat;*/
 }
 
 #leftCol {
@@ -102,7 +115,7 @@ body {
 }
 
 #patientSearchBox {
-	width: 170px;
+	width: 175px;
 	height: 13px;
 	padding: 7px;
 	font-size: 12px;
@@ -110,7 +123,7 @@ body {
 	outline: none;
 	border: 1px solid #ccc;
 	border-radius: 3px;
-	margin-left: 11px;
+	margin-left: 8px;
 	margin-top:10px;
 }
 
@@ -118,7 +131,11 @@ body {
 	list-style-type: none;
 	padding: 0;
 	margin: 0;
-	float:left;
+	height:420px;
+	overflow:hidden;
+}
+#patientSearchResults:hover {
+	overflow-y:scroll;
 }
 
 #addPatientButton {
@@ -153,9 +170,9 @@ body {
 
 #mainCol {
 	/*border: 1px solid blue;*/
-	float: left;
 	position: relative;
-	width: 525px;
+	margin: auto;
+	width: 700px;
 }
 
 #mainContentView {
@@ -250,6 +267,28 @@ body {
 	margin-top: 10px;
 }
 
+.adherence-sparkline {
+	width: 200px;
+	height: 100px;
+	/*border: 1px solid red;*/
+}
+
+.sparkline {
+	fill: none;
+	stroke: #000;
+	stroke-width: 0.5px;
+}
+
+.sparkcircle {
+	fill: #f00;
+	stroke: none;
+}
+
+.sparkthreshold {
+	stroke:#0077f3;
+	stroke-width:1px;
+}
+
 #prescriptionsListContainer {
 	float:left;
 	margin-top: 25px;
@@ -260,6 +299,10 @@ body {
 	float: left;
 	padding: 8px;
 	border-radius: 3px;
+}
+
+.prescriptionDrugName {
+	margin-bottom: 10px;
 }
 
 .remindersListContainer {

@@ -18,4 +18,5 @@ urlpatterns = patterns('',
     url(r'^fishfood/reminders/delete/$', 'webapp.views.delete_reminder'),
     url(r'^fishfood/patients/create_safety_net_contact/$', 'webapp.views.create_safety_net_contact'),
     url(r'^fishfood/patients/delete_safety_net_contact/$', 'webapp.views.delete_safety_net_contact'),
+    url(r'^fishfood/patients/adherence_history_csv/$', 'reminders.views.adherence_history_csv'),
 )

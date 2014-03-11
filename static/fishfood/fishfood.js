@@ -25,10 +25,74 @@
 
 		// ===define and bind event-handlers===================================
 
+		// sparkline loader functions, called when loading patient profile
+		// loads data from server to populate adherence sparklines
+
+		var load_adherence_sparklines = 
+		function() {
+			var width = 200;
+			var height = 100;
+			var x = d3.scale.linear().range([0, width-4]);
+			var y = d3.scale.linear().range([height, 0]);
+			var parseDate = d3.time.format("%e-%b-%y").parse;
+			var line = d3.svg.line()
+			             .interpolate("basis")
+			             .x(function(d) { return x(d.date); })
+			             .y(function(d) { return y(d.adherence_rate); });
+			function sparkline(elemId, data) {
+			  data.forEach(function(d) {
+			    d.date = parseDate(d.date);
+			    d.adherence_rate = +d.adherence_rate;
+			  });
+			  x.domain(d3.extent(data, function(d) { return d.date; }));
+			  y.domain([0, 1]);
+			  // y.domain(d3.extent(data, function(d) { return d.adherence_rate; }));
+
+			 var svg = d3.select(elemId)
+			              .append('svg')
+			              .attr('width', width)
+			              .attr('height', height)
+			              .append('g')
+			              .attr('transform', 'translate(0, 0)');
+			  svg.append('line')
+			  	 .attr('class', 'sparkthreshold')
+			  	 .attr('x1', x(data[0].date))
+			  	 .attr('y1', y(.5))
+			  	 .attr('x2', x(data[data.length-1].date))
+			  	 .attr('y2', y(.5))
+			  svg.append('path')
+			     .datum(data)
+			     .attr('class', 'sparkline')
+			     .attr('d', line)
+			     .style('stroke-width', 1.5)
+			     .style('stroke', '#777');
+			  svg.append('circle')
+			     .attr('class', 'sparkcircle')
+			     .attr('cx', x(data[data.length-1].date))
+			     .attr('cy', y(data[data.length-1].adherence_rate))
+			     .attr('r', 2); 
+			}
+
+			return function (e) {
+				// retrieve adherence time-series
+				var dynamicData = {};
+				dynamicData['p_id'] = $("#patientView").attr("data-id");
+				$.ajax({
+					url  : "/fishfood/patients/adherence_history_csv/",
+					type : "get",
+					data : dynamicData,
+					success : function(data) {
+						parsedData = d3.csv.parse(data);
+						console.log(parsedData)
+						sparkline('#spark-vod', parsedData);
+					}
+				});
+			}
+		}();
+
 		// keystroke handler for patient search-box 
 		// instant search
 		function get_patient_search_results_list(e) {
-			console.log("getting results");
 			var dynamicData = {};
 			dynamicData['q'] = patient_search_box.val().trim();
 			$.ajax({
@@ -53,6 +117,7 @@
 				success : function(data, request) {
 					$("#mainContentView").html(data).show();
 					add_patient_view.hide();
+					load_adherence_sparklines();
 				}
 			});
 		}
