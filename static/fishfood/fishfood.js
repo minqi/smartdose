@@ -30,7 +30,7 @@
 
 		var load_adherence_sparklines = 
 		function() {
-			var width = 200;
+			var width = 250;
 			var height = 100;
 			var x = d3.scale.linear().range([0, width-4]);
 			var y = d3.scale.linear().range([height, 0]);
