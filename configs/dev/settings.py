@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import djcelery
 from celery.schedules import crontab
 import os, re
+import datetime
 
 # store project root in PROJECT_ROOT
 PROJECT_NAME = "smartdose"
@@ -17,6 +18,8 @@ TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
+DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
+															# the day following the doctor's appointment
 
 TEST_ALL_APPS = False
 """

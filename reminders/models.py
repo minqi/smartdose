@@ -7,7 +7,7 @@ from django.db.models import Q
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from common.models import UserProfile, Drug
-from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL
+from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL, DOCTOR_INITIATED_WELCOME_SEND_TIME
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -95,16 +95,23 @@ class ReminderManager(models.Manager):
 		return (refill_reminder, reminder_times)
 
 	def create_safety_net_notification(self, to, text):
-		safetynet_reminder = ReminderTime.objects.get_or_create(to=to, 
+		safetynet_reminder = ReminderTime.objects.get_or_create(to=to, # Minqi: Why is this get or create?
 																reminder_type=ReminderTime.SAFETY_NET,
 																repeat=ReminderTime.ONE_SHOT,
 																text=text)[0]
 		return safetynet_reminder
 
-	def create_welcome_notification(self, to):
-		welcome_reminder = ReminderTime.objects.get_or_create(to=to, 
+	def create_consumer_welcome_notification(self, to):
+		welcome_reminder = ReminderTime.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
 			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT)[0]
 		return welcome_reminder
+
+	def create_doctor_initiated_welcome_notification(self, to):
+		welcome_reminder = ReminderTime.objects.create(to=to,
+		    reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT,
+		    send_time=DOCTOR_INITIATED_WELCOME_SEND_TIME)
+		return welcome_reminder
+
 
 class ReminderTime(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""

@@ -359,8 +359,7 @@ def create_patient(request, *args, **kwargs):
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
-			ReminderTime.objects.create_welcome_notification(to=patient)
-			
+			ReminderTime.objects.create_consumer_welcome_notification(to=patient)
 			patient.save()
 
 			c = RequestContext(request)

@@ -192,7 +192,7 @@ class WelcomeMessageTest(TestCase):
 		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=datetime.date(year=1990, month=8, day=7))
-		ReminderTime.objects.create_welcome_notification(to=self.patient1)
+		ReminderTime.objects.create_consumer_welcome_notification(to=self.patient1)
 	def test_welcome_message(self):
 		self.assertEqual(self.patient1.status, PatientProfile.NEW)
 		
