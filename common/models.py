@@ -8,7 +8,6 @@ from django.contrib.auth import hashers
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 
-from common.utilities import convert_to_e164
 
 class Country(models.Model):
 	"""Model for mapping country_iso_code to country name"""
@@ -142,7 +141,6 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
 
 		self.username = self.get_unique_username(self)
 		self.full_name = self.get_full_name()
-		self.primary_phone_number = convert_to_e164(self.primary_phone_number)
 
 	@staticmethod
 	def get_unique_username(obj):

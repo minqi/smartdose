@@ -4,7 +4,7 @@ from django.db import models
 from django.template.loader import render_to_string
 from django.core.exceptions import ValidationError
 
-from common.utilities import InterpersonalRelationship
+from common.utilities import InterpersonalRelationship, convert_to_e164
 from common.models import UserProfile, UserProfileManager
 
 
@@ -79,6 +79,8 @@ class PatientProfile(UserProfile):
 	safety_net_contacts 	= models.ManyToManyField('self', 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
 
+	# need to have this separately in patient and doctor so patient/doctor accounts can 
+	# use same phone number
 	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
 	email 					= models.EmailField(blank=True, null=True, unique=True)
 	
@@ -108,6 +110,9 @@ class PatientProfile(UserProfile):
 			return
 		valid = True
 
+		if self.primary_phone_number:
+			self.primary_phone_number = convert_to_e164(self.primary_phone_number)
+		
 		if not self.primary_phone_number and not self.primary_contact:
 			valid = False
 		if not valid:
