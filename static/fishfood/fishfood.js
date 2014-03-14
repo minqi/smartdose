@@ -20,8 +20,8 @@
 		var main_content_view = $("#mainContentView");
 		var patient_view = $("#patientView");
 		var add_patient_view = $("#addPatientView");
-		var add_reminder_form = $("#addReminderForm");
-		var add_reminder_button = $("#addReminderButton");
+		var add_reminder_form = $("#add-reminder-form");
+		var add_reminder_button = $("#add-reminder-button");
 
 		// ===define and bind event-handlers===================================
 
@@ -127,13 +127,13 @@
 		function load_add_patient_view(e){
 			$("#patientView").hide();
 			$("#addPatientView").fadeIn();
-			$("#addReminderForm").hide();
+			$("#add-reminder-form").hide();
 		};
 		add_patient_button.on("click", load_add_patient_view);
 
 		// cancel handler for new patient form
 		function cancel_new_patient_form(e) {
-			$("#addReminderForm").hide();
+			$("#add-reminder-form").hide();
 			$("#addPatientView").hide();
 			$("#patientView").fadeIn();
 			$("#addPatientForm")[0].reset();
@@ -193,13 +193,13 @@
 
 		// click handler for add reminder button
 		function load_new_reminder_form(e) {
-			$("#addReminderForm").fadeIn();
+			$("#add-reminder-form").fadeIn();
 		}
-		main_col.on("click", "#addReminderButton", load_new_reminder_form);
+		main_col.on("click", "#add-reminder-button", load_new_reminder_form);
 
 		// cancel button handler for new reminder form
 		function cancel_new_reminder_form(e) {
-			add_reminder_form = $("#addReminderForm");
+			add_reminder_form = $("#add-reminder-form");
 			add_reminder_form[0].reset();
 			add_reminder_form.hide();
 		}
@@ -213,7 +213,7 @@
 			var okToSubmit = false;
 			if ( $("input:checkbox:checked").length > 0 ) okToSubmit = true;
 			if (okToSubmit) {
-				form = $("#addReminderForm");
+				form = $("#add-reminder-form");
 				p_id = $("#patientView").attr("data-id");
 				data = "p_id=" + p_id + "&"
 				$.ajax({
@@ -228,6 +228,7 @@
 							data: {'p_id': p_id},
 							success: function(data) {
 								$("#mainContentView").html(data);
+								load_adherence_sparklines();
 							}
 						});
 					}	

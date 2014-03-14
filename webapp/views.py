@@ -307,6 +307,11 @@ def fishfood(request):
 	return HttpResponseBadRequest('Something went wrong.')
 
 
+@login_required
+def dashboard(request):
+	pass
+
+
 # create new patient
 @login_required
 def create_patient(request, *args, **kwargs):

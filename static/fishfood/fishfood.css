@@ -10,7 +10,8 @@ body {
 	direction:ltr;
 	font-family: "HelveticaNeue-Medium";
 	margin:0px;
-	background: #eceef1
+	background: #eceef1;
+	color: #3d464d;
 }
 
 #globalContainer {
@@ -72,6 +73,7 @@ body {
 	color: white;
 	margin-top: 10px;
 	margin-left: 10px;
+	margin-bottom: 2px;
 	color: #777;
 /*	width:100px;
 	height:60px;
@@ -96,12 +98,11 @@ body {
 	border-left: 0;
 	border-top: 1px solid #ccc;
 	border-bottom: 1px solid #FFF;
-	margin: 2px 0;
+	margin: 0px
 }
 
 .leftMenuButton {
 	/* border: solid 1px #ACE; */
-	width: 198px;
 	height: 40px;
 	line-height: 40px;
 	font-weight: bold;
@@ -112,6 +113,9 @@ body {
 	cursor: pointer;
 	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
 	color: #444;
+}
+.leftMenuButton:hover {
+	background: #d5d7d9;
 }
 
 #patientSearchBox {
@@ -125,6 +129,7 @@ body {
 	border-radius: 3px;
 	margin-left: 8px;
 	margin-top:10px;
+	margin-bottom:1px;
 }
 
 #patientSearchResults {
@@ -139,19 +144,6 @@ body {
 }
 
 #addPatientButton {
-	/*border: solid 1px brown;*/
-	position: relative;
-	width: 210px;
-	height: 40px;
-	line-height:40px;
-	font-weight: bold;
-	padding-left:10px;
-	-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
-	-moz-box-sizing: border-box;    /* Firefox, other Gecko */
-	box-sizing: border-box;
-	cursor:pointer;
-	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
-	color: #444;
 }
 
 #patientSearchResults .patientResult {
@@ -167,6 +159,9 @@ body {
 	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
 	color: #444;
 }
+#patientSearchResults .patientResult:hover{
+	background: #d5d7d9;
+}
 
 #mainCol {
 	/*border: 1px solid blue;*/
@@ -176,8 +171,7 @@ body {
 }
 
 #mainContentView {
-	padding: 0 28px;
-	padding-top: 42px;
+	padding: 28px;
 }
 
 #patientProfileHeader {
@@ -208,6 +202,36 @@ body {
 #patientProfileHeader .patientListItemInfo {
 	float:left;
 	width:400px;
+}
+
+#patient-view-nav {
+	position: relative;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	height: 35px;
+	margin-top: 10px;
+}
+
+#patient-view-nav-medlist, #patient-view-nav-caregivers {
+	display: inline-block;
+	text-align: center;
+	line-height: 35px;
+	width: 50%;
+	float: left;
+	cursor: pointer;
+}
+
+.patient-view-nav-selected {
+	background: #f1f3fa
+}
+
+.patient-view-nav-vr {
+	display: inline-block;
+	position: absolute;
+	bottom: 0px;
+	height: 100%;
+	border-left: 1px solid #ccc;
+	float: left;
 }
 
 #addPatientForm #id_full_name {
@@ -242,29 +266,34 @@ body {
 	float: left;
 }
 
-#addReminderButtonContainer {
-	margin-top: 16px;
-	margin-bottom: 29px;
+#add-reminder-button {
+	height: 60px;
+	width: 100%;
+	float: left;
+	border: 2px solid #ccc;
+	cursor: pointer;
+	border-radius: 1px;
+	border-style: dashed;
+	box-sizing: border-box;
+	margin-top: 25px;
+	line-height: 56px;
+	text-align: center;
+	color: #ccc;
+}
+#add-reminder-button:hover {
+	color: #aaa;
+	border: 2px solid #aaa;
+	border-style: dashed;
+	text-decoration: underline;
 }
 
-#addReminderButton {
-	height: 61px;
-	width: 61px;
-	float:left;
-	border:1px solid black;
-	cursor:pointer;
+#add-reminder-form {
+	float: left;
+	margin-top: 25px;
 }
 
 #addReminderName {
 	float: left;
-}
-
-#addReminderButtonLabel {
-	font-family: "HelveticaNeue-Medium";
-	font-size: 32px;
-	float:left;
-	margin-left: 12px;
-	margin-top: 10px;
 }
 
 .adherence-sparkline {
@@ -292,13 +321,16 @@ body {
 #prescriptionsListContainer {
 	float:left;
 	margin-top: 25px;
+	width: 100%;
 }
 
 .prescriptionsListItem {
-	border: 1px solid #aaa;
 	float: left;
-	padding: 8px;
+	padding: 10px;
+	border: 1px solid #ccc;
 	border-radius: 3px;
+	box-sizing: border-box;
+	width: 100%;
 }
 
 .prescriptionDrugName {
@@ -310,6 +342,7 @@ body {
 	width: 450px;
 	padding: 0;
 	margin-top: 5px;
+	width: 100%;
 }
 
 .deleteReminderButton {
