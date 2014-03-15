@@ -249,9 +249,10 @@ body {
 }
 
 #addPatientCancel, #addReminderCancel,
+#addReminderSubmit,
 .deletePatientButton, .deletePatientConfirmYes,
 .deletePatientConfirmNo {
-	border: 1px solid #777;
+	border: 1px solid #aaa;
 	border-radius: 8px;
 	float: left;
 	font-size: 18px;
@@ -260,6 +261,16 @@ body {
 	cursor:pointer;
 	width:54px;	
 	text-align:center;
+	color: #aaa;
+}
+#addPatientCancel:hover, #addReminderCancel:hover,
+#addReminderSubmit:hover,
+.deletePatientButton:hover, .deletePatientConfirmYes:hover,
+.deletePatientConfirmNo:hover {
+	border: 1px solid #3d464d;
+	color: #fff;
+	background: #f1f3fa;
+	color: #3d464d;
 }
 
 #addPatientForm #addPatientSubmit {
@@ -271,6 +282,7 @@ body {
 	width: 100%;
 	float: left;
 	border: 2px solid #ccc;
+	color: #ccc;
 	cursor: pointer;
 	border-radius: 1px;
 	border-style: dashed;
@@ -278,7 +290,6 @@ body {
 	margin-top: 25px;
 	line-height: 56px;
 	text-align: center;
-	color: #ccc;
 }
 #add-reminder-button:hover {
 	color: #aaa;
@@ -290,10 +301,83 @@ body {
 #add-reminder-form {
 	float: left;
 	margin-top: 25px;
+	border: 1px solid #ccc;
+	border-bottom: 2px solid #ccc;
+	border-radius: 3px;
+	width: 100%;
+	padding: 10px;
+	box-sizing: border-box;
+	font-size: 16px;
 }
 
 #addReminderName {
 	float: left;
+	outline: none;
+	border: 1px solid #ccc;
+	font-size: 16px;
+	padding: 12px;
+	margin: 0px;
+}
+
+#addReminderTime {
+	float: left;
+	clear: left;
+	outline: none;
+	border: 1px solid #ccc;
+	font-size: 16px;
+	width: 164px;
+	padding: 12px;
+	font-family: Helvetica;
+	margin: 0px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	height: 44px;
+	box-sizing: border-box;
+	width: 190px;
+}
+
+#day-selector {
+	float: left;
+	clear: left;
+}
+
+.day-bubble {
+	display: none;
+}
+
+.day-label {
+	cursor: pointer;
+	height: 30px;
+	width: 30px;
+	background: #ccc;
+	float: left;
+	border-radius: 20px;
+	margin-top: 4px;
+	margin-right: 8px;
+	text-align: center;
+	line-height: 30px;
+	color: #777;
+    -webkit-user-select: none; /* webkit (safari, chrome) browsers */
+    -moz-user-select: none; /* mozilla browsers */
+    -khtml-user-select: none; /* webkit (konqueror) browsers */
+    -ms-user-select: none; /* IE10+ */
+}
+.day-label:hover {
+	background: #aaa;
+}
+
+#addReminderCancel {
+	float: left;
+	clear: left;
+	margin-top: 15px;
+}
+
+#addReminderSubmit {
+	float: left;
+	margin-top: 15px;
+	margin-left: 5px;
+	background: white;
+	width: 70px;
 }
 
 .adherence-sparkline {
@@ -328,6 +412,7 @@ body {
 	float: left;
 	padding: 10px;
 	border: 1px solid #ccc;
+	border-bottom: 2px solid #ccc;
 	border-radius: 3px;
 	box-sizing: border-box;
 	width: 100%;
@@ -379,11 +464,48 @@ body {
 	color: #777;
 }
 
-#sendRefillReminderCheckbox {
-	float: left;
+#refill-reminder-check {
+	display: none;
 }
 
-.selectedDay {
+.inner-check {
+	height: 22px;
+	width: 22px;
+	border-radius: 19px;
+	border: 1px solid #ccc;
+	margin: auto;
+	margin-top: 3px;
+}
+
+.outer-check {
+	float: right;
+	margin-left: 5px;
+	cursor: pointer;
+	height: 30px;
+	width: 30px;
+	background: #fff;
+	border-radius: 20px;
+	border: 1px solid #ccc;
+	margin-top: 4px;
+	margin-right: 8px;
+	text-align: center;
+	line-height: 30px;
+	color: #777;
+    -webkit-user-select: none; /* webkit (safari, chrome) browsers */
+    -moz-user-select: none; /* mozilla browsers */
+    -khtml-user-select: none; /* webkit (konqueror) browsers */
+    -ms-user-select: none; /* IE10+ */
+}
+
+#refill-reminder-text-label {
+	display: block;
+	margin-top: 9px;
+	color: #aaa;
+	float: right;
+}
+
+.selectedDay, .selectedDay:hover,
+.selected-inner-check, .selected-inner-check:hover {
 	background: #81CC88;
 }
 

@@ -194,6 +194,7 @@
 		// click handler for add reminder button
 		function load_new_reminder_form(e) {
 			$("#add-reminder-form").fadeIn();
+			$("#add-reminder-button").hide();
 		}
 		main_col.on("click", "#add-reminder-button", load_new_reminder_form);
 
@@ -202,8 +203,24 @@
 			add_reminder_form = $("#add-reminder-form");
 			add_reminder_form[0].reset();
 			add_reminder_form.hide();
+			$("#add-reminder-button").show();
+			$(".day-label").removeClass("selectedDay");
+			$(".inner-check").removeClass("selected-inner-check");
 		}
 		main_col.on("click", "#addReminderCancel", cancel_new_reminder_form);
+
+		// highlight selected days in add reminder form
+		function highlight_selected_day(e) {
+			$(e.target).toggleClass("selectedDay");
+		}
+		main_col.on("click", ".day-label", highlight_selected_day);
+
+		// highlight selected reminder options in add reminder form
+		function highlight_selected_reminder_option(e) {
+			var target = $(e.target).toggleClass("selected-inner-check");
+		}
+		// main_col.on("click", ".outer-check", highlight_selected_reminder_option);
+		main_col.on("click", ".inner-check", highlight_selected_reminder_option);
 
 		// submit button handler for new reminder form
 		function submit_new_reminder_form(e) {
