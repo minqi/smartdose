@@ -5,10 +5,13 @@ import random
 
 
 class ResponseCenter(object):
+	@staticmethod
 	class Action:
 		ACK, QUIT, RESUME, UNKNOWN, NOT_VALID_MESSAGE = range(5)
+		def __init__(self):
+			pass
 
-	ACTION = Action()
+
 
 	def _parse_is_ack(self, message):
 		""" Returns true if the message is an acknowledgment message
@@ -45,16 +48,16 @@ class ResponseCenter(object):
 			message is the content of the text message sent to Smartdose
 		"""
 		if message == None or sender == None:
-			return ResponseCenter.ACTION.NOT_VALID_MESSAGE
+			return ResponseCenter.Action.NOT_VALID_MESSAGE
 
 		if self._parse_is_ack(message):
-			return ResponseCenter.ACTION.ACK
+			return ResponseCenter.Action.ACK
 		elif self._parse_is_quit(message):
-			return ResponseCenter.ACTION.QUIT
+			return ResponseCenter.Action.QUIT
 		elif self._parse_is_resume(message):
-			return ResponseCenter.ACTION.RESUME
+			return ResponseCenter.Action.RESUME
 		else:
-			return ResponseCenter.ACTION.UNKNOWN
+			return ResponseCenter.Action.UNKNOWN
 
 	def _get_adherence_ratio_ack_response_content(self, sender, acked_messages):
 		#TODO(mgaba): What kind of information should go in a message that reports
@@ -127,16 +130,16 @@ class ResponseCenter(object):
 		""" Returns an HttpResponse object. Changes state of system based on action and sender's message
 		"""
 
-		if action == ResponseCenter.ACTION.NOT_VALID_MESSAGE or \
-			(sender and sender.did_quit() and action != ResponseCenter.ACTION.RESUME):
+		if action == ResponseCenter.Action.NOT_VALID_MESSAGE or \
+			(sender and sender.did_quit() and action != ResponseCenter.Action.RESUME):
 			return self._process_not_valid_response()
-		elif action == ResponseCenter.ACTION.ACK:
+		elif action == ResponseCenter.Action.ACK:
 			return self._process_ack_response(sender, message)
-		elif action == ResponseCenter.ACTION.QUIT:
+		elif action == ResponseCenter.Action.QUIT:
 			return self._process_quit_response(sender)
-		elif action == ResponseCenter.ACTION.RESUME:
+		elif action == ResponseCenter.Action.RESUME:
 			return self._process_resume_response(sender)
-		elif action == ResponseCenter.ACTION.UNKNOWN:
+		elif action == ResponseCenter.Action.UNKNOWN:
 			return self._process_unknown_response()
 		else:
 			raise Exception("ResponseCenter asked to process an action it doesn't know about")
