@@ -26,9 +26,9 @@
 						{% include 'fishfood/patient_search_results_list.html' %}
 					</ul>
 				</div>
-				<form id="#logoutButton" action="/fishfood/logout/" method="post">
+				<form  id="logout-form" action="/fishfood/logout/" method="post">
 					{% csrf_token %}
-					<input type="submit" value="Logout">
+					<input id="logoutButton" type="submit" value="Logout">
 				</form>
 			</div>
 			<div id="main-container">

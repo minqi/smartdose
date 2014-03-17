@@ -83,12 +83,12 @@
 					data : dynamicData,
 					success : function(data) {
 						parsedData = d3.csv.parse(data);
-						console.log(parsedData)
 						sparkline('#spark-vod', parsedData);
 					}
 				});
 			}
 		}();
+
 
 		// keystroke handler for patient search-box 
 		// instant search
@@ -105,6 +105,7 @@
 			});
 		};
 		patient_search_box.on("keyup", get_patient_search_results_list);
+
 
 		// click handler for patient search result list items
 		function load_patient_view(e){
@@ -123,6 +124,7 @@
 		}
 		patient_search_results.on("click", "li", load_patient_view);
 
+
 		// click handler for add new patient button
 		function load_add_patient_view(e){
 			$("#patientView").hide();
@@ -130,6 +132,7 @@
 			$("#add-reminder-form").hide();
 		};
 		add_patient_button.on("click", load_add_patient_view);
+
 
 		// cancel handler for new patient form
 		function cancel_new_patient_form(e) {
@@ -139,6 +142,7 @@
 			$("#addPatientForm")[0].reset();
 		}
 		main_col.on("click", "#addPatientCancel", cancel_new_patient_form);
+
 
 		// submit handler for new patient form
 		function submit_new_patient_form(e) {
@@ -157,14 +161,15 @@
 		}
 		$("#mainContentView").on("submit", "#addPatientForm", submit_new_patient_form);
 
+
 		// delete button handler for new patient form
 		function delete_patient_button_clicked(e) {
 			$(e.target).hide();
-			$(".deletePatientConfirm").fadeIn();
 			$(".deletePatientConfirmYes").fadeIn();
 			$(".deletePatientConfirmNo").fadeIn();
 		}
 		main_col.on("click", ".deletePatientButton", delete_patient_button_clicked);
+
 
 		function delete_patient_cancel(e) {
 			$(".deletePatientConfirm").hide();
@@ -173,6 +178,7 @@
 			$(".deletePatientButton").fadeIn();
 		}
 		main_col.on("click", ".deletePatientConfirmNo", delete_patient_cancel);
+
 
 		function delete_patient_confirm(e) {
 			csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value; 
@@ -191,12 +197,14 @@
 		}
 		main_col.on("click", ".deletePatientConfirmYes", delete_patient_confirm);
 
+
 		// click handler for add reminder button
 		function load_new_reminder_form(e) {
 			$("#add-reminder-form").fadeIn();
 			$("#add-reminder-button").hide();
 		}
 		main_col.on("click", "#add-reminder-button", load_new_reminder_form);
+
 
 		// cancel button handler for new reminder form
 		function cancel_new_reminder_form(e) {
@@ -209,11 +217,13 @@
 		}
 		main_col.on("click", "#addReminderCancel", cancel_new_reminder_form);
 
+
 		// highlight selected days in add reminder form
 		function highlight_selected_day(e) {
 			$(e.target).toggleClass("selectedDay");
 		}
 		main_col.on("click", ".day-label", highlight_selected_day);
+
 
 		// highlight selected reminder options in add reminder form
 		function highlight_selected_reminder_option(e) {
@@ -221,6 +231,7 @@
 		}
 		// main_col.on("click", ".outer-check", highlight_selected_reminder_option);
 		main_col.on("click", ".inner-check", highlight_selected_reminder_option);
+
 
 		// submit button handler for new reminder form
 		function submit_new_reminder_form(e) {
@@ -254,6 +265,8 @@
 		}
 		main_col.on("click", "#addReminderSubmit", submit_new_reminder_form);
 
+
+		// delete reminder handler
 		function delete_reminder_confirm(e) {
 			csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value; 
 			var dynamicData = {'csrfmiddlewaretoken':csrfmiddlewaretoken};
@@ -285,5 +298,113 @@
 		}
 		main_col.on("click", ".deleteReminderButton", delete_reminder_confirm);
 
+
+		function show_reminders_list_item_hover_items(e) {
+			var listItem = $(e.target).closest(".remindersListItem"); 
+			listItem.find(".deleteReminderButton").show();
+			listItem.css("background", "#f1f3fa");
+		}
+		main_col.on("mouseenter", ".remindersListItem", show_reminders_list_item_hover_items);
+		function hide_reminders_list_item_hover_items(e) {
+			var listItem = $(e.target).closest(".remindersListItem"); 
+			listItem.find(".deleteReminderButton").hide();
+			listItem.css("background", "#fff");
+		}
+		main_col.on("mouseleave", ".remindersListItem", hide_reminders_list_item_hover_items);
+
+
+		// click handler for add reminder button
+		function load_new_caregiver_form(e) {
+			$("#add-caregiver-button").hide();
+			$("#add-caregiver-form").fadeIn();
+		}
+		main_col.on("click", "#add-caregiver-button", load_new_caregiver_form);
+
+
+		// cancel button handler for new reminder form
+		function cancel_new_caregiver_form(e) {
+			add_caregiver_form = $("#add-caregiver-form");
+			add_caregiver_form[0].reset();
+			add_caregiver_form.hide();
+			$("#add-caregiver-button").show();
+		}
+		main_col.on("click", "#add-caregiver-cancel", cancel_new_caregiver_form);
+
+
+		// submit handler for new patient form
+		function submit_new_caregiver_form(e) {
+			e.preventDefault();
+			form = $("#add-caregiver-form");
+			p_id = $("#patientView").attr("data-id");
+			data = "p_id=" + p_id + "&"
+			$.ajax({
+				url: "/fishfood/patients/create_safety_net_contact/",
+				type: "post",
+				data: data + form.serialize(),
+				success: function(data) {
+					$.ajax({
+						url: "/fishfood/patients/caregivers/",
+						type: "get",
+						data: {'p_id': p_id},
+						success: function(data) {
+							$("#mainContentView").html(data);
+							load_adherence_sparklines();
+						}
+					});
+				}
+			});
+		}
+		main_col.on("submit", "#add-caregiver-form", submit_new_caregiver_form);
+
+
+		// delete caregiver handler
+		function delete_caregiver_confirm(e) {
+			csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value; 
+			var dynamicData = {'csrfmiddlewaretoken':csrfmiddlewaretoken};
+			dynamicData['p_id'] = $("#patientView").attr("data-id");
+
+			var target = $(e.target);
+			var caregiversListItem = target.parents(".caregivers-list-item");
+			dynamicData['target_p_id'] = caregiversListItem.attr("data-id");
+			$.ajax({
+				url: "/fishfood/patients/delete_safety_net_contact/",
+				type: "post",
+				data: dynamicData,
+				success: function(data) {
+					caregiversListItem.remove();
+				}
+			});
+		}
+		main_col.on("click", ".delete-caregiver-button", delete_caregiver_confirm);
+
+
+		function show_caregivers_list_item_hover_items(e) {
+			var listItem = $(e.target).closest(".caregivers-list-item"); 
+			listItem.find(".delete-caregiver-button").show();
+			listItem.css("background", "#f1f3fa");
+		}
+		main_col.on("mouseenter", ".caregivers-list-item", show_caregivers_list_item_hover_items);
+		function hide_caregivers_list_item_hover_items(e) {
+			var listItem = $(e.target).closest(".caregivers-list-item"); 
+			listItem.find(".delete-caregiver-button").hide();
+			listItem.css("background", "#fff");
+		}
+		main_col.on("mouseleave", ".caregivers-list-item", hide_caregivers_list_item_hover_items);
+
+
+		// control switching between various patient view sections
+		function switch_patient_view_sections(e) {
+			$(".patient-section").hide();
+			$(".patient-view-nav-tab").removeClass("patient-view-nav-selected");
+			var target = $(e.target);
+			if (target.is("#patient-view-nav-medlist")) {
+				$("#patient-view-reminders-section").show();
+			}
+			else if (target.is("#patient-view-nav-caregivers")) {
+				$("#patient-view-caregivers-section").show();
+			}
+			target.addClass("patient-view-nav-selected");
+		}
+		main_col.on("click", ".patient-view-nav-tab", switch_patient_view_sections);
 	});
 }));

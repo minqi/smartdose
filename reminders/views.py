@@ -17,7 +17,6 @@ def handle_text(request):
 
 def adherence_history_csv(request):
 	if request.GET:
-		print 'got here'
 		headers = [
 			'date',
 			'adherence_rate',

@@ -1,0 +1,14 @@
+<div id="caregivers-list-container">
+	{% for safety_net_relation in safety_net_relations %}
+	{% with safety_net_relation.target_patient as safety_net_contact %}
+	<div class="caregivers-list-item" data-id={{ safety_net_contact.id }}>
+		<div class="delete-caregiver-button no_display">Delete</div>
+		<div class="caregiver-fullname">{{ safety_net_contact.full_name }}</div>
+		<div class="caregiver-relationship">
+			{{ safety_net_relation.source_to_target_relationship }}
+		</div>
+		<div class="caregiver-phonenumber">{{ safety_net_contact.primary_phone_number }}</div>
+	</div>
+	{% endwith %}
+	{% endfor %}
+</div>

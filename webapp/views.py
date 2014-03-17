@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.context_processors import csrf
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import resolve
 from django.db.models import Q
 from localflavor.us.forms import USPhoneNumberField
 from itertools import groupby
@@ -208,6 +209,7 @@ class CreateSafetyNetContactForm(forms.Form):
 		primary_phone_number = self.cleaned_data['primary_phone_number'].strip()
 		return convert_to_e164(primary_phone_number)
 
+
 class DeleteSafetyNetContactForm(forms.Form):
 	p_id = forms.IntegerField()
 	target_p_id = forms.IntegerField()
@@ -217,6 +219,7 @@ class DeleteSafetyNetContactForm(forms.Form):
 		if not PatientProfile.objects.filter(id=p_id).exists():
 			raise ValidationError('Patient does not exist')
 		return p_id
+
 
 # @lockdown
 def user_registration(request):
@@ -374,6 +377,8 @@ def create_patient(request, *args, **kwargs):
 def retrieve_patient(request, *args, **kwargs):
 	if request.GET:
 		c = RequestContext(request)
+		url_name = resolve(request.path_info).url_name
+		c['url_name'] = url_name
 
 		patient_id = request.GET.get('p_id', None)
 		if not is_integer(patient_id):
@@ -388,6 +393,7 @@ def retrieve_patient(request, *args, **kwargs):
 					return HttpResponseBadRequest("You don't have access to this user's profile")
 
 				c['patient'] = patient
+
 				# get reminders
 				reminders = ReminderTime.objects.filter(
 					to=patient, reminder_type=ReminderTime.MEDICATION)
@@ -402,6 +408,11 @@ def retrieve_patient(request, *args, **kwargs):
 						drug_group['schedules'].append({'time':send_time, 'days_of_week':days_of_week})
 					reminder_groups.append(drug_group)
 				c['reminder_groups'] = tuple(reminder_groups)
+
+				# get caregivers
+				safety_net_relations = SafetyNetRelationship.objects.filter(source_patient=patient)
+				c['safety_net_relations'] = safety_net_relations
+
 				return render_to_response('fishfood/patient_view.html', c)
 		return HttpResponseBadRequest("This user already exists.")
 	return HttpResponseBadRequest("Something went wrong.")

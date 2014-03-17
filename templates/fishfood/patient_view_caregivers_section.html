@@ -1,0 +1,18 @@
+{% if url_name == 'retrieve_caregivers' %}
+<div id="patient-view-caregivers-section" class="patient-section">
+{% else %}
+<div id="patient-view-caregivers-section" class="patient-section no_display">
+{% endif %}
+	<div id="add-caregiver-button">+ Add caregiver</div>
+	<form id="add-caregiver-form" class="no_display">
+		{% csrf_token %}
+		<input id="add-caregiver-fullname" type="text" name="full_name" placeholder="Full name, e.g. John Doe"/>
+		<input id="add-caregiver-phonenumber" type="text" name="primary_phone_number" placeholder="Phone number, e.g. 555-555-5555"/>
+		<input id="add-caregiver-relationship" type="text" name="relationship" placeholder="Relationship, e.g. Mother"/>
+		<p/>
+		<div id="add-caregiver-cancel">Cancel</div>
+		<input type="submit" id="add-caregiver-submit" value="Done"/>
+	</form>
+	<p/>
+	{% include 'fishfood/patient_caregivers_list.html' %}
+</div>

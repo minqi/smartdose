@@ -7,7 +7,7 @@
 			<ul class="remindersList unstyledList">
 				{% for schedule in drug_group.schedules %}
 				<li class="remindersListItem">
-					<div class="deleteReminderButton">Delete</div>
+					<div class="deleteReminderButton no_display">Delete</div>
 					<div class="remindersListItemTime">{{ schedule.time|time:"g:i A" }}</div>
 					<div class="remindersListItemDays">
 						{% if 1 in schedule.days_of_week or 8 in schedule.days_of_week %}
@@ -46,8 +46,8 @@
 						<div class="remindersListItemDay">Sn</div>
 						{% endif %}
 					</div>
+					<div class="clearfix"></div>
 				</li>
-				<div class="clearfix"></div>
 				{% endfor %}
 			</ul>
 		</div>
