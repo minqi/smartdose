@@ -1,7 +1,7 @@
 import datetime
 from django.template.loader import render_to_string
 from patients.models import PatientProfile, SafetyNetRelationship
-from reminders.models import SentReminder, ReminderTime
+from reminders.models import SentReminder, Notification
 
 class SafetyNetCenter(object):
 
@@ -21,7 +21,7 @@ class SafetyNetCenter(object):
 		reminders = SentReminder.objects.filter(
 			time_sent__gte=window_start,
 			time_sent__lte=window_finish,
-			reminder_time__reminder_type=ReminderTime.MEDICATION).exclude(time_sent__gte=time - timeout)
+			reminder_time__reminder_type=Notification.MEDICATION).exclude(time_sent__gte=time - timeout)
 		# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
 		reminders = reminders.prefetch_related('reminder_time').prefetch_related('reminder_time__prescription')
 
@@ -68,7 +68,7 @@ class SafetyNetCenter(object):
 					SafetyNetRelationship.objects.get(source_patient=patient, 
 						target_patient=safety_net_contact).target_to_source_relationship
 				message_body = render_to_string('messages/safety_net_message.txt', dictionary)
-				ReminderTime.objects.create_safety_net_notification(to=safety_net_contact, text=message_body)
+				Notification.objects.create_safety_net_notification(to=safety_net_contact, text=message_body)
 
 	def schedule_safety_net_messages(self, window_start, window_finish, threshold, timeout):
 		"""

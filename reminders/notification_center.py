@@ -1,7 +1,7 @@
 from common.utilities import sendTextMessageToNumber, list_to_queryset
 from common.models import UserProfile
 from patients.models import PatientProfile
-from reminders.models import ReminderTime, Message, SentReminder
+from reminders.models import Notification, Message, SentReminder
 from configs.dev import settings
 from django.template.loader import render_to_string
 import datetime
@@ -46,7 +46,7 @@ class NotificationCenter(object):
 		In future, checks performed on additional recipient features will determine whether
 		the message should be sent via SMS, as a native app notification, or as a voice call.
 		"""
-		if notifications.__class__ == ReminderTime:
+		if notifications.__class__ == Notification:
 			notifications = [notifications]
 
 		message = Message.objects.create(patient=to, message_type=notifications[0].reminder_type)
@@ -64,11 +64,11 @@ class NotificationCenter(object):
 
 		# perform necessary record-keeping and updates to sent notifications
 		for notification in notifications:
-			if notification.reminder_type in (ReminderTime.REFILL, ReminderTime.MEDICATION):
+			if notification.reminder_type in (Notification.REFILL, Notification.MEDICATION):
 				sent_reminder = SentReminder.objects.create(reminder_time=notification, 
 					message=message, prescription=notification.prescription)
 				notification.update_to_next_send_time()
-			elif notification.reminder_type in (ReminderTime.WELCOME, ReminderTime.SAFETY_NET):
+			elif notification.reminder_type in (Notification.WELCOME, Notification.SAFETY_NET):
 				sent_reminder = SentReminder.objects.create(reminder_time=notification, message=message)
 				notification.active = False
 				notification.save()
@@ -79,7 +79,7 @@ class NotificationCenter(object):
 		"""
 		Send welcome notification in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=ReminderTime.WELCOME)
+		notifications = notifications.filter(to=to, reminder_type=Notification.WELCOME)
 		if notifications.exists() and to.status == PatientProfile.NEW:
 			welcome_notification = list(notifications.order_by('send_time'))[0]
 			context = {'patient_first_name':to.first_name}
@@ -94,7 +94,7 @@ class NotificationCenter(object):
 		"""
 		Send refill notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=ReminderTime.REFILL)
+		notifications = notifications.filter(to=to, reminder_type=Notification.REFILL)
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
@@ -108,7 +108,7 @@ class NotificationCenter(object):
 		Send medication notifications in QuerySet <notifications> to recipient <to>
 		"""
 		notifications = notifications.filter(to=to,
-			reminder_type=ReminderTime.MEDICATION, prescription__filled=True)
+			reminder_type=Notification.MEDICATION, prescription__filled=True)
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
@@ -121,7 +121,7 @@ class NotificationCenter(object):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=ReminderTime.SAFETY_NET)
+		notifications = notifications.filter(to=to, reminder_type=Notification.SAFETY_NET)
 		if notifications.exists() and to.status in (PatientProfile.NEW, PatientProfile.ACTIVE):
 			notifications = notifications.order_by("send_time")
 			for notification in notifications:
@@ -138,7 +138,7 @@ class NotificationCenter(object):
 		# convert into QuerySet
 		if isinstance(notifications, [].__class__):
 			notifications = list_to_queryset(notifications)
-		elif isinstance(notifications, ReminderTime):
+		elif isinstance(notifications, Notification):
 			notifications = list_to_queryset([notifications])
 
 		self.send_welcome_notifications(to, notifications)

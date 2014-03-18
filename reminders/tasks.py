@@ -8,7 +8,7 @@ from celery import shared_task
 from django.conf import Settings
 from django.template.loader import render_to_string
 from django.db.models import Q
-from reminders.models import ReminderTime, Message, SentReminder
+from reminders.models import Notification, Message, SentReminder
 from common.models import UserProfile
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile, SafetyNetRelationship
@@ -34,7 +34,7 @@ def sendRemindersForNow():
 	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
 	"""
 	now = datetime.datetime.now()
-	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
+	reminders_for_now = Notification.objects.reminders_at_time(now)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 

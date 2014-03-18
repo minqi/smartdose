@@ -17,7 +17,7 @@ from common.utilities import is_integer, next_weekday, convert_to_e164
 from common.models import Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
-from reminders.models import ReminderTime, Prescription, Message, SentReminder
+from reminders.models import Notification, Prescription, Message, SentReminder
 
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 from guardian.models import UserObjectPermission, GroupObjectPermission
@@ -167,9 +167,9 @@ class DeleteReminderForm(forms.Form):
 		if not Prescription.objects.filter(patient=patient, drug__name=drug_name):
 			raise ValidationError('Reminder does not exist')
 
-		reminders = ReminderTime.objects.filter(
+		reminders = Notification.objects.filter(
 			to=patient, prescription__drug__name__iexact=drug_name, 
-			reminder_type=ReminderTime.MEDICATION)
+			reminder_type=Notification.MEDICATION)
 		reminders_for_deletion = []
 		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
@@ -359,7 +359,7 @@ def create_patient(request, *args, **kwargs):
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
-			ReminderTime.objects.create_consumer_welcome_notification(to=patient)
+			Notification.objects.create_consumer_welcome_notification(to=patient)
 			patient.save()
 
 			c = RequestContext(request)
@@ -388,8 +388,8 @@ def retrieve_patient(request, *args, **kwargs):
 
 				c['patient'] = patient
 				# get reminders
-				reminders = ReminderTime.objects.filter(
-					to=patient, reminder_type=ReminderTime.MEDICATION)
+				reminders = Notification.objects.filter(
+					to=patient, reminder_type=Notification.MEDICATION)
 				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_time.time()))
 				reminder_groups = []
 				for drug, outer_group in groupby(reminders, lambda x: x.prescription.drug.name):
@@ -460,7 +460,7 @@ def delete_patient(request, *args, **kwargs):
 			# Note we keep outstanding Messages and SentReminders
 			if patient.num_caregivers == 0:
 				Prescription.objects.filter(patient=patient).delete()
-				ReminderTime.objects.filter(to=patient).delete()
+				Notification.objects.filter(to=patient).delete()
 				SafetyNetRelationship.objects.filter(source_patient=patient).delete()
 				# delete permissions
 				filters = Q(content_type=ContentType.objects.get_for_model(patient), 
@@ -527,7 +527,7 @@ def create_reminder(request, *args, **kwargs):
 				prescriber=request.user, patient=patient, drug=drug)
 
 			reminder_time = form.cleaned_data['reminder_time']
-			existing_reminders = ReminderTime.objects.filter(
+			existing_reminders = Notification.objects.filter(
 				to=patient, prescription__drug__name__iexact=drug_name)
 
 			# check if it's a daily reminder
@@ -541,11 +541,11 @@ def create_reminder(request, *args, **kwargs):
 						r.delete()
 				send_datetime = datetime.datetime.combine(
 					datetime.datetime.today().date(), reminder_time)
-				med_reminder = ReminderTime.objects.get_or_create(
+				med_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=ReminderTime.MEDICATION,
+					reminder_type=Notification.MEDICATION,
 					send_time = send_datetime, 
-					repeat=ReminderTime.DAILY, 
+					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(med_reminder)
 				med_reminder.update_to_next_send_time()
@@ -558,7 +558,7 @@ def create_reminder(request, *args, **kwargs):
 					if active_day:
 						skip_day = False # skip day if already reminder at this time
 						existing_reminders_for_day = existing_reminders.filter( 
-							Q(day_of_week=idx+1) | Q(repeat=ReminderTime.DAILY)
+							Q(day_of_week=idx+1) | Q(repeat=Notification.DAILY)
 						)
 						for r in existing_reminders_for_day:
 							if r.send_time.time() == reminder_time:
@@ -572,11 +572,11 @@ def create_reminder(request, *args, **kwargs):
 								send_datetime = datetime.datetime.combine(
 									next_weekday(today.date(), idx), reminder_time
 								)
-							med_reminder = ReminderTime.objects.get_or_create(
+							med_reminder = Notification.objects.get_or_create(
 								to=patient, 
-								reminder_type=ReminderTime.MEDICATION,
+								reminder_type=Notification.MEDICATION,
 								send_time = send_datetime, 
-								repeat=ReminderTime.WEEKLY, 
+								repeat=Notification.WEEKLY,
 								prescription=prescription)[0]
 							new_reminders.append(med_reminder)
 							med_reminder.day_of_week = idx + 1
@@ -584,18 +584,18 @@ def create_reminder(request, *args, **kwargs):
 			# create a refill reminder for the patient if prescription is not filled
 			send_refill_reminder = form.cleaned_data['send_refill_reminder']
 			if send_refill_reminder and not prescription.filled:
-				refill_reminder = ReminderTime.objects.get_or_create(
+				refill_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=ReminderTime.REFILL, 
-					repeat=ReminderTime.DAILY, 
+					reminder_type=Notification.REFILL,
+					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(refill_reminder)
 			elif not send_refill_reminder and prescription_created:
 				prescription.filled = True
 				prescription.save()
 			for r in new_reminders:
-				assign_perm('view_notification', request.user, r)
-				assign_perm('change_notification', request.user, r)
+				assign_perm('view_notification_smartdose', request.user, r)
+				assign_perm('change_notification_smartdose', request.user, r)
 			return HttpResponse('')
 	return HttpResponseBadRequest()
 
@@ -618,9 +618,9 @@ def delete_reminder(request, *args, **kwargs):
 
 			drug_name = form.cleaned_data['drug_name']
 			if form.cleaned_data['all_deleted']: # delete all reminder objects
-				ReminderTime.objects.filter(
+				Notification.objects.filter(
 					to=patient, prescription__drug__name__iexact=drug_name, 
-					reminder_type=ReminderTime.REFILL).delete()
+					reminder_type=Notification.REFILL).delete()
 			for r in form.cleaned_data['reminders_for_deletion']: 
 				r.delete()
 			return HttpResponse('')

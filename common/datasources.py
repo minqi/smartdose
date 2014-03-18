@@ -2,7 +2,7 @@ import os, datetime, random, csv
 from faker import Factory
 from configs.dev.settings import PROJECT_ROOT
 from common.models import Drug
-from reminders.models import Prescription, ReminderTime
+from reminders.models import Prescription, Notification
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 
@@ -75,7 +75,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 		# TODO(minqi): replace with actual sigs/sig codes + write a parser
 		fake_fields["with_food"] = (random.randint(0,1) == 0) and True or False
 		fake_fields["with_water"] = (random.randint(0,1) == 0) and True or False
-		fake_fields["repeat"] = ReminderTime.DAILY
+		fake_fields["repeat"] = Notification.DAILY
 		fake_fields["send_time"] = datetime.datetime.now() + datetime.timedelta(minutes=random.randint(0,59), 
 																 hours=random.randint(0,24))
 

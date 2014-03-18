@@ -42,7 +42,7 @@ class ReminderManager(models.Manager):
 			Q(send_time__lte=now_datetime)
 		).order_by('to', 'send_time') # order by recipient's full name, then by send_time
 
-		all_reminders_at_time = ReminderTime.objects.none()
+		all_reminders_at_time = Notification.objects.none()
 		if reminders_at_time.exists():
 			for recipient, recipient_group in groupby(reminders_at_time, lambda x: x.to):
 				latest_reminder = None
@@ -61,13 +61,13 @@ class ReminderManager(models.Manager):
 		"""STUB: Schedule both a refill reminder and a medication reminder for a prescription"""
 		refill_reminder = None
 		if not prescription.filled:
-			refill_reminder = ReminderTime.objects.get_or_create(to=to,
-														 reminder_type=ReminderTime.REFILL,
-														 repeat=ReminderTime.DAILY,
+			refill_reminder = Notification.objects.get_or_create(to=to,
+														 reminder_type=Notification.REFILL,
+														 repeat=Notification.DAILY,
 														 prescription=prescription)[0]
-		med_reminder = ReminderTime.objects.get_or_create(to=to,
-												  reminder_type=ReminderTime.MEDICATION,
-												  repeat=ReminderTime.DAILY,
+		med_reminder = Notification.objects.get_or_create(to=to,
+												  reminder_type=Notification.MEDICATION,
+												  repeat=Notification.DAILY,
 												  prescription=prescription)[0]
 		return (refill_reminder, med_reminder)
 
@@ -78,15 +78,15 @@ class ReminderManager(models.Manager):
 		"""
 		refill_reminder = None
 		if not prescription.filled:
-			refill_reminder = ReminderTime.objects.get_or_create(to=to,
-																 reminder_type=ReminderTime.REFILL,
-																 repeat=ReminderTime.DAILY,
+			refill_reminder = Notification.objects.get_or_create(to=to,
+																 reminder_type=Notification.REFILL,
+																 repeat=Notification.DAILY,
 																 send_time=reminder_schedule[0][1], 
 																 prescription=prescription)[0]
 		reminder_times = []
 		for reminder_schedule_entry in reminder_schedule:
-			reminder_time = ReminderTime.objects.create(to=to,
-														reminder_type=ReminderTime.MEDICATION,
+			reminder_time = Notification.objects.create(to=to,
+														reminder_type=Notification.MEDICATION,
 														prescription=prescription,
 														repeat=reminder_schedule_entry[0],
 														send_time=reminder_schedule_entry[1])
@@ -95,25 +95,25 @@ class ReminderManager(models.Manager):
 		return (refill_reminder, reminder_times)
 
 	def create_safety_net_notification(self, to, text):
-		safetynet_reminder = ReminderTime.objects.get_or_create(to=to, # Minqi: Why is this get or create?
-																reminder_type=ReminderTime.SAFETY_NET,
-																repeat=ReminderTime.ONE_SHOT,
+		safetynet_reminder = Notification.objects.get_or_create(to=to, # Minqi: Why is this get or create?
+																reminder_type=Notification.SAFETY_NET,
+																repeat=Notification.ONE_SHOT,
 																text=text)[0]
 		return safetynet_reminder
 
 	def create_consumer_welcome_notification(self, to):
-		welcome_reminder = ReminderTime.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
-			reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT)[0]
+		welcome_reminder = Notification.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
+			reminder_type=Notification.WELCOME, repeat=Notification.ONE_SHOT)[0]
 		return welcome_reminder
 
 	def create_doctor_initiated_welcome_notification(self, to):
-		welcome_reminder = ReminderTime.objects.create(to=to,
-		    reminder_type=ReminderTime.WELCOME, repeat=ReminderTime.ONE_SHOT,
+		welcome_reminder = Notification.objects.create(to=to,
+		    reminder_type=Notification.WELCOME, repeat=Notification.ONE_SHOT,
 		    send_time=DOCTOR_INITIATED_WELCOME_SEND_TIME)
 		return welcome_reminder
 
 
-class ReminderTime(models.Model):
+class Notification(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
 	# Reminder type
 	WELCOME     = 'w'
@@ -259,7 +259,7 @@ class ReminderTime(models.Model):
 		pass
 
 	def __init__(self, *args, **kwargs):
-		super(ReminderTime, self).__init__(*args, **kwargs)
+		super(Notification, self).__init__(*args, **kwargs)
 		# custom init logic
 		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
 		# by parsing the prescription sig
@@ -270,9 +270,10 @@ class ReminderTime(models.Model):
 
 	class Meta:
 		get_latest_by = 'send_time'
+		# TODO(matt): Note to minqi: Changed name of this permission
 		permissions = (
-			('view_notification', 'View notification'),
-			('change_notification', 'Change notification'),
+			('view_notification_smartdose', 'View notification'),
+			('change_notification_smartdose', 'Change notification'),
 		)
 
 
@@ -348,7 +349,7 @@ class Message(models.Model):
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
 	prescription   = models.ForeignKey(Prescription, null=True)
-	reminder_time  = models.ForeignKey(ReminderTime, blank=False)
+	reminder_time  = models.ForeignKey(Notification, blank=False)
 	message 	   = models.ForeignKey(Message)
 	time_sent      = models.DateTimeField(auto_now_add=True)
 	ack			   = models.BooleanField(default=False)
@@ -359,14 +360,14 @@ class SentReminder(models.Model):
 	def processAck(self):
 		self.ack = True
 		self.save()
-		if self.reminder_time.reminder_type == ReminderTime.REFILL:
+		if self.reminder_time.reminder_type == Notification.REFILL:
 			self.prescription.filled = True
 			self.prescription.save()
-			reminder_times = self.prescription.remindertime_set.all()
+			reminder_times = self.prescription.notification_set.all()
 			# Advance medication reminder send times to a point after the refill reminder is ack'd
 			now = datetime.datetime.now()
 			for reminder_time in reminder_times:
-				if reminder_time.reminder_type == ReminderTime.MEDICATION:
+				if reminder_time.reminder_type == Notification.MEDICATION:
 					if reminder_time.send_time < now:
 						reminder_time.update_to_next_send_time()
 			self.reminder_time.active = False
