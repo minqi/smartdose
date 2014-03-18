@@ -23,11 +23,59 @@
 		var add_reminder_form = $("#add-reminder-form");
 		var add_reminder_button = $("#add-reminder-button");
 
+		// main header states
+		var main_header_text_handlers = function() {
+			var main_header_text = $("#main-header").text();
+			var main_header_text_prev = main_header_text;
+
+			var update_main_header_text = function(new_text) {
+				main_header_text_prev = main_header_text;
+				main_header_text = new_text;
+				$("#main-header").text(main_header_text);
+			} 
+
+			var revert_main_header_text = function() {
+				main_header_text = main_header_text_prev;
+				$("#main-header").text(main_header_text);
+			}
+
+			return [update_main_header_text, revert_main_header_text];
+		}();
+		var update_main_header_text = main_header_text_handlers[0];
+		var revert_main_header_text = main_header_text_handlers[1];
+
 		// ===define and bind event-handlers===================================
+
+
+		// window resize
+		function window_resize_handler() {
+			var window_height = $(window).height();
+			var window_width = $(window).width();
+
+			// fit left menu
+			var left_menu = $("#leftMenu");
+			var new_height = 
+				window_height - 
+				$("#left-menu-footer").height() - 
+				left_menu.offset().top;
+			left_menu.height(new_height);
+
+			// fit main container
+			var main_container = $("#main-container");
+			var new_width = 
+				window_width -
+				$("#leftCol").width();
+			main_container.width(new_width);
+
+			var main_view = $("#main-view");
+			$("#main-view").css("min-height", window_height - 10);
+		}
+		window_resize_handler();
+		$(window).on("resize", window_resize_handler);
+
 
 		// sparkline loader functions, called when loading patient profile
 		// loads data from server to populate adherence sparklines
-
 		var load_adherence_sparklines = 
 		function() {
 			var width = 250;
@@ -119,6 +167,7 @@
 					$("#mainContentView").html(data).show();
 					add_patient_view.hide();
 					load_adherence_sparklines();
+					update_main_header_text("Medication record")
 				}
 			});
 		}
@@ -127,9 +176,9 @@
 
 		// click handler for add new patient button
 		function load_add_patient_view(e){
-			$("#patientView").hide();
+			$("#mainContentView").children().hide();
 			$("#addPatientView").fadeIn();
-			$("#add-reminder-form").hide();
+			update_main_header_text("Add a patient");
 		};
 		add_patient_button.on("click", load_add_patient_view);
 
@@ -137,9 +186,11 @@
 		// cancel handler for new patient form
 		function cancel_new_patient_form(e) {
 			$("#add-reminder-form").hide();
+			$("#add-caregiver-form").hide();
 			$("#addPatientView").hide();
 			$("#patientView").fadeIn();
 			$("#addPatientForm")[0].reset();
+			revert_main_header_text();
 		}
 		main_col.on("click", "#addPatientCancel", cancel_new_patient_form);
 
@@ -153,6 +204,7 @@
 				type: "post",
 				data: form.serialize(),
 				success: function(data) {
+					$("#mainContentView").children().show();
 					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
 					get_patient_search_results_list()
@@ -371,7 +423,7 @@
 				type: "post",
 				data: dynamicData,
 				success: function(data) {
-					caregiversListItem.remove();
+					caregiversListItem.fadeOut();
 				}
 			});
 		}

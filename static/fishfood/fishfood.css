@@ -16,7 +16,7 @@ body {
 
 #globalContainer {
 	/*border: 1px solid yellow;*/
-	width: 960px;
+	width: 100%;
 	float:left;
 	min-width:960px;
 	position: relative;
@@ -25,29 +25,25 @@ body {
 
 #main-container {
 	float: left;
-	min-height:700px;
-	height:100vh;
+	height: 100vh;
+	overflow-y: scroll;
 }
 
 #main-view {
-	/* border: 1px solid red; */
+/* border: 0px solid red; */
 	float: left;
-	position: absolute;
-	min-height: 600px;
-	width: 746px;
+	width: 748px;
 	margin: 0;
-/*	-webkit-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
-	-moz-box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.5);
-	 box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5); */
 	border-left: 1px solid #aaa;
-	/*border-top: 1px solid #aaa;*/
 	border-right: 1px solid #aaa;
 	border-radius: 3px;
 	border-bottom-right-radius: 0px;
 	border-bottom-left-radius: 0px;
-	top: 10px;
-	bottom:0px;
+	margin-top: 10px;
 	background: #fff;
+	min-height: 100vh;
+	padding-bottom: 50px;
+	box-sizing: border-box;
 }
 
 #main-header {
@@ -75,6 +71,7 @@ body {
 	margin-left: 10px;
 	margin-bottom: 2px;
 	color: #777;
+	cursor: pointer;
 /*	width:100px;
 	height:60px;
 	background-image: url('/static/img/smartdose-logo-color.png');
@@ -88,10 +85,15 @@ body {
 	position: relative;
 	min-height: 600px;
 	height: 100vh;
+	width: 210px;
 	background: #eceef1;
 }
 
 #leftMenu {
+	overflow-y: hidden;
+}
+#leftMenu:hover {
+	overflow-y: scroll;
 }
 
 .left-navigation-hr {
@@ -136,11 +138,6 @@ body {
 	list-style-type: none;
 	padding: 0;
 	margin: 0;
-	height:420px;
-	overflow:hidden;
-}
-#patientSearchResults:hover {
-	overflow-y:scroll;
 }
 
 #addPatientButton {
@@ -234,6 +231,13 @@ body {
 	float: left;
 }
 
+#addPatientView {
+/*	border: 1px solid #ccc;
+	border-bottom: 2px solid #ccc;
+	border-radius: 3px;*/
+	padding: 10px;
+}
+
 #addPatientForm #id_full_name {
 	font-size: 32px;
 	margin-left: 12px;
@@ -253,7 +257,8 @@ body {
 .deletePatientButton, .deletePatientConfirmYes,
 .deletePatientConfirmNo, 
 #add-caregiver-submit,
-#add-caregiver-cancel {
+#add-caregiver-cancel, 
+#addPatientSubmit {
 	border: 1px solid #aaa;
 	border-radius: 8px;
 	float: left;
@@ -271,7 +276,8 @@ body {
 .deletePatientButton:hover, .deletePatientConfirmYes:hover,
 .deletePatientConfirmNo:hover,
 #add-caregiver-submit:hover,
-#add-caregiver-cancel:hover {
+#add-caregiver-cancel:hover,
+#addPatientSubmit:hover {
 	border: 1px solid #3d464d;
 	color: #fff;
 	background: #f1f3fa;
@@ -314,7 +320,8 @@ body {
 }
 
 #addReminderName, #add-caregiver-fullname, 
-#add-caregiver-phonenumber, #add-caregiver-relationship {
+#add-caregiver-phonenumber, #add-caregiver-relationship,
+#add-patient-full-name, #add-patient-primary-phone-number{
 	float: left;
 	outline: none;
 	border: 1px solid #ccc;
@@ -367,30 +374,34 @@ body {
 }
 
 .day-label, #patient-view-nav, .outer-check,
-#add-reminder-button, #add-caregiver-button {
+#add-reminder-button, #add-caregiver-button,
+#patientSearchResults {
 	-webkit-user-select: none; /* webkit (safari, chrome) browsers */
     -moz-user-select: none; /* mozilla browsers */
     -khtml-user-select: none; /* webkit (konqueror) browsers */
     -ms-user-select: none; /* IE10+ */
 }
 
-#addReminderCancel, #add-caregiver-cancel {
+#addReminderCancel, #add-caregiver-cancel,
+#addPatientCancel {
 	float: left;
 	clear: left;
 	margin-top: 15px;
 }
 
-#add-caregiver-fullname {
+#add-caregiver-fullname, #add-patient-full-name {
 	width: 275px;
 }
 
-#add-caregiver-phonenumber, #add-caregiver-relationship {
+#add-caregiver-phonenumber, #add-caregiver-relationship,
+#add-patient-primary-phone-number {
 	clear: left;
 	margin-top: 10px;
 	width: 275px;
 }
 
-#addReminderSubmit, #add-caregiver-submit {
+#addReminderSubmit, #add-caregiver-submit,
+#addPatientSubmit {
 	float: left;
 	margin-top: 15px;
 	margin-left: 5px;
@@ -547,17 +558,6 @@ body {
 	color: #5a8f5f;
 }
 
-#patientProfileHeader {
-	margin-top: 9px;
-}
-
-.greeting {
-	float: left;
-	font-family: "HelveticaNeue-UltraLight";
-	font-size: 32px;
-	width:469px;
-}
-
 .prescriptItem {
 	width: 420px;
 }
@@ -602,6 +602,11 @@ body {
 	margin-bottom: 5px;
 }
 
+#left-menu-footer {
+	position: fixed;
+	bottom: 0px;
+}
+
 #logout-form {
 	height:40px;
 }
@@ -620,8 +625,6 @@ body {
 	font-family: "HelveticaNeue-Medium";
 	font-size: 16px;
 	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
-	position: fixed;
-	bottom: 0px;
 	-webkit-box-shadow: 0 0px 2px 1px rgba(0,0,0,.05);
 }
 #logoutButton:hover {
