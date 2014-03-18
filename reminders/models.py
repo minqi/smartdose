@@ -27,95 +27,95 @@ class Prescription(models.Model):
 	# Has the prescription been filled at the pharmacy?
 	filled						= models.BooleanField(default=False)
 
-class ReminderManager(models.Manager):
-	def reminders_at_time(self, now_datetime):
+class NotificationManager(models.Manager):
+	def notifications_at_time(self, now_datetime):
 		"""
 		Returns all notifications at and before now_datetime
-		If there is at least one such reminder, also looks ahead REMINDER_MERGE_INTERVAL
+		If there is at least one such notification, also looks ahead REMINDER_MERGE_INTERVAL
 		seconds to look for additional notifications
 
 		Arguments:
-		now_datetime -- the datetime for which we care about reminders. datetime object
+		now_datetime -- the datetime for which we care about notifications. datetime object
 		"""
-		reminders_at_time = super(ReminderManager, self).get_query_set().filter(
+		notifications_at_time = super(NotificationManager, self).get_query_set().filter(
 			Q(active=True) &
 			Q(send_time__lte=now_datetime)
 		).order_by('to', 'send_time') # order by recipient's full name, then by send_time
 
-		all_reminders_at_time = Notification.objects.none()
-		if reminders_at_time.exists():
-			for recipient, recipient_group in groupby(reminders_at_time, lambda x: x.to):
-				latest_reminder = None
-				for latest_reminder in recipient_group: # get latest reminder in group
+		all_notifications_at_time = Notification.objects.none()
+		if notifications_at_time.exists():
+			for recipient, recipient_group in groupby(notifications_at_time, lambda x: x.to):
+				latest_notification = None
+				for latest_notification in recipient_group: # get latest notification in group
 					pass
-				max_send_time_for_batch = latest_reminder.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
-				reminders_at_time_for_user = super(ReminderManager, self).get_queryset().filter(
+				max_send_time_for_batch = latest_notification.send_time + datetime.timedelta(seconds=REMINDER_MERGE_INTERVAL)
+				notifications_at_time_for_user = super(NotificationManager, self).get_queryset().filter(
 					Q(to=recipient) &
 					Q(active=True) &
 					Q(send_time__lt=max_send_time_for_batch)
 				)
-				all_reminders_at_time = all_reminders_at_time | reminders_at_time_for_user
-		return all_reminders_at_time
+				all_notifications_at_time = all_notifications_at_time | notifications_at_time_for_user
+		return all_notifications_at_time
 
-	def create_prescription_reminders(self, to, repeat, prescription):
-		"""STUB: Schedule both a refill reminder and a medication reminder for a prescription"""
-		refill_reminder = None
+	def create_prescription_notifications(self, to, repeat, prescription):
+		"""STUB: Schedule both a refill notification and a medication notification for a prescription"""
+		refill_notification = None
 		if not prescription.filled:
-			refill_reminder = Notification.objects.get_or_create(to=to,
-														 reminder_type=Notification.REFILL,
+			refill_notification = Notification.objects.get_or_create(to=to,
+														 notification_type=Notification.REFILL,
 														 repeat=Notification.DAILY,
 														 prescription=prescription)[0]
-		med_reminder = Notification.objects.get_or_create(to=to,
-												  reminder_type=Notification.MEDICATION,
+		med_notification = Notification.objects.get_or_create(to=to,
+												  notification_type=Notification.MEDICATION,
 												  repeat=Notification.DAILY,
 												  prescription=prescription)[0]
-		return (refill_reminder, med_reminder)
+		return (refill_notification, med_notification)
 
 
-	def create_prescription_reminders_from_reminder_schedule(self, to, prescription, reminder_schedule):
-		""" Take a prescription and a reminder schedule and schedule a refill reminder and medication reminders
-			reminder_schedule is a list of [repeat, send_time] tuples.
+	def create_prescription_notifications_from_notification_schedule(self, to, prescription, notification_schedule):
+		""" Take a prescription and a notification schedule and schedule a refill notification and medication
+			notifications notification_schedule is a list of [repeat, send_time] tuples.
 		"""
-		refill_reminder = None
+		refill_notification = None
 		if not prescription.filled:
-			refill_reminder = Notification.objects.get_or_create(to=to,
-																 reminder_type=Notification.REFILL,
+			refill_notification = Notification.objects.get_or_create(to=to,
+																 notification_type=Notification.REFILL,
 																 repeat=Notification.DAILY,
-																 send_time=reminder_schedule[0][1], 
+																 send_time=notification_schedule[0][1],
 																 prescription=prescription)[0]
-		reminder_times = []
-		for reminder_schedule_entry in reminder_schedule:
-			reminder_time = Notification.objects.create(to=to,
-														reminder_type=Notification.MEDICATION,
+		notification_times = []
+		for notification_schedule_entry in notification_schedule:
+			notification_time = Notification.objects.create(to=to,
+														notification_type=Notification.MEDICATION,
 														prescription=prescription,
-														repeat=reminder_schedule_entry[0],
-														send_time=reminder_schedule_entry[1])
-			reminder_times.append(reminder_time)
+														repeat=notification_schedule_entry[0],
+														send_time=notification_schedule_entry[1])
+			notification_times.append(notification_time)
 
-		return (refill_reminder, reminder_times)
+		return (refill_notification, notification_times)
 
 	def create_safety_net_notification(self, to, text):
-		safetynet_reminder = Notification.objects.get_or_create(to=to, # Minqi: Why is this get or create?
-																reminder_type=Notification.SAFETY_NET,
+		safetynet_notification = Notification.objects.get_or_create(to=to, # Minqi: Why is this get or create?
+																notification_type=Notification.SAFETY_NET,
 																repeat=Notification.ONE_SHOT,
 																text=text)[0]
-		return safetynet_reminder
+		return safetynet_notification
 
 	def create_consumer_welcome_notification(self, to):
-		welcome_reminder = Notification.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
-			reminder_type=Notification.WELCOME, repeat=Notification.ONE_SHOT)[0]
-		return welcome_reminder
+		welcome_notification = Notification.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
+			notification_type=Notification.WELCOME, repeat=Notification.ONE_SHOT)[0]
+		return welcome_notification
 
 	def create_doctor_initiated_welcome_notification(self, to):
-		welcome_reminder = Notification.objects.create(to=to,
-		    reminder_type=Notification.WELCOME, repeat=Notification.ONE_SHOT,
+		welcome_notification = Notification.objects.create(to=to,
+		    notification_type=Notification.WELCOME, repeat=Notification.ONE_SHOT,
 		    send_time=DOCTOR_INITIATED_WELCOME_SEND_TIME)
-		return welcome_reminder
+		return welcome_notification
 
 
 class Notification(models.Model):
 	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
-	# Reminder type
+	# Notification type
 	WELCOME     = 'w'
 	MEDICATION 	= 'm'
 	REFILL 		= 'r'
@@ -127,7 +127,7 @@ class Notification(models.Model):
 		(SAFETY_NET, 'safety_net'),
 	)
 
-	# repeat choices i.e., what is the period of this reminder time
+	# repeat choices i.e., what is the period of this notification time
 	ONE_SHOT = 'o'
 	DAILY    = 'd'
 	WEEKLY   = 'w'
@@ -149,7 +149,7 @@ class Notification(models.Model):
 
 	# required fields:
 	to       			= models.ForeignKey(PatientProfile, null=False, blank=False)
-	reminder_type		= models.CharField(max_length=4,
+	notification_type		= models.CharField(max_length=4,
 									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
 	repeat 				= models.CharField(max_length=2,
 									   choices=REPEAT_CHOICES, null=False, blank=False)
@@ -164,9 +164,9 @@ class Notification(models.Model):
 
 	text            	= models.CharField(max_length=160, null=True, blank=True)
 	prescription 		= models.ForeignKey(Prescription, null=True)
-	active				= models.BooleanField(default=True) # is the reminder still alive?
+	active				= models.BooleanField(default=True) # is the notification still alive?
 
-	objects 			= ReminderManager()
+	objects 			= NotificationManager()
 
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.ONE_SHOT:
@@ -232,7 +232,7 @@ class Notification(models.Model):
 			self.save()
 
 	def __update_custom_send_time(self):
-		if self.reminder_type == self.CUSTOM:
+		if self.notification_type == self.CUSTOM:
 			pass
 
 	# update send_time to next send_time based on notification period
@@ -247,11 +247,11 @@ class Notification(models.Model):
 		}
 		update_periodic_send_time[self.repeat]()
 
-	# return the optimal time to send reminder
+	# return the optimal time to send notification
 	def get_best_send_time(self):
 		pass
 
-	# return and set the optimal time to send reminder 
+	# return and set the optimal time to send notification
 	def set_best_send_time(self):
 		# (placeholder for now)
 		if not self.send_time:
@@ -349,7 +349,7 @@ class Message(models.Model):
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
 	prescription   = models.ForeignKey(Prescription, null=True)
-	reminder_time  = models.ForeignKey(Notification, blank=False)
+	notification  = models.ForeignKey(Notification, blank=False)
 	message 	   = models.ForeignKey(Message)
 	time_sent      = models.DateTimeField(auto_now_add=True)
 	ack			   = models.BooleanField(default=False)
@@ -360,17 +360,17 @@ class SentReminder(models.Model):
 	def processAck(self):
 		self.ack = True
 		self.save()
-		if self.reminder_time.reminder_type == Notification.REFILL:
+		if self.notification.notification_type == Notification.REFILL:
 			self.prescription.filled = True
 			self.prescription.save()
-			reminder_times = self.prescription.notification_set.all()
+			notifications = self.prescription.notification_set.all()
 			# Advance medication reminder send times to a point after the refill reminder is ack'd
 			now = datetime.datetime.now()
-			for reminder_time in reminder_times:
-				if reminder_time.reminder_type == Notification.MEDICATION:
-					if reminder_time.send_time < now:
-						reminder_time.update_to_next_send_time()
-			self.reminder_time.active = False
-			self.reminder_time.save()
+			for notification in notifications:
+				if notification.notification_type == Notification.MEDICATION:
+					if notification.send_time < now:
+						notification.update_to_next_send_time()
+			self.notification.active = False
+			self.notification.save()
 
 

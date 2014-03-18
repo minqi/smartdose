@@ -169,7 +169,7 @@ class DeleteReminderForm(forms.Form):
 
 		reminders = Notification.objects.filter(
 			to=patient, prescription__drug__name__iexact=drug_name, 
-			reminder_type=Notification.MEDICATION)
+			notification_type=Notification.MEDICATION)
 		reminders_for_deletion = []
 		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
@@ -389,7 +389,7 @@ def retrieve_patient(request, *args, **kwargs):
 				c['patient'] = patient
 				# get reminders
 				reminders = Notification.objects.filter(
-					to=patient, reminder_type=Notification.MEDICATION)
+					to=patient, notification_type=Notification.MEDICATION)
 				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_time.time()))
 				reminder_groups = []
 				for drug, outer_group in groupby(reminders, lambda x: x.prescription.drug.name):
@@ -543,7 +543,7 @@ def create_reminder(request, *args, **kwargs):
 					datetime.datetime.today().date(), reminder_time)
 				med_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=Notification.MEDICATION,
+					notification_type=Notification.MEDICATION,
 					send_time = send_datetime, 
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
@@ -574,7 +574,7 @@ def create_reminder(request, *args, **kwargs):
 								)
 							med_reminder = Notification.objects.get_or_create(
 								to=patient, 
-								reminder_type=Notification.MEDICATION,
+								notification_type=Notification.MEDICATION,
 								send_time = send_datetime, 
 								repeat=Notification.WEEKLY,
 								prescription=prescription)[0]
@@ -586,7 +586,7 @@ def create_reminder(request, *args, **kwargs):
 			if send_refill_reminder and not prescription.filled:
 				refill_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=Notification.REFILL,
+					notification_type=Notification.REFILL,
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(refill_reminder)
@@ -620,7 +620,7 @@ def delete_reminder(request, *args, **kwargs):
 			if form.cleaned_data['all_deleted']: # delete all reminder objects
 				Notification.objects.filter(
 					to=patient, prescription__drug__name__iexact=drug_name, 
-					reminder_type=Notification.REFILL).delete()
+					notification_type=Notification.REFILL).delete()
 			for r in form.cleaned_data['reminders_for_deletion']: 
 				r.delete()
 			return HttpResponse('')

@@ -34,7 +34,7 @@ def sendRemindersForNow():
 	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
 	"""
 	now = datetime.datetime.now()
-	reminders_for_now = Notification.objects.reminders_at_time(now)
+	reminders_for_now = Notification.objects.notifications_at_time(now)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 

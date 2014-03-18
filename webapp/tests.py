@@ -140,7 +140,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(p.num_caregivers, 1)
 		self.assertEqual(p.status, PatientProfile.NEW)
 
-		q = Notification.objects.filter(to=p, reminder_type=Notification.WELCOME)
+		q = Notification.objects.filter(to=p, notification_type=Notification.WELCOME)
 		self.assertEqual(len(q), 1)
 
 	def test_create_patient_existing_unmanaged_account(self):
@@ -155,7 +155,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(p.num_caregivers, 1)
 		self.assertEqual(p.status, PatientProfile.NEW)
 
-		q = Notification.objects.filter(to=p, reminder_type=Notification.WELCOME)
+		q = Notification.objects.filter(to=p, notification_type=Notification.WELCOME)
 		self.assertEqual(len(q), 1)
 
 	def test_create_patient_existing_managed_account(self):
@@ -187,7 +187,7 @@ class CreatePatientTest(TestCase):
 
 		# make sure welcome message is sent
 		welcome_count = len(Notification.objects.filter(
-			to=patient, reminder_type=Notification.WELCOME))
+			to=patient, notification_type=Notification.WELCOME))
 		self.assertEqual(welcome_count, 1)
 
 	def test_create_existing_patient(self):
@@ -207,7 +207,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.num_caregivers, 1)
 
 		welcome_count = len(Notification.objects.filter(
-			to=patient, reminder_type=Notification.WELCOME))
+			to=patient, notification_type=Notification.WELCOME))
 		self.assertEqual(welcome_count, 0)
 
 
@@ -327,13 +327,13 @@ class DeletePatientTest(TestCase):
 			prescriber=self.prescriber, patient=self.patient1, drug=self.drug1)
 
 		self.welcome_reminder = Notification.objects.create(
-			to=self.patient1, reminder_type=Notification.WELCOME, repeat=Notification.DAILY,
+			to=self.patient1, notification_type=Notification.WELCOME, repeat=Notification.DAILY,
 			send_time=datetime.datetime.now())
 		self.refill_reminder = Notification.objects.create(
-			to=self.patient1, reminder_type=Notification.REFILL, repeat=Notification.DAILY,
+			to=self.patient1, notification_type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription1, send_time=datetime.datetime.now())
 		self.medication_reminder = Notification.objects.create(
-			to=self.patient1, reminder_type=Notification.MEDICATION, repeat=Notification.DAILY,
+			to=self.patient1, notification_type=Notification.MEDICATION, repeat=Notification.DAILY,
 			prescription=self.prescription1, send_time=datetime.datetime.now())
 
 		self.patient2 = PatientProfile.objects.create(
@@ -343,13 +343,13 @@ class DeletePatientTest(TestCase):
 			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
 
 		self.welcome_reminder2 = Notification.objects.create(
-			to=self.patient2, reminder_type=Notification.WELCOME, repeat=Notification.DAILY,
+			to=self.patient2, notification_type=Notification.WELCOME, repeat=Notification.DAILY,
 			send_time=datetime.datetime.now())
 		self.refill_reminder2 = Notification.objects.create(
-			to=self.patient2, reminder_type=Notification.REFILL, repeat=Notification.DAILY,
+			to=self.patient2, notification_type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription2, send_time=datetime.datetime.now())
 		self.medication_reminder2 = Notification.objects.create(
-			to=self.patient2, reminder_type=Notification.MEDICATION, repeat=Notification.DAILY,
+			to=self.patient2, notification_type=Notification.MEDICATION, repeat=Notification.DAILY,
 			prescription=self.prescription2, send_time=datetime.datetime.now())
 
 		self.patient1.add_safety_net_contact(target_patient=self.patient2, relationship='Friend')
@@ -470,7 +470,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.DAILY,
 			prescription=self.prescription1,
@@ -489,10 +489,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY))
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 
@@ -501,7 +501,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1,
@@ -520,10 +520,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY))
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 
@@ -533,7 +533,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.DAILY,
 			prescription=self.prescription1,
@@ -550,10 +550,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY))
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 		
@@ -562,7 +562,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1,
@@ -579,10 +579,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY))
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 0)
 		self.assertEqual(weekly_reminder_count, 1)
 
@@ -594,12 +594,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL))
+			notification_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 1)
 
 	def test_create_with_refill_and_prescription_filled(self):
@@ -613,12 +613,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL))
+			notification_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_daily_reminder_without_colliding_reminder(self):
@@ -631,12 +631,12 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY))
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		self.assertEqual(daily_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL))
+			notification_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_weekly_reminder_without_colliding_reminder(self):
@@ -647,12 +647,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			notification_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL))
+			notification_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_reminder_without_refill_reminder(self):
@@ -663,7 +663,7 @@ class CreateReminderTest(TestCase):
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL))
+			notification_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 		# if reminder created w/o refill reminder, filled should be true
@@ -700,13 +700,13 @@ class DeleteReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		self.refill_reminder = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.REFILL,
+			notification_type=Notification.REFILL,
 			send_time = send_datetime, 
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
 		self.med_reminder1 = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1,
@@ -714,7 +714,7 @@ class DeleteReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 1)
 		self.med_reminder2 = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1,
@@ -723,7 +723,7 @@ class DeleteReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 1)
 		self.med_reminder3 = Notification.objects.create(
 			to=self.patient1, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.DAILY,
 			prescription=self.prescription1,
@@ -731,7 +731,7 @@ class DeleteReminderTest(TestCase):
 
 		self.med_reminder4 = Notification.objects.create(
 			to=self.patient2, 
-			reminder_type=Notification.MEDICATION,
+			notification_type=Notification.MEDICATION,
 			send_time = send_datetime, 
 			repeat=Notification.DAILY,
 			prescription=self.prescription2,
@@ -789,12 +789,12 @@ class DeleteReminderTest(TestCase):
 
 		remaining_med_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, prescription__drug__name='drug1'))
+			notification_type=Notification.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 1)
 
 		remaining_refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL, prescription__drug__name='drug1'))
+			notification_type=Notification.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 1)
 
 	def test_delete_existing_reminder_for_all_times(self):
@@ -810,12 +810,12 @@ class DeleteReminderTest(TestCase):
 
 		remaining_med_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.MEDICATION, prescription__drug__name='drug1'))
+			notification_type=Notification.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 0)
 
 		remaining_refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			reminder_type=Notification.REFILL, prescription__drug__name='drug1'))
+			notification_type=Notification.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 0)
 
 	def test_delete_reminder_without_permission(self):

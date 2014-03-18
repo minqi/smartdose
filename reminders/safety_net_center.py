@@ -21,9 +21,9 @@ class SafetyNetCenter(object):
 		reminders = SentReminder.objects.filter(
 			time_sent__gte=window_start,
 			time_sent__lte=window_finish,
-			reminder_time__reminder_type=Notification.MEDICATION).exclude(time_sent__gte=time - timeout)
+			notification__notification_type=Notification.MEDICATION).exclude(time_sent__gte=time - timeout)
 		# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
-		reminders = reminders.prefetch_related('reminder_time').prefetch_related('reminder_time__prescription')
+		reminders = reminders.prefetch_related('notification').prefetch_related('notification__prescription')
 
 		patients = PatientProfile.objects.all()
 		if patients == None:
@@ -32,7 +32,7 @@ class SafetyNetCenter(object):
 		for patient in patients:
 			dose_count = 0
 			acked_dose_count = 0
-			patient_reminders = reminders.filter(reminder_time__to=patient)
+			patient_reminders = reminders.filter(notification__to=patient)
 			for patient_reminder in patient_reminders:
 				if patient_reminder.prescription.safety_net_on:
 					dose_count += 1

@@ -45,54 +45,54 @@ class NotificationCenterTest(TestCase):
 			send_datetime = self.now_datetime + datetime.timedelta(seconds=i*180)
 			self.old_send_datetimes.append(send_datetime)
 			Notification.objects.create(to=self.patient1,
-				reminder_type=Notification.MEDICATION, repeat=Notification.DAILY, send_time=send_datetime)
-		self.med_reminders = Notification.objects.filter(
-			to=self.patient1, reminder_type=Notification.MEDICATION).order_by('send_time')
+				notification_type=Notification.MEDICATION, repeat=Notification.DAILY, send_time=send_datetime)
+		self.med_notifications = Notification.objects.filter(
+			to=self.patient1, notification_type=Notification.MEDICATION).order_by('send_time')
 
-		(self.refill_reminder, self.med_reminder) = Notification.objects.create_prescription_reminders(
+		(self.refill_reminder, self.med_reminder) = Notification.objects.create_prescription_notifications(
 			to=self.patient2, repeat=Notification.DAILY, prescription=self.prescription2)
 
 		self.safetynet_notification = Notification.objects.create_safety_net_notification(to=self.patient1, text='testing')
 
 	def test_merge_notifications(self):
-		merged_reminders = self.nc.merge_notifications(self.med_reminders)
-		ground_truth_merged_reminders = []
+		merged_notifications = self.nc.merge_notifications(self.med_notifications)
+		ground_truth_merged_notifications = []
 		reminder_group = []
-		for reminder in self.med_reminders:
+		for reminder in self.med_notifications:
 			reminder_group.append(reminder)
-		ground_truth_merged_reminders.append(tuple(reminder_group))
-		ground_truth_merged_reminders = tuple(ground_truth_merged_reminders)
-		self.assertEqual(merged_reminders, ground_truth_merged_reminders)
+		ground_truth_merged_notifications.append(tuple(reminder_group))
+		ground_truth_merged_notifications = tuple(ground_truth_merged_notifications)
+		self.assertEqual(merged_notifications, ground_truth_merged_notifications)
 
 	def test_send_message(self):
 		self.patient1.status = UserProfile.ACTIVE
 		sent_time = datetime.datetime.now()
-		self.nc.send_message(to=self.patient1, notifications=self.med_reminders,
-			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_reminders)})
+		self.nc.send_message(to=self.patient1, notifications=self.med_notifications,
+			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_notifications)})
 
 		# see if the right messages are created
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 1)
 
 		# # see if the right book-keeping is performed
 		sent_notifications = SentReminder.objects.all()
-		self.assertEqual(len(sent_notifications), len(self.med_reminders))
+		self.assertEqual(len(sent_notifications), len(self.med_notifications))
 		for n in sent_notifications:
-			self.assertTrue(n.reminder_time in self.med_reminders)
+			self.assertTrue(n.notification in self.med_notifications)
 
 		Notification.objects.update()
-		self.assertTrue((self.med_reminders[0].send_time.date() - sent_time.date()).days == 1)
+		self.assertTrue((self.med_notifications[0].send_time.date() - sent_time.date()).days == 1)
 
 	def test_send_welcome_notifications(self):
 		# check that the patient's status is NEW
 		self.assertTrue(self.patient1.status == UserProfile.NEW)
 		# see if a reminder is sent (shouldn't be)
-		self.nc.send_notifications(to=self.patient1, notifications=self.med_reminders)
+		self.nc.send_notifications(to=self.patient1, notifications=self.med_notifications)
 		self.assertEqual(len(Message.objects.filter(patient=self.patient1)), 0)
 
 		# see if a welcome message is sent
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1,
-			reminder_type=Notification.WELCOME, repeat=Notification.DAILY, send_time=now_datetime)
+			notification_type=Notification.WELCOME, repeat=Notification.DAILY, send_time=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		# see if message is sent
@@ -170,7 +170,7 @@ class NotificationCenterTest(TestCase):
 		self.patient1.save()
 		now_datetime = datetime.datetime.now()
 		notification = Notification.objects.create(to=self.patient1,
-			reminder_type=Notification.WELCOME, repeat=Notification.DAILY, send_time=now_datetime)
+			notification_type=Notification.WELCOME, repeat=Notification.DAILY, send_time=now_datetime)
 
 		self.nc.send_notifications(self.patient1, notification)
 		self.assertEqual(len(Message.objects.all()), 0)
@@ -181,7 +181,7 @@ class NotificationCenterTest(TestCase):
 		self.patient1.save()
 		now_datetime = datetime.datetime.now()
 		notification = Notification.objects.create(to=self.patient1, prescription=self.prescription1,
-			reminder_type=Notification.MEDICATION, repeat=Notification.DAILY, send_time=now_datetime)
+			notification_type=Notification.MEDICATION, repeat=Notification.DAILY, send_time=now_datetime)
 
 		self.nc.send_notifications(self.patient1, notification)
 		self.assertEqual(len(Message.objects.all()), 1)
@@ -198,9 +198,9 @@ class WelcomeMessageTest(TestCase):
 		
 		# make sure welcome message was created
 		now_datetime = datetime.datetime.now()
-		notifications = Notification.objects.reminders_at_time(now_datetime)
+		notifications = Notification.objects.notifications_at_time(now_datetime)
 		self.assertEqual(len(notifications), 1) 
-		self.assertEqual(notifications[0].reminder_type, Notification.WELCOME)
+		self.assertEqual(notifications[0].notification_type, Notification.WELCOME)
 		self.assertEqual(notifications[0].to, self.patient1)
 
 		# after sending welcome, make sure patient is active and 
@@ -218,13 +218,13 @@ class UpdateSendDateTimeTest(TestCase):
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=datetime.date(year=1990, month=8, day=7))
 		self.n_daily = Notification(to=self.patient1, repeat=Notification.DAILY,
-			reminder_type=Notification.SAFETY_NET, send_time=self.test_datetime)
+			notification_type=Notification.SAFETY_NET, send_time=self.test_datetime)
 		self.n_weekly = Notification(to=self.patient1, repeat=Notification.WEEKLY,
-			reminder_type=Notification.SAFETY_NET, send_time=self.test_datetime)
+			notification_type=Notification.SAFETY_NET, send_time=self.test_datetime)
 		self.n_monthly = Notification(to=self.patient1, repeat=Notification.MONTHLY,
-			reminder_type=Notification.SAFETY_NET, send_time=self.test_datetime)
+			notification_type=Notification.SAFETY_NET, send_time=self.test_datetime)
 		self.n_yearly = Notification(to=self.patient1, repeat=Notification.YEARLY,
-			reminder_type=Notification.SAFETY_NET, send_time=self.test_datetime)
+			notification_type=Notification.SAFETY_NET, send_time=self.test_datetime)
 
 
 	def test_update_daily_send_time(self):

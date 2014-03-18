@@ -56,10 +56,10 @@ class ReminderDeliveryTest(TestCase):
 		                                           drug=self.vitamin,
 		                                           note="To make you strong")
 		expected_delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[Notification.DAILY, expected_delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
+		notification_schedule = [[Notification.DAILY, expected_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
 		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		                                                                          notification_schedule=notification_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
@@ -97,10 +97,10 @@ class ReminderDeliveryTest(TestCase):
 		self.minqi.save()
 		sunday_delivery_time = self.current_time + datetime.timedelta(hours=3)
 		tuesday_delivery_time = sunday_delivery_time + datetime.timedelta(days=2)
-		reminder_schedule = [[Notification.WEEKLY, sunday_delivery_time], [Notification.WEEKLY, tuesday_delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
+		notification_schedule = [[Notification.WEEKLY, sunday_delivery_time], [Notification.WEEKLY, tuesday_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
 		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		                                                                          notification_schedule=notification_schedule)
 		# Test the first weeks worth of messages
 		# Emulate the scheduler task and make sure no reminders are sent
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, sunday_delivery_time, datetime.timedelta(hours=1))
@@ -159,10 +159,10 @@ class ReminderDeliveryTest(TestCase):
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
 		expected_delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[Notification.MONTHLY, expected_delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.MONTHLY, expected_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																			  prescription=prescription,
+																			  notification_schedule=notification_schedule)
 		# Test the first months message
 		# Emulate the scheduler task and make sure no reminders are sent
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, expected_delivery_time, datetime.timedelta(hours=1))
@@ -193,12 +193,12 @@ class ReminderDeliveryTest(TestCase):
 		                                           drug=self.vitamin,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[Notification.DAILY, delivery_time]]
+		notification_schedule = [[Notification.DAILY, delivery_time]]
 		(refill_reminder, reminder_times) = \
-			Notification.objects.create_prescription_reminders_from_reminder_schedule(
+			Notification.objects.create_prescription_notifications_from_notification_schedule(
 				to=self.minqi,
 				prescription=prescription,
-				reminder_schedule=reminder_schedule)
+				notification_schedule=notification_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
@@ -257,12 +257,12 @@ class ReminderDeliveryTest(TestCase):
 		                                           drug=self.vitamin,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=1)
-		reminder_schedule = [[Notification.DAILY, delivery_time]]
+		notification_schedule = [[Notification.DAILY, delivery_time]]
 		(refill_reminder, reminder_times) = \
-			Notification.objects.create_prescription_reminders_from_reminder_schedule(
+			Notification.objects.create_prescription_notifications_from_notification_schedule(
 				to=self.minqi,
 				prescription=prescription,
-				reminder_schedule=reminder_schedule)
+				notification_schedule=notification_schedule)
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
@@ -322,10 +322,10 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[Notification.WEEKLY, delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.WEEKLY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
 		reminder_tasks.schedule_safety_net_messages()
@@ -350,10 +350,10 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[Notification.WEEKLY, delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.WEEKLY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
 			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
@@ -380,10 +380,10 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[Notification.MONTHLY, delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.MONTHLY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = self.current_time + datetime.timedelta(weeks=1)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
 		reminder_tasks.schedule_safety_net_messages()
@@ -404,10 +404,10 @@ class TestSafetyNetDelivery(TestCase):
 		# Mark patients as active so that they can receive reminders
 		self.no_safety_net_patient.status = PatientProfile.ACTIVE
 		self.no_safety_net_patient.save()
-		reminder_schedule = [[Notification.DAILY, delivery_time]]
-		Notification.objects.create_prescription_reminders_from_reminder_schedule(to=self.no_safety_net_patient,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.DAILY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.no_safety_net_patient,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
 			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))

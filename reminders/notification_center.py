@@ -49,7 +49,7 @@ class NotificationCenter(object):
 		if notifications.__class__ == Notification:
 			notifications = [notifications]
 
-		message = Message.objects.create(patient=to, message_type=notifications[0].reminder_type)
+		message = Message.objects.create(patient=to, message_type=notifications[0].notification_type)
 		if context:
 			context['message_number'] = message.message_number
 		else:
@@ -64,22 +64,22 @@ class NotificationCenter(object):
 
 		# perform necessary record-keeping and updates to sent notifications
 		for notification in notifications:
-			if notification.reminder_type in (Notification.REFILL, Notification.MEDICATION):
-				sent_reminder = SentReminder.objects.create(reminder_time=notification, 
+			if notification.notification_type in (Notification.REFILL, Notification.MEDICATION):
+				sent_reminder = SentReminder.objects.create(notification=notification,
 					message=message, prescription=notification.prescription)
 				notification.update_to_next_send_time()
-			elif notification.reminder_type in (Notification.WELCOME, Notification.SAFETY_NET):
-				sent_reminder = SentReminder.objects.create(reminder_time=notification, message=message)
+			elif notification.notification_type in (Notification.WELCOME, Notification.SAFETY_NET):
+				sent_reminder = SentReminder.objects.create(notification=notification, message=message)
 				notification.active = False
 				notification.save()
 			else:
-				raise Exception("You probably added a new reminder_type. Must specify logic for updating after sending a message")
+				raise Exception("You probably added a new notification_type. Must specify logic for updating after sending a message")
 
 	def send_welcome_notifications(self, to, notifications):
 		"""
 		Send welcome notification in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=Notification.WELCOME)
+		notifications = notifications.filter(to=to, notification_type=Notification.WELCOME)
 		if notifications.exists() and to.status == PatientProfile.NEW:
 			welcome_notification = list(notifications.order_by('send_time'))[0]
 			context = {'patient_first_name':to.first_name}
@@ -94,7 +94,7 @@ class NotificationCenter(object):
 		"""
 		Send refill notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=Notification.REFILL)
+		notifications = notifications.filter(to=to, notification_type=Notification.REFILL)
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
@@ -108,7 +108,7 @@ class NotificationCenter(object):
 		Send medication notifications in QuerySet <notifications> to recipient <to>
 		"""
 		notifications = notifications.filter(to=to,
-			reminder_type=Notification.MEDICATION, prescription__filled=True)
+			notification_type=Notification.MEDICATION, prescription__filled=True)
 		if notifications.exists() and to.status == PatientProfile.ACTIVE:
 			notifications = notifications.order_by('prescription__drug__name')
 			notification_groups = self.merge_notifications(notifications)
@@ -121,7 +121,7 @@ class NotificationCenter(object):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, reminder_type=Notification.SAFETY_NET)
+		notifications = notifications.filter(to=to, notification_type=Notification.SAFETY_NET)
 		if notifications.exists() and to.status in (PatientProfile.NEW, PatientProfile.ACTIVE):
 			notifications = notifications.order_by("send_time")
 			for notification in notifications:
