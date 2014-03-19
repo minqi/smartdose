@@ -1,7 +1,9 @@
-import datetime
 from django.template.loader import render_to_string
+
 from patients.models import PatientProfile, SafetyNetRelationship
-from reminders.models import SentReminder, Notification
+from reminders.models import SentReminder, Notification, SafetyNetNotification
+
+import datetime
 
 class SafetyNetCenter(object):
 
@@ -68,7 +70,9 @@ class SafetyNetCenter(object):
 					SafetyNetRelationship.objects.get(source_patient=patient, 
 						target_patient=safety_net_contact).target_to_source_relationship
 				message_body = render_to_string('messages/safety_net_message.txt', dictionary)
-				Notification.objects.create_safety_net_notification(to=safety_net_contact, text=message_body)
+				SafetyNetNotification.objects.create(to=safety_net_contact,
+				                                     safety_net_member=patient,
+				                                     adherence_rate=adherence_percentage)
 
 	def schedule_safety_net_messages(self, window_start, window_finish, threshold, timeout):
 		"""

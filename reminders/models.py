@@ -4,10 +4,11 @@ from itertools import groupby
 from django.db import models
 from django.db.models import Q
 
-from doctors.models import DoctorProfile
-from patients.models import PatientProfile
 from common.models import UserProfile, Drug
 from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL, DOCTOR_INITIATED_WELCOME_SEND_TIME
+from patients.models import PatientProfile
+
+#==============NOTIFICATION RELATED CLASSES=======================
 
 class Prescription(models.Model):
 	"""Model for prescriptions"""
@@ -26,6 +27,12 @@ class Prescription(models.Model):
 
 	# Has the prescription been filled at the pharmacy?
 	filled						= models.BooleanField(default=False)
+
+
+
+
+
+#==============NOTIFICATION RELATED CLASSES=======================
 
 class NotificationManager(models.Manager):
 	def notifications_at_time(self, now_datetime):
@@ -61,12 +68,10 @@ class NotificationManager(models.Manager):
 		"""STUB: Schedule both a refill notification and a medication notification for a prescription"""
 		refill_notification = None
 		if not prescription.filled:
-			refill_notification = Notification.objects.get_or_create(to=to,
-														 notification_type=Notification.REFILL,
+			refill_notification = RefillNotification.objects.get_or_create(to=to,
 														 repeat=Notification.DAILY,
 														 prescription=prescription)[0]
-		med_notification = Notification.objects.get_or_create(to=to,
-												  notification_type=Notification.MEDICATION,
+		med_notification = MedicationNotification.objects.get_or_create(to=to,
 												  repeat=Notification.DAILY,
 												  prescription=prescription)[0]
 		return (refill_notification, med_notification)
@@ -78,15 +83,13 @@ class NotificationManager(models.Manager):
 		"""
 		refill_notification = None
 		if not prescription.filled:
-			refill_notification = Notification.objects.get_or_create(to=to,
-																 notification_type=Notification.REFILL,
+			refill_notification = RefillNotification.objects.get_or_create(to=to,
 																 repeat=Notification.DAILY,
 																 send_time=notification_schedule[0][1],
 																 prescription=prescription)[0]
 		notification_times = []
 		for notification_schedule_entry in notification_schedule:
-			notification_time = Notification.objects.create(to=to,
-														notification_type=Notification.MEDICATION,
+			notification_time = MedicationNotification.objects.create(to=to,
 														prescription=prescription,
 														repeat=notification_schedule_entry[0],
 														send_time=notification_schedule_entry[1])
@@ -94,37 +97,27 @@ class NotificationManager(models.Manager):
 
 		return (refill_notification, notification_times)
 
-	def create_safety_net_notification(self, to, text):
-		safetynet_notification = Notification.objects.get_or_create(to=to, # Minqi: Why is this get or create?
-																notification_type=Notification.SAFETY_NET,
-																repeat=Notification.ONE_SHOT,
-																text=text)[0]
-		return safetynet_notification
-
-	def create_consumer_welcome_notification(self, to):
-		welcome_notification = Notification.objects.get_or_create(to=to,  # Minqi: Why is this get or create?
-			notification_type=Notification.WELCOME, repeat=Notification.ONE_SHOT)[0]
-		return welcome_notification
-
-	def create_doctor_initiated_welcome_notification(self, to):
-		welcome_notification = Notification.objects.create(to=to,
-		    notification_type=Notification.WELCOME, repeat=Notification.ONE_SHOT,
-		    send_time=DOCTOR_INITIATED_WELCOME_SEND_TIME)
-		return welcome_notification
-
-
 class Notification(models.Model):
-	"""Model for all of the times in a day/week/month/year that a prescription will be sent"""
+	"""
+	A Notification marks a point in time for when an outgoing message needs to be sent to a user.
+	A Notification has a repeat field specifying how frequently the user should be notified.
+	Notifications are periodically grouped into Messages and sent to users."""
+
 	# Notification type
-	WELCOME     = 'w'
-	MEDICATION 	= 'm'
-	REFILL 		= 'r'
-	SAFETY_NET  = 's'
-	REMINDER_TYPE_CHOICES = (
-		(WELCOME,    'welcome'),
+	MEDICATION 	    = 'm'
+	REFILL 		    = 'r'
+	WELCOME         = 'w'
+	SAFETY_NET      = 's'
+	NON_ADHERENT    = 'n'
+	STATIC_ONE_OFF  = 'o'
+
+	NOTIFICATION_TYPE_CHOICES = (
 		(MEDICATION, 'medication'),
 		(REFILL,	 'refill'),
+		(WELCOME,    'welcome'),
 		(SAFETY_NET, 'safety_net'),
+		(NON_ADHERENT, 'non_adherent'),
+		(STATIC_ONE_OFF, 'static_one_off')
 	)
 
 	# repeat choices i.e., what is the period of this notification time
@@ -143,30 +136,56 @@ class Notification(models.Model):
 		(CUSTOM,   'custom'),
 	)	
 
-	# If value of week_of_month is 5, it means "last day of month" 
-	# e.g., last Tuesday of every month
-	LAST_WEEK_OF_MONTH = 5
-
-	# required fields:
+	notification_type	= models.CharField(max_length=4,
+	                                            choices=NOTIFICATION_TYPE_CHOICES, null=False, blank=False)
 	to       			= models.ForeignKey(PatientProfile, null=False, blank=False)
-	notification_type		= models.CharField(max_length=4,
-									   choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
 	repeat 				= models.CharField(max_length=2,
-									   choices=REPEAT_CHOICES, null=False, blank=False)
-
-	# optional fields:
-	send_time			= models.DateTimeField(null=True)
-	day_of_week			= models.PositiveIntegerField(null=True) #Monday = 1 Sunday = 7
-	day_of_month		= models.PositiveIntegerField(null=True)
-	week_of_month		= models.PositiveIntegerField(null=True) # 5 indicates "last week of month"
-	day_of_year			= models.PositiveIntegerField(null=True)
-	month_of_year		= models.PositiveIntegerField(null=True)
-
-	text            	= models.CharField(max_length=160, null=True, blank=True)
-	prescription 		= models.ForeignKey(Prescription, null=True)
+	                                         choices=REPEAT_CHOICES, null=False, blank=False)
+	send_time			= models.DateTimeField(null=False, blank=False)
 	active				= models.BooleanField(default=True) # is the notification still alive?
 
 	objects 			= NotificationManager()
+
+	class Meta:
+		get_latest_by = 'send_time'
+		permissions = (
+		('view_notification_smartdose', 'View notification'),
+		('change_notification_smartdose', 'Change notification'),
+		)
+
+	def __init__(self, *args, **kwargs):
+		super(Notification, self).__init__(*args, **kwargs)
+		# custom init logic
+		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
+		# by parsing the prescription sig
+		if self.id:
+			return
+		if not self.send_time:
+			self.set_best_send_time()
+
+	# update send_time to next send_time based on notification period
+	def update_to_next_send_time(self):
+		update_periodic_send_time = {
+		self.ONE_SHOT: self.__update_one_shot_send_time,
+		self.DAILY:    self.__update_daily_send_time,
+		self.WEEKLY:   self.__update_weekly_send_time,
+		self.MONTHLY:  self.__update_monthly_send_time,
+		self.YEARLY:   self.__update_yearly_send_time,
+		self.CUSTOM:   self.__update_custom_send_time,
+		}
+		update_periodic_send_time[self.repeat]()
+
+	# return the optimal time to send notification
+	def get_best_send_time(self):
+		pass
+
+	# return and set the optimal time to send notification
+	def set_best_send_time(self):
+		# (placeholder for now)
+		if not self.send_time:
+			self.send_time = datetime.datetime.now()
+		pass
+
 
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.ONE_SHOT:
@@ -207,12 +226,6 @@ class Notification(models.Model):
 				next_day = min(next_date.day,calendar.monthrange(next_year,next_month)[1])
 				next_date = datetime.date(next_year, next_month, next_day)
 
-			if self.week_of_month == 5:
-				cal = calendar.Calendar(0)
-				month_week_dates = cal.monthdatescalendar(next_year, next_month)
-				lastweek_month = month_week_dates[-1]
-				next_date = lastweek_month[self.send_time.weekday()]
-
 			self.send_time = datetime.datetime.combine(next_date, self.send_time.time())
 			self.save()
 
@@ -235,47 +248,74 @@ class Notification(models.Model):
 		if self.notification_type == self.CUSTOM:
 			pass
 
-	# update send_time to next send_time based on notification period
-	def update_to_next_send_time(self):
-		update_periodic_send_time = {
-			self.ONE_SHOT: self.__update_one_shot_send_time,
-			self.DAILY:    self.__update_daily_send_time,
-			self.WEEKLY:   self.__update_weekly_send_time,
-			self.MONTHLY:  self.__update_monthly_send_time,
-			self.YEARLY:   self.__update_yearly_send_time,
-			self.CUSTOM:   self.__update_custom_send_time,
-		}
-		update_periodic_send_time[self.repeat]()
-
-	# return the optimal time to send notification
-	def get_best_send_time(self):
-		pass
-
-	# return and set the optimal time to send notification
-	def set_best_send_time(self):
-		# (placeholder for now)
-		if not self.send_time:
-			self.send_time = datetime.datetime.now()
-		pass
+class MedicationNotification(Notification):
+	"""A notification for a user to take a particular dose of medicine"""
+	prescription	= models.ForeignKey(Prescription, null=True)
+	parent          = models.OneToOneField(Notification, parent_link=True, primary_key=True)
 
 	def __init__(self, *args, **kwargs):
-		super(Notification, self).__init__(*args, **kwargs)
-		# custom init logic
-		# TODO(minqi): write custom initialization checks, e.g. automatically determining send_time
-		# by parsing the prescription sig
+		super(MedicationNotification, self).__init__(*args, **kwargs)
 		if self.id:
 			return
-		if not self.send_time:
-			self.set_best_send_time()
+		self.notification_type = Notification.MEDICATION
 
-	class Meta:
-		get_latest_by = 'send_time'
-		# TODO(matt): Note to minqi: Changed name of this permission
-		permissions = (
-			('view_notification_smartdose', 'View notification'),
-			('change_notification_smartdose', 'Change notification'),
-		)
+class RefillNotification(Notification):
+	"""A notification for a user to fill/refill his prescriptions."""
+	prescription	= models.ForeignKey(Prescription, null=True)
 
+	def __init__(self, *args, **kwargs):
+		super(RefillNotification, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.notification_type = Notification.REFILL
+
+class WelcomeNotification(Notification):
+	"""A notification that welcomes a user to Smartdose"""
+
+	def __init__(self, *args, **kwargs):
+		super(WelcomeNotification, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.notification_type = Notification.WELCOME
+		self.repeat            = Notification.ONE_SHOT
+
+class SafetyNetNotification(Notification):
+	"""A notification that goes out to a safety net member about the patient's adherence rates"""
+	safety_net_member   = models.ForeignKey(PatientProfile)
+	adherence_rate      = models.PositiveSmallIntegerField()
+
+	def __init__(self, *args, **kwargs):
+		super(SafetyNetNotification, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.notification_type  = Notification.SAFETY_NET
+		self.repeat             = Notification.ONE_SHOT
+
+class NonAdherentNotification(Notification):
+	"""A notification that goes out to a user when he's been non-adherent"""
+
+	def __init__(self, *args, **kwargs):
+		super(NonAdherentNotification, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.notification_type = Notification.NON_ADHERENT
+
+class StaticOneOffNotification(Notification):
+	"""A notification for sending a one-off message with static content"""
+
+	content  = models.CharField(max_length=160)
+
+	def __init__(self, *args, **kwargs):
+		super(StaticOneOffNotification, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.notification_type = Notification.STATIC_ONE_OFF
+
+
+
+
+
+#==============MESSAGE RELATED CLASSES=======================
 
 class MessageManager(models.Manager):
 	def create(self, patient, message_type):

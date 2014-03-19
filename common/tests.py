@@ -4,20 +4,22 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
-import random, string, datetime
-from django.test import SimpleTestCase, TestCase
-from django.template import Context, Template
 from django.contrib.auth import authenticate
+from django.core.exceptions import ValidationError
+from django.template import Context, Template
+from django.test import SimpleTestCase, TestCase
+
 from configs.dev import settings
+from configs.dev.settings import PROJECT_ROOT
+from common.datasources import *
 from common.utilities import *
 from common.models import Drug
-from patients.models import PatientProfile
 from doctors.models import DoctorProfile
-from reminders.models import Notification, Prescription
-from common.datasources import *
-from django.core.exceptions import ValidationError
-from configs.dev.settings import PROJECT_ROOT
+from patients.models import PatientProfile
+from reminders.models import Notification, MedicationNotification, Prescription
+
 from freezegun import freeze_time
+import random, string, datetime
 
 class TestDatasources(TestCase):
 	def setUp(self):
@@ -60,13 +62,14 @@ class TestListToQuerySet(TestCase):
 		n_pks = []
 		for i in range(5):
 			send_datetime = self.now_datetime + datetime.timedelta(seconds=i*180)
-			n = Notification.objects.create(to=self.patient1,
-				notification_type=Notification.MEDICATION, repeat=Notification.DAILY, send_time=send_datetime)
+			n = MedicationNotification.objects.create(to=self.patient1,
+			                                          repeat=Notification.DAILY,
+			                                          send_time=send_datetime)
 			test_list.append(n)
 			n_pks.append(n.pk)
 
 		result = list_to_queryset(test_list)
-		true_queryset = Notification.objects.filter(pk__in=set(n_pks))
+		true_queryset = MedicationNotification.objects.filter(pk__in=set(n_pks))
 		for idx, n in enumerate(result):
 			self.assertEqual(n, true_queryset[idx])
 

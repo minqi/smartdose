@@ -21,7 +21,7 @@ class NotificationCenter(object):
 
 		interval_sec_dt = datetime.timedelta(seconds=interval_sec)
 		if notifications.exists():
-			notifications_iter = notifications.order_by("send_time", "prescription__drug__name")
+			notifications_iter = notifications.order_by("send_time", "prescription__name")
 			first_notification = notifications[0]
 			chunks = []
 			current_chunk = []

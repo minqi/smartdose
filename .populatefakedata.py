@@ -1,6 +1,6 @@
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
-from reminders.models import Prescription, Notification
+from reminders.models import Prescription, MedicationNotification
 from common.models import Country, Drug
 from datetime import datetime, date, time, timedelta
 from django.db.models.signals import pre_save
@@ -44,26 +44,22 @@ for i in range(12):
 	prescription_minqi2 = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=drug2, filled=True)[0]
 	prescription_matt1 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug1, filled=True)[0]
 	prescription_matt2 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug2, filled=True)[0]
-	Notification.objects.get_or_create(
+	MedicationNotification.objects.get_or_create(
 		to=minqi, 
 		prescription=prescription_minqi1, 
 		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1),
-		reminder_type=Notification.MEDICATION)
-	Notification.objects.get_or_create(
+		send_time=now + i*timedelta(hours=1))
+	MedicationNotification.objects.get_or_create(
 		to=minqi, 
 		prescription=prescription_minqi2, 
 		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1),
-		reminder_type=Notification.MEDICATION)
-	Notification.objects.get_or_create(to=matt,
+		send_time=now + i*timedelta(hours=1))
+	MedicationNotification.objects.get_or_create(to=matt,
 		prescription=prescription_matt1, 
 		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1), 
-		reminder_type=Notification.MEDICATION)
-	Notification.objects.get_or_create(to=matt,
+		send_time=now + i*timedelta(hours=1))
+	MedicationNotification.objects.get_or_create(to=matt,
 		prescription=prescription_matt2, 
 		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1), 
-		reminder_type=Notification.MEDICATION)
+		send_time=now + i*timedelta(hours=1))
 

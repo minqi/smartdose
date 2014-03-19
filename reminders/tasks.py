@@ -42,7 +42,7 @@ def sendRemindersForNow():
 	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
-		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
+		p_reminders = reminders_for_now.filter(to=p)
 		nc.send_notifications(to=p, notifications=p_reminders)
 
 @shared_task()
