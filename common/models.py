@@ -164,6 +164,7 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
 			allowed_chars='abcdefghjkmnpqrstuvwxyz23456789')
 		self.save()
 
+
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
 	name = models.CharField(max_length=64, blank=False, unique=True)

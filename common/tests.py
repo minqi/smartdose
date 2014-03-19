@@ -19,6 +19,9 @@ from django.core.exceptions import ValidationError
 from configs.dev.settings import PROJECT_ROOT
 from freezegun import freeze_time
 
+from common.models import ParentModel, Child1
+
+
 class TestDatasources(TestCase):
 	def setUp(self):
 		self.dirname = "fake_datasources"

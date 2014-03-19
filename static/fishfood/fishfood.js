@@ -73,7 +73,6 @@
 		window_resize_handler();
 		$(window).on("resize", window_resize_handler);
 
-
 		// sparkline loader functions, called when loading patient profile
 		// loads data from server to populate adherence sparklines
 		var load_adherence_sparklines = 

@@ -10,25 +10,28 @@
 		<title>Smartdose - Login</title>
 	</head>
 	<body>
-		<div id="globalContainer">
-			<div id="mainContainer">
-				<div id="mainCol">
-					<div id="mainContentView">
-						Welcome to the Smartdose fishfood :)
-						<form id="loginForm" action="/fishfood/login/" method="post">
-							{% csrf_token %}
-							<input type="text" class="loginField" 
-								placeholder="555-555-5555" name="primary_phone_number"/>
-							<input type="password" name="password"/>
-							<input type="submit" class="loginSubmitButton" value="Next"/>
-						</form>
+		<div id="login-form-container">
+			<div id="login-form-content">
+				<form id="login-form" action="/fishfood/login/" method="post">
+					{% csrf_token %}
+					<div id="login-form-logo"></div>
+					<div id="login-form-caption">Login to Smartdose</div>
+					<input type="text" id="login-form-phonenumber" class="login-field" 
+						placeholder="Phone" name="primary_phone_number"/>
+					<input type="password" id="login-form-password" class="login-field" name="password" placeholder="Password"/>
+					<div id="login-form-footer">
+						<input id="login-form-submit" type="submit" value="Login"/>
 					</div>
+				</form>
+				<div id="login-form-signup-footer">
+					No account? <a href="/fishfood/signup">Sign-up for free</a>
 				</div>
 			</div>
 		</div>
 		<footer>
 			<script src="http://code.jquery.com/jquery-1.11.0.min.js" type="text/javascript"></script>
-			<script src="/static/fishfood/fishfood.js" type="text/javascript"></script>
+			<script src="/static/fishfood/jquery.inputmask.js" type="text/javascript"></script>
+			<script src="/static/fishfood/landing.js" type="text/javascript"></script>
 		</footer>
 	</body>
 </html>

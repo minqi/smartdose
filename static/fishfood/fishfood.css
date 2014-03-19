@@ -26,6 +26,7 @@ body {
 #main-container {
 	float: left;
 	height: 100vh;
+	/*min-width: 960px;*/
 	overflow-y: scroll;
 }
 
@@ -63,9 +64,107 @@ body {
 	margin-left: -1px;
 }
 
+#login-form-container {
+	position: absolute;
+	top: 50%;
+	margin-top: -200px;
+	width:100%;
+}
+
+#login-form-content {
+	margin: auto;
+	width: 400px;
+}
+
+#login-form-logo {
+	width: 200px;
+	height: 103px;
+	background-image: url('/static/img/smartdose-logo-color.png');
+	background-size: 100%;
+	background-repeat: no-repeat;
+	margin: auto;
+	margin-top: 40px;
+}
+
+#login-form-caption {
+	margin: auto;
+	margin-top: 15px;
+	margin-bottom: 15px;
+	width: 300px;
+	text-align: center;
+	font-size: 32px;
+	font-family: "HelveticaNeue-Thin";
+	color: #24bafc;
+}
+
+#login-form {
+	margin: auto;
+	width: 400px;
+	height: 400px;
+	border: 1px solid #ccc;
+	border-radius: 50px;
+	background: #fff;
+}
+
+.login-field {
+	display: block;
+	outline: none;
+	border: none;
+	border-bottom: 1px solid #eee;
+	font-size: 24px;
+	font-family: "HelveticaNeue-Thin";
+	width: 300px;
+	margin: auto;
+	padding: 10px;
+}
+
+#login-form-footer {
+	width: 320px;
+	margin: auto;
+}
+
+#login-form-submit {
+	display: block;
+	float: right;
+	margin: auto;
+	margin-top: 15px;
+	padding: 0px;
+	font-size: 24px;
+	padding: 0px;
+	font-family: "HelveticaNeue-Thin";
+	color: #aaa;
+	background: #fff;
+	border: none;
+	cursor: pointer;
+}
+#login-form-submit:hover {
+	color: #000;
+}
+
+#login-form-signup-footer {
+	margin: auto;
+	margin-top: 10px;
+	width: 300px;
+	text-align: center;
+	color: #777;
+	font-family: "HelveticaNeue-Thin";
+	font-size: 18px;
+}
+
+#login-form-signup-footer a {
+	text-decoration: none;
+	color: #169fda;
+}
+#login-form-signup-footer a:visited {
+	color: #169fda;
+}
+#login-form-signup-footer a:hover {
+	color: purple;
+}
+
 #smartdoseLogo {
 	text-align: left;
-	font-size: 28px;
+	font-size: 24px;
 	color: white;
 	margin-top: 10px;
 	margin-left: 10px;
