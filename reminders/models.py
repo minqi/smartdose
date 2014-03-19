@@ -346,7 +346,7 @@ class MessageManager(models.Manager):
 class Message(models.Model):
 	"""Model for messages that have been sent to users"""
 	class Meta:
-		ordering = ['-time_sent']
+		ordering = ['-datetime_sent']
 
 	UNACKED = 'u'
 	ACKED 	= 'a'
@@ -357,27 +357,68 @@ class Message(models.Model):
 		(EXPIRED,   'e'),
 	)
 
-	WELCOME     = 'w'
-	MEDICATION 	= 'm'
-	REFILL 		= 'r'
-	SAFETY_NET  = 's'
-	REMINDER_TYPE_CHOICES = (
-		(WELCOME,    'welcome'),
-		(MEDICATION, 'medication'),
-		(REFILL,	 'refill'),
-		(SAFETY_NET, 'safety_net'),
+	# All of the types of messages
+	MEDICATION 	                = 'm'
+	MEDICATION_ACK              = 'ma'
+	MEDICATION_QUESTIONNAIRE    = 'mq'
+	REFILL 		                = 'r'
+	REFILL_QUESTIONNAIRE        = 'rq'
+	MED_INFO                    = 'mi'
+	NON_ADHERENT                = 'na'
+	NON_ADHERENT_QUESTIONNAIRE  = 'naq'
+	OPEN_ENDED_QUESTION         = 'oeq'
+	WELCOME                     = 'w'
+	SAFETY_NET                  = 'sn'
+	STATIC_ONE_OFF              = 'sof'
+
+	MESSAGE_TYPE_CHOICES = (
+		(MEDICATION,                'medicationmessage'),
+		(MEDICATION_ACK,            'medicationackmessage'),
+		(MEDICATION_QUESTIONNAIRE,  'medicationquestionnairemessage'),
+		(REFILL,	                'refillmessage'),
+		(REFILL_QUESTIONNAIRE,      'refillquestionnairemessage'),
+		(MED_INFO,                  'medinfomessage'),
+		(NON_ADHERENT,              'nonadherentmessage'),
+		(NON_ADHERENT_QUESTIONNAIRE,'nonadherentquestionnairemessage'),
+		(OPEN_ENDED_QUESTION,       'openendedquestionmessage'),
+		(WELCOME,                   'welcomemessage'),
+		(SAFETY_NET,                'safetynetmessage'),
+		(STATIC_ONE_OFF,            'staticoneoffmessage'),
 	)
 
-	patient         = models.ForeignKey(PatientProfile, blank=False)
-	time_sent       = models.DateTimeField(auto_now_add=True)
-	message_number  = models.PositiveIntegerField(blank=True, null=True, default=1)
-	state           = models.CharField(max_length=2,
-											   choices=STATE_CHOICES,
-											   default=UNACKED)
-	message_type    = models.CharField(
-		max_length=4, choices=REMINDER_TYPE_CHOICES, null=False, blank=False)
+	MESSAGE_TYPE_TO_CHILD = dict(MESSAGE_TYPE_CHOICES)
+
+	to                  = models.ForeignKey(PatientProfile, blank=False)
+	datetime_sent       = models.DateTimeField(blank=True, null=True)
+	responded           = models.BooleanField(default=False)
+	datetime_responded  = models.DateTimeField(blank=True, null=True)
+	message_type        = models.CharField(
+			max_length=4, choices=MESSAGE_TYPE_CHOICES, null=False, blank=False)
 	
 	objects		    = MessageManager()
+
+	def __init__(self, *args, **kwargs):
+		super(Message, self).__init__(*args, **kwargs)
+		self.did_send = False
+
+
+	def prepare_to_send(self):
+		if self._meta.object_name == 'Message':
+			# Code executed here is executed when Message.prepare_to_send is called
+			# Call prepare_to_send method of appropriate ChildMessage
+			if hasattr(self, Message.MESSAGE_TYPE_TO_CHILD[self.message_type]):
+				return getattr(self, Message.MESSAGE_TYPE_TO_CHILD[self.message_type]).prepare_to_send()
+			else:
+				raise Exception('this message has an invalid message_type')
+		else:
+			# Code executed here is executed when super(ChildMessage, self).prepare_to_send() is called
+			if self.did_send:
+				raise Exception("Message can only be sent once per instantiation")
+			self.did_send = True
+
+	def process_response(self):
+		#TODO(mgaba):Write process response code here
+		pass
 
 	def processAck(self):
 		self.state = Message.ACKED
@@ -385,6 +426,134 @@ class Message(models.Model):
 		sentreminders = SentReminder.objects.filter(message=self)
 		for sentreminder in sentreminders:
 			sentreminder.processAck()
+
+class MedicationMessageManager(models.Manager):
+	def create(self, **kwargs):
+		today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+		todays_messages = self.filter(datetime_sent__gte=today)
+		if todays_messages:
+			nth_message_of_day = todays_messages.first().nth_message_of_day + 1
+		else:
+			nth_message_of_day = 0
+		super(MedicationMessageManager,self).create(nth_message_of_day=nth_message_of_day, **kwargs)
+
+class MedicationMessage(Message):
+	MESSAGE_TEMPLATE = 'messages/medication_reminder.txt'
+
+	notifications = models.ManyToManyField(MedicationNotification)
+	#medication_feedbacks = models.ManyToManyField("MedicationFeedback")
+	nth_message_of_day = models.PositiveSmallIntegerField(default=0)
+
+	#objects = MedicationMessageManager()
+
+	def __init__(self, *args, **kwargs):
+		super(MedicationMessage, self).__init__(*args, **kwargs)
+		self.message_type = Message.MEDICATION
+
+
+	def prepare_to_send(self):
+		super(MedicationMessage, self).prepare_to_send()
+		self.datetime_sent = datetime.datetime.now()
+		"""
+		for notification in self.notifications:
+			MedicationFeedback.objects.create(prescription=notification.prescription)
+			notification.update_to_next_send_time()
+			"""
+
+		return "Time to take your medicine!"
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write MedicationMessage response code
+		pass
+
+class MedicationAckMessage(Message):
+	def __init__(self, *args, **kwargs):
+		super(MedicationAckMessage,self).__init__(*args,**kwargs)
+		self.message_type = Message.MEDICATION_ACK
+
+	def prepare_to_send(self):
+		#TODO(mgaba):Write MedicationAckMessage send code
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write MedicationAckMessage response code
+		pass
+
+class MedicationQuestionnaireMessage(Message):
+	#TODO(mgaba): Add feedback key after implementing the feedback class
+	#medication_feedbacks = models.ForeignKey(MedicationFeedback)
+
+	def __init__(self, *args, **kwargs):
+		super(MedicationQuestionnaireMessage,self).__init__(*args,**kwargs)
+		self.message_type = Message.MEDICATION_QUESTIONNAIRE
+
+	def prepare_to_send(self):
+		#TODO(mgaba):Write MedicationQuestionnaireMessage send code
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write MedicationQuestionnaireMessage response code
+		pass
+
+class RefillMessage(Message):
+	notifications = models.ManyToManyField(RefillNotification)
+	#TODO(mgaba): Add feedback key after implementing the feedback class
+	#refill_feedbacks = models.ManyToManyField(RefillFeedback)
+	def __init__(self, *args, **kwargs):
+		super(RefillMessage,self).__init__(*args,**kwargs)
+		self.message_type = Message.REFILL
+
+	def prepare_to_send(self):
+		#TODO(mgaba):Write RefillMessage send code
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write RefillMessage response code
+		#TODO(mgaba): Take code below and make it fit as response code
+		"""
+		if self.notification.notification_type == Notification.REFILL:
+			self.prescription.filled = True
+			self.prescription.save()
+			notifications = self.prescription.notification_set.all()
+			# Advance medication reminder send times to a point after the refill reminder is ack'd
+			now = datetime.datetime.now()
+			for notification in notifications:
+				if notification.notification_type == Notification.MEDICATION:
+					if notification.send_time < now:
+						notification.update_to_next_send_time()
+			self.notification.active = False
+			self.notification.save()
+		pass
+		"""
+
+class WelcomeMessage(Message):
+	def __init__(self, *args, **kwargs):
+		super(WelcomeMessage,self).__init__(*args,**kwargs)
+		self.message_type = Message.WELCOME
+
+	def prepare_to_send(self):
+		#TODO(mgaba):Write WelcomeMessage send code
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write WelcomeMessage response code
+		pass
+
+class SafetyNetMessage(Message):
+	patient         = models.ForeignKey(PatientProfile)
+	adherence_rate  = models.PositiveSmallIntegerField()
+	def __init__(self, *args, **kwargs):
+		super(SafetyNetMessage,self).__init__(*args,**kwargs)
+		self.message_type = Message.SAFETY_NET
+
+	def prepare_to_send(self):
+		#TODO(mgaba):Write SafetyNetMessage send code
+		pass
+
+	def process_response(self):
+		#TODO(mgaba):Write SafetyNetMessage response code
+		pass
 
 class SentReminder(models.Model):
 	"""Model for reminders that have been sent"""
