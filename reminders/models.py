@@ -250,7 +250,7 @@ class Notification(models.Model):
 
 class MedicationNotification(Notification):
 	"""A notification for a user to take a particular dose of medicine"""
-	prescription	= models.ForeignKey(Prescription, null=True)
+	prescription	= models.ForeignKey(Prescription)
 	parent          = models.OneToOneField(Notification, parent_link=True, primary_key=True)
 
 	def __init__(self, *args, **kwargs):
@@ -261,7 +261,7 @@ class MedicationNotification(Notification):
 
 class RefillNotification(Notification):
 	"""A notification for a user to fill/refill his prescriptions."""
-	prescription	= models.ForeignKey(Prescription, null=True)
+	prescription	= models.ForeignKey(Prescription)
 
 	def __init__(self, *args, **kwargs):
 		super(RefillNotification, self).__init__(*args, **kwargs)
@@ -454,11 +454,10 @@ class MedicationMessage(Message):
 	def prepare_to_send(self):
 		super(MedicationMessage, self).prepare_to_send()
 		self.datetime_sent = datetime.datetime.now()
-		"""
-		for notification in self.notifications:
+
+		for notification in self.notifications.all():
 			MedicationFeedback.objects.create(prescription=notification.prescription)
 			notification.update_to_next_send_time()
-			"""
 
 		return "Time to take your medicine!"
 		pass
@@ -582,4 +581,36 @@ class SentReminder(models.Model):
 			self.notification.active = False
 			self.notification.save()
 
+class Feedback(models.Model):
+	"""Records information on a patients feedback for a given event tied to a notification
+	(e.g., taking a drug, filling a prescription, general nonadherence)"""
+	time_sent      = models.DateTimeField(auto_now_add=True)
+	time_responded = models.DateTimeField(blank=True, null=True)
+	note           = models.CharField(max_length=320)
+
+	class Meta:
+		get_latest_by = "time_sent"
+
+	def setNote(self, note):
+		self.note = note
+
+class MedicationFeedback(Feedback):
+	"""Feedback for a medication notification"""
+	taken        = models.BooleanField(default=False)
+	prescription = models.ForeignKey(Prescription)
+
+	def setTaken(self):
+		self.taken = True
+		self.time_responded = datetime.datetime.now()
+		self.save()
+
+class RefillFeedback(Feedback):
+	"""Feedback for a refill notification"""
+	filled       = models.BooleanField(default=False)
+	prescription = models.ForeignKey(Prescription)
+
+	def setFilled(self):
+		self.filled = True
+		self.time_responded = datetime.datetime.now()
+		self.save()
 

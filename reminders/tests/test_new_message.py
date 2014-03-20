@@ -29,7 +29,7 @@ class MessageTest(TestCase):
 		self.prescription2 = Prescription.objects.create(prescriber=self.bob,
 		                                                 patient=self.minqi, drug=self.drug1)
 		send_datetime = datetime.datetime.now()
-		notification1 = MedicationNotification.objects.create(to=self.minqi, repeat=Notification.DAILY, send_time=send_datetime)
+		notification1 = MedicationNotification.objects.create(to=self.minqi, repeat=Notification.DAILY, send_time=send_datetime, prescription=self.prescription1)
 
 		m = MedicationMessage.objects.create(to=self.minqi)
 		m.notifications.add(notification1)
