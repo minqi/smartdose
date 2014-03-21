@@ -10,7 +10,7 @@ from common.models import UserProfile, Drug
 from common.utilities import SMSLogger
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
-from reminders.models import Notification, Prescription, Message, SentReminder, Feedback
+from reminders.models import Notification, Prescription, Message, Feedback
 from reminders import models as reminder_model
 from reminders import tasks as reminder_tasks
 from reminders import views as reminder_views

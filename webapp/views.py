@@ -17,7 +17,7 @@ from common.utilities import is_integer, next_weekday, convert_to_e164
 from common.models import Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
-from reminders.models import Notification, Prescription, Message, SentReminder
+from reminders.models import Notification, Prescription, Message
 
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 from guardian.models import UserObjectPermission, GroupObjectPermission

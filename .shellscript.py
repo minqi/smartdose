@@ -7,7 +7,6 @@ from patients.models import PatientProfile
 from datetime import datetime,timedelta
 from django.conf import settings
 from reminders.models import Message
-from reminders.models import SentReminder
 from MessageReminderRelationship
 from datetime import datetime
 from reminders.tasks import REMINDER_INTERVAL

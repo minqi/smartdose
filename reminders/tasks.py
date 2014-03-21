@@ -8,7 +8,7 @@ from celery import shared_task
 from django.conf import Settings
 from django.template.loader import render_to_string
 from django.db.models import Q
-from reminders.models import Notification, Message, SentReminder
+from reminders.models import Notification, Message
 from common.models import UserProfile
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile, SafetyNetRelationship

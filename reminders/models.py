@@ -9,8 +9,6 @@ from common.models import UserProfile, Drug
 from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL, DOCTOR_INITIATED_WELCOME_SEND_TIME
 from patients.models import PatientProfile
 
-#==============NOTIFICATION RELATED CLASSES=======================
-
 class Prescription(models.Model):
 	"""Model for prescriptions"""
 	prescriber     				= models.ForeignKey(UserProfile, blank=False, related_name='prescriptions_given')
@@ -414,39 +412,8 @@ class Message(models.Model):
 
 
 	def processAck(self):
-		self.state = Message.ACKED
+		self.datetime_responded = datetime.datetime.now()
 		self.save()
-		sentreminders = SentReminder.objects.filter(message=self)
-		for sentreminder in sentreminders:
-			sentreminder.processAck()
-
-
-class SentReminder(models.Model):
-	"""Model for reminders that have been sent"""
-	prescription   = models.ForeignKey(Prescription, null=True)
-	notification  = models.ForeignKey(Notification, blank=False)
-	message 	   = models.ForeignKey(Message)
-	time_sent      = models.DateTimeField(auto_now_add=True)
-	ack			   = models.BooleanField(default=False)
-
-	class Meta:
-		get_latest_by = "time_sent"
-
-	def processAck(self):
-		self.ack = True
-		self.save()
-		if self.notification.type == Notification.REFILL:
-			self.prescription.filled = True
-			self.prescription.save()
-			notifications = self.prescription.notification_set.all()
-			# Advance medication reminder send times to a point after the refill reminder is ack'd
-			now = datetime.datetime.now()
-			for notification in notifications:
-				if notification.type == Notification.MEDICATION:
-					if notification.send_datetime < now:
-						notification.update_to_next_send_time()
-			self.notification.active = False
-			self.notification.save()
 
 class Feedback(models.Model):
 	"""Records information on a patients feedback for a given event tied to a notification

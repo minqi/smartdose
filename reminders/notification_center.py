@@ -2,7 +2,7 @@ import itertools
 from common.utilities import sendTextMessageToNumber, list_to_queryset
 from common.models import UserProfile
 from patients.models import PatientProfile
-from reminders.models import Notification, Message, SentReminder, Feedback
+from reminders.models import Notification, Message, Feedback
 from configs.dev import settings
 from django.template.loader import render_to_string
 import datetime

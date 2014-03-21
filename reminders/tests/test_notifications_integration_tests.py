@@ -5,7 +5,7 @@ from django.test import Client
 from doctors.models import DoctorProfile
 from freezegun import freeze_time
 from patients.models import PatientProfile
-from reminders.models import Notification, Prescription, Message, SentReminder
+from reminders.models import Notification, Prescription, Message
 from reminders import tasks as reminder_tasks
 from common.utilities import SMSLogger
 from configs.dev import settings

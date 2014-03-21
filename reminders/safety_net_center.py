@@ -1,7 +1,7 @@
 from django.template.loader import render_to_string
 
 from patients.models import PatientProfile, SafetyNetRelationship
-from reminders.models import SentReminder, Notification
+from reminders.models import Notification, Feedback
 
 import datetime
 
@@ -20,7 +20,7 @@ class SafetyNetCenter(object):
 		window_start and window_finish at time time. A dose is considered missed 
 		if it's gone unacknowledged for longer than timeout.
 		"""
-		reminders = SentReminder.objects.filter(
+		reminders = Feedback.objects.filter(
 			time_sent__gte=window_start,
 			time_sent__lte=window_finish,
 			notification__notification_type=Notification.MEDICATION).exclude(time_sent__gte=time - timeout)
