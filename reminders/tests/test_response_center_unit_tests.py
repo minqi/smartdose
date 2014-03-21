@@ -21,7 +21,7 @@ class RenderResponseFromActionTest(TestCase):
 	def test_ack_valid(self):
 		message_number = 1
 		ack_number = message_number
-		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, message_type=Message.REFILL)
+		valid_message = Message(to=self.minqi, message_number=message_number, type=Message.REFILL)
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
@@ -31,16 +31,16 @@ class RenderResponseFromActionTest(TestCase):
 				return []
 			else:
 				raise Exception("Must specify message_number here")
-		self.assertEqual(valid_message.state, Message.UNACKED)
+		self.assertIsNone(valid_message.datetime_responded)
 		with mock.patch('reminders.models.Message.objects.filter', fake_filter):
 			response = self.rc.render_response_from_action(ResponseCenter.Action.ACK, self.minqi, str(ack_number))
 			self.assertEqual("Your family will be happy to know that you're taking care of your health.", response.content)
-			self.assertEqual(valid_message.state, Message.ACKED)
+			self.assertIsNotNone(valid_message.datetime_responded)
 
 	def test_ack_valid_quotes_in_message(self):
 		message_number = 1
 		response_message = "\'" + str(message_number) + "\'"
-		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, message_type=Message.REFILL)
+		valid_message = Message(to=self.minqi, type=Message.REFILL)
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
@@ -59,7 +59,7 @@ class RenderResponseFromActionTest(TestCase):
 	def test_ack_invalid(self):
 		message_number = 1
 		ack_number = 2
-		valid_message = Message(patient=self.minqi, message_number=message_number, state=Message.UNACKED, message_type=Message.REFILL)
+		valid_message = Message(to=self.minqi, type=Message.REFILL)
 		valid_message_as_list = [valid_message]
 		# Create a fake Message.objects.filter method to patch into our code.
 		def fake_filter(message_number, **kwargs):
@@ -69,11 +69,11 @@ class RenderResponseFromActionTest(TestCase):
 				return []
 			else:
 				raise Exception("Must specify message_number here")
-		self.assertEqual(valid_message.state, Message.UNACKED)
+		self.assertIsNone(valid_message.datetime_responded)
 		with mock.patch('reminders.models.Message.objects.filter', fake_filter):
 			response = self.rc.render_response_from_action(ResponseCenter.Action.ACK, self.minqi, str(ack_number))
 			self.assertEqual("Whoops - there is no reminder with number 2 that needs a response.", response.content)
-			self.assertEqual(valid_message.state, Message.UNACKED)
+			self.assertIsNotNone(valid_message.datetime_responded)
 
 	def test_not_valid(self):
 		not_valid_message = "heaoij"

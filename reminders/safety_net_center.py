@@ -1,7 +1,7 @@
 from django.template.loader import render_to_string
 
 from patients.models import PatientProfile, SafetyNetRelationship
-from reminders.models import SentReminder, Notification, SafetyNetNotification
+from reminders.models import SentReminder, Notification
 
 import datetime
 

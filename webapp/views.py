@@ -169,11 +169,11 @@ class DeleteReminderForm(forms.Form):
 
 		reminders = Notification.objects.filter(
 			to=patient, prescription__drug__name__iexact=drug_name, 
-			notification_type=Notification.MEDICATION)
+			type=Notification.MEDICATION)
 		reminders_for_deletion = []
 		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
-			if r.send_time.time() == reminder_time:
+			if r.send_datetime.time() == reminder_time:
 				reminders_for_deletion.append(r)
 		if len(reminders_for_deletion) == 0:
 			raise ValidationError('Reminder does not exist')
@@ -389,16 +389,16 @@ def retrieve_patient(request, *args, **kwargs):
 				c['patient'] = patient
 				# get reminders
 				reminders = Notification.objects.filter(
-					to=patient, notification_type=Notification.MEDICATION)
-				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_time.time()))
+					to=patient, type=Notification.MEDICATION)
+				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_datetime.time()))
 				reminder_groups = []
 				for drug, outer_group in groupby(reminders, lambda x: x.prescription.drug.name):
 					drug_group = {'drug_name':drug, 'schedules':[]}
-					for send_time, time_group in groupby(outer_group, lambda y: y.send_time.time()):
+					for send_datetime, time_group in groupby(outer_group, lambda y: y.send_datetime.time()):
 						days_of_week = []
 						for reminder in time_group:
 							days_of_week.append(reminder.day_of_week)
-						drug_group['schedules'].append({'time':send_time, 'days_of_week':days_of_week})
+						drug_group['schedules'].append({'time':send_datetime, 'days_of_week':days_of_week})
 					reminder_groups.append(drug_group)
 				c['reminder_groups'] = tuple(reminder_groups)
 				return render_to_response('fishfood/patient_view.html', c)
@@ -537,14 +537,14 @@ def create_reminder(request, *args, **kwargs):
 			if is_daily_reminder:
 				# remove all other reminders at this time, and replace with single daily reminder
 				for r in existing_reminders:
-					if r.send_time.time() == reminder_time:
+					if r.send_datetime.time() == reminder_time:
 						r.delete()
 				send_datetime = datetime.datetime.combine(
 					datetime.datetime.today().date(), reminder_time)
 				med_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					notification_type=Notification.MEDICATION,
-					send_time = send_datetime, 
+					type=Notification.MEDICATION,
+					send_datetime = send_datetime,
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(med_reminder)
@@ -561,7 +561,7 @@ def create_reminder(request, *args, **kwargs):
 							Q(day_of_week=idx+1) | Q(repeat=Notification.DAILY)
 						)
 						for r in existing_reminders_for_day:
-							if r.send_time.time() == reminder_time:
+							if r.send_datetime.time() == reminder_time:
 								skip_day = True
 								break
 						if not skip_day:
@@ -574,8 +574,8 @@ def create_reminder(request, *args, **kwargs):
 								)
 							med_reminder = Notification.objects.get_or_create(
 								to=patient, 
-								notification_type=Notification.MEDICATION,
-								send_time = send_datetime, 
+								type=Notification.MEDICATION,
+								send_datetime = send_datetime,
 								repeat=Notification.WEEKLY,
 								prescription=prescription)[0]
 							new_reminders.append(med_reminder)
@@ -586,7 +586,7 @@ def create_reminder(request, *args, **kwargs):
 			if send_refill_reminder and not prescription.filled:
 				refill_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					notification_type=Notification.REFILL,
+					type=Notification.REFILL,
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(refill_reminder)
@@ -620,7 +620,7 @@ def delete_reminder(request, *args, **kwargs):
 			if form.cleaned_data['all_deleted']: # delete all reminder objects
 				Notification.objects.filter(
 					to=patient, prescription__drug__name__iexact=drug_name, 
-					notification_type=Notification.REFILL).delete()
+					type=Notification.REFILL).delete()
 			for r in form.cleaned_data['reminders_for_deletion']: 
 				r.delete()
 			return HttpResponse('')
