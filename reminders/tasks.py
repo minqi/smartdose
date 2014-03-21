@@ -4,16 +4,18 @@ from __future__ import absolute_import
 import datetime
 import common.datasources as datasources
 
-from celery import shared_task
 from django.conf import Settings
 from django.template.loader import render_to_string
 from django.db.models import Q
-from reminders.models import ReminderTime, Message, SentReminder
+
 from common.models import UserProfile
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile, SafetyNetRelationship
+from reminders.models import ReminderTime, Message, SentReminder
 from reminders.notification_center import NotificationCenter
 from reminders.safety_net_center import SafetyNetCenter
+
+from celery import shared_task
 
 FAKE_CSV = False # Use fake patient csv data for 
 

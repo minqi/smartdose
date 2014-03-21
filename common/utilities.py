@@ -69,7 +69,8 @@ class SMSLogger():
 
 
 def sendTextMessageToNumber(body, to):
-	if not settings.DEBUG:
+	if settings.SEND_TEXT_MESSAGES:
+		to = convert_to_e164(to)
 		try: 
 			# just send first 160 char for now; plan to support concatenation in the future
 			body = body[:settings.TWILIO_MAX_SMS_LEN] #
@@ -77,7 +78,10 @@ def sendTextMessageToNumber(body, to):
 		except twilio.TwilioRestException as e:
 			print e
 
-	SMSLogger.log(to, body, datetime_orig.datetime.now())
+	if settings.DEBUG:
+		print body
+
+	# SMSLogger.log(to, body, datetime_orig.datetime.now())
 	return True
 
 

@@ -10,7 +10,10 @@ from django.conf import settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'configs.dev.settings')
 
 app = Celery('smartdose', 
-			 include=['reminders.tasks'])
+			 include=[
+			 'reminders.tasks', 
+			 'common.registration_services.delete_expired_regprofiles',
+			 ])
 
 # Using a string here means the worker will not have to
 # pickle the object when using Windows.

@@ -1,7 +1,7 @@
 from django.conf import settings
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
-from common.models import UserProfile
+from common.models import UserProfile, RegistrationProfile
 from django.contrib.auth import hashers
 import datetime
 
@@ -48,8 +48,30 @@ class SettingsBackend(object):
 				return None
 		else:
 			return None
-		assert False #This code should not execute
 
+
+	def get_user(self, user_id):
+		try:
+			return PatientProfile.objects.get(pk=user_id)
+		except PatientProfile.DoesNotExist:
+			return None
+		else:
+			try: 
+				return DoctorProfile.objects.get(pk=user_id)
+			except DoctorProfile.DoesNotExist:
+				return None
+
+
+class RegistrationTokenAuthBackend(object):
+	def authenticate(self, regprofile=None, phonenumber=None, email=None):
+		if (phonenumber and regprofile.phonenumber_activation_key == RegistrationProfile.ACTIVATED) \
+			or (email and regprofile.email_activation_key == RegistrationProfile.ACTIVATED):
+			for child_class_name in ('PatientProfile', 'DoctorProfile'):
+				try:
+					return regprofile.userprofile.__getattribute__(child_class_name.lower())
+				except eval(child_class_name).DoesNotExist:
+					pass
+		return None
 
 	def get_user(self, user_id):
 		try:

@@ -14,8 +14,10 @@ from django.db.models import Q
 from localflavor.us.forms import USPhoneNumberField
 from itertools import groupby
 
-from common.utilities import is_integer, next_weekday, convert_to_e164
-from common.models import Drug
+from common.utilities import is_integer, next_weekday, convert_to_e164, sendTextMessageToNumber
+from common.registration_services import create_inactive_patientprofile, \
+	regprofile_activate_user_phonenumber
+from common.models import RegistrationProfile, Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import ReminderTime, Prescription, Message, SentReminder
@@ -64,6 +66,14 @@ class UserRegistrationForm(forms.Form):
 			raise forms.ValidationError("Passwords don't match")
 
 		return self.cleaned_data
+
+
+class VerifyMobileForm(forms.Form):
+	otp = forms.CharField(min_length=5, max_length=5)
+
+	def clean_otp(self):
+		otp = self.cleaned_data['otp'].strip().lower()
+		return otp
 
 
 class CreatePatientForm(forms.Form):
@@ -221,7 +231,6 @@ class DeleteSafetyNetContactForm(forms.Form):
 		return p_id
 
 
-# @lockdown
 def user_registration(request):
 	c = RequestContext(request)
 	if request.method == 'GET':
@@ -241,24 +250,62 @@ def user_registration(request):
 			if PatientProfile.objects.filter(primary_phone_number=primary_phone_number).exists():
 				return HttpResponseBadRequest('This number is already in use')
 
-			patient = PatientProfile.objects.create(
-				full_name=full_name,
-				email=email,
+			(reg_profile, patient) = create_inactive_patientprofile(
+				full_name=full_name, 
+				email=email, 
 				primary_phone_number=primary_phone_number,
-				# status=PatientProfile.PENDING, # for number validation
-			)
+				password=password)
 
-			# TODO: Refactor into additional phone number verification view
-			patient.num_caregivers += 1
-			assign_perm('manage_patient_profile', patient, patient)
-			patient.set_password(password)
-			patient.save()
-			patient = authenticate(phone_number=primary_phone_number, password=password)
-			login(request, patient)
+			# send user to number verification page
+			response = render_to_response('fishfood/verify_mobile.html', c)
 
-			return redirect('/fishfood/')
+			# set cookie
+			response.set_cookie('reg_id', reg_profile.id)
+			return response
 
 	return HttpResponseBadRequest('Something went wrong.')
+
+
+def verify_mobile(request):
+	c = RequestContext(request)
+
+	if request.method == 'POST':
+		form = VerifyMobileForm(request.POST)
+		if form.is_valid() and request.COOKIES.has_key('reg_id'):
+			reg_id = request.COOKIES['reg_id']
+			regprofile = RegistrationProfile.objects.get(id=reg_id)
+
+			# get otp
+			otp = form.cleaned_data['otp']
+			if regprofile_activate_user_phonenumber(regprofile, otp):
+				patient = authenticate(regprofile=regprofile, phonenumber=True)
+				login(request, patient)
+				return redirect('/fishfood/')
+
+			response = HttpResponse('Unauthorized')
+			response.status_code = 401
+			return response
+
+	return HttpResponseBadRequest('Something went wrong')
+
+
+def resend_mobile_verification_code(request):
+	c = RequestContext(request)
+
+	if request.method == 'GET':
+		reg_id = request.COOKIES['reg_id']
+		regprofile = RegistrationProfile.objects.get(id=reg_id)
+		regprofile.set_phonenumber_activation_key()
+		regprofile.save()
+
+		c['otp'] = regprofile.phonenumber_activation_key
+		body = render_to_string('messages/verify_mobile.html', c)
+		sendTextMessageToNumber(
+			to=regprofile.userprofile.primary_phone_number,
+			body=body)
+		return HttpResponse('')
+
+	return HttpResponseBadRequest('Something went wrong')
 
 
 # @lockdown
@@ -289,6 +336,8 @@ def user_logout(request):
 	c = RequestContext(request)
 	if request.method == 'POST':
 		logout(request)
+
+		# need to delete cookie here
 		return redirect('/fishfood/')
 
 	return HttpResponseBadRequest('')

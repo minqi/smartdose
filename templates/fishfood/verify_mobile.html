@@ -13,19 +13,17 @@
 
 		<div id="login-form-container">
 			<div id="login-form-content">
-				<form id="login-form" action="/fishfood/signup/" method="post">
+				<form id="login-form" action="/fishfood/signup/verifymobile/" method="post">
 					{% csrf_token %}
-					<div id="login-form-caption">Sign up</div>
-					<input type="text" class="login-field" placeholder="Full name" 
-						name="full_name"/>
-					<input type="text" class="login-field" 
-						placeholder="Email" name="email"/>
-					<input type="text" class="login-field" 
-						placeholder="Phone" name="primary_phone_number"/>
-					<input type="password" name="password1" class="login-field" placeholder="Password"/>
-					<input type="password" name="password2" class="login-field" placeholder="Confirm password"/>
+					<div id="login-form-caption">Verify your number</div>
+					<div id="otp-blurb">
+						We sent a 5-digit code in a text-message to your mobile device at <span id="otp-blurb-phonenumber"></span>. This code will expire in 5 minutes.
+						<p/> 
+						Please enter this code below to confirm you are the owner of the number.
+					</div>
+					<input type="text" class="login-field" placeholder="Code" name="otp"/>
 					<div id="login-form-footer">
-						<input type="submit" id="signup-form-submit" value="Next"/>
+						<input type="submit" id="signup-form-otp-submit" value="Done"/>
 					</div>
 				</form>
 				<div id="login-form-signup-footer">

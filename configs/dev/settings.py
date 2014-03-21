@@ -136,6 +136,7 @@ AUTH_USER_MODEL = 'common.UserProfile'
 AUTHENTICATION_BACKENDS = (
     'common.authentication.SettingsBackend',
     'guardian.backends.ObjectPermissionBackend',
+    'common.authentication.RegistrationTokenAuthBackend',
 )
 ANONYMOUS_USER_ID = -1
 
@@ -219,7 +220,11 @@ CELERYBEAT_SCHEDULE = {
     'schedule-safety-net': {
 	    'task' : 'reminders.tasks.schedule_safety_net_messages',
         'schedule': crontab(minute=0, hour=10, day_of_week=1) # Schedule safety net messages weekly at 10am on Monday
-    }
+    },
+    'delete_expired_regprofiles': {
+        'task' : 'common.registration_services.delete_expired_regprofiles',
+        'schedule' : crontab(minute='*/5')
+    },
 }
 USE_TZ = False
 
