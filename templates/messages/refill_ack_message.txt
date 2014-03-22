@@ -1,0 +1,1 @@
+Great. You'll receive your first reminder {{ day }} at {{ hour }}:{{ minute|stringformat:"02d" }}{{ ampm }}. To change the time of your reminder, simply reply with the time (e.g., 9am).

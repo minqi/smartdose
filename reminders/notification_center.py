@@ -108,7 +108,8 @@ class NotificationCenter(object):
 			def get_drug_name(notification):
 				return notification.prescription.drug.name
 			prescription_names = list(itertools.imap(get_drug_name, notification_group))
-			context = {'prescription_name_list': prescription_names}
+			context = {'prescription_name_list': prescription_names,
+			           'times_sent': notification_group[0].times_sent}
 			self.send_text_message(to=to, notifications=notification_group, template=template, context=context)
 
 	def send_medication_notifications(self, to, notifications):

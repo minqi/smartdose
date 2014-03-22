@@ -243,7 +243,7 @@ class ResponseCenter(object):
 			           Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
 			           '.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=return_message_type, content=content)
+			new_m = Message.objects.create(to=sender, type=return_message_type, content=content, previous_message=message)
 			return HttpResponse(content=content, content_type='text/plain')
 
 
@@ -305,6 +305,99 @@ class ResponseCenter(object):
 		now = datetime.datetime.now()
 		message.datetime_responded = now
 		message.save()
+
+		# Switch on type of response
+		if self.is_yes(response):
+			# TODO(mgaba): Implement questions about weekly, monthly prescriptions. What's the right day?
+			# Send out a medication ack message
+			# Update state
+			feedbacks = message.feedbacks.all()
+			for feedback in feedbacks:
+				feedback.completed = True
+				feedback.datetime_responded = now
+				feedback.save()
+
+			earliest_notification = None
+			now = datetime.datetime.now()
+			for feedback in feedbacks:
+				feedback.prescription.filled = True
+				feedback.prescription.save()
+				med_notifications = Notification.objects.filter(prescription=feedback.prescription, type=Notification.MEDICATION)
+				for med_notification in med_notifications:
+					if med_notification.send_datetime < now:
+						med_notification.update_to_next_send_time()
+					if earliest_notification == None or earliest_notification.send_datetime - now > med_notification.send_datetime - now:
+						earliest_notification = med_notification
+
+			hour = earliest_notification.send_datetime.hour
+			minute = earliest_notification.send_datetime.minute
+			if hour == 0:
+				hour = 12
+				ampm = 'am'
+			elif hour == 12:
+				hour = 12
+				ampm = 'pm'
+			elif hour > 12:
+				hour = hour - 12
+				ampm = 'pm'
+			else:
+				ampm = 'am'
+			if earliest_notification.send_datetime.date() == now.date():
+				day = "today"
+			elif earliest_notification.send_datetime.date() == now.date() + datetime.timedelta(days=1):
+				day = "tomorrow"
+			elif earliest_notification.send_datetime.date() <  now.date() + datetime.timedelta(days=7):
+				weekdays = {'0':'Monday',
+				            '1':'Tuesday',
+				            '2':'Wednesday',
+				            '3':'Thursday',
+				            '4':'Friday',
+				            '5':'Saturday',
+				            '6':'Sunday'}
+				day = "on " + weekdays[str(earliest_notification.send_datetime.weekday())]
+
+			# Create new message
+			context = {'hour':hour,
+			           'minute':minute,
+			           'ampm':ampm,
+			           'day':day}
+			template = 'messages/refill_ack_message.txt'
+			content = render_to_string(template, context)
+			Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, previous_message=message, content=content)
+			return HttpResponse(content=content, content_type='text/plain')
+
+		elif self.is_no(response):
+			# Send out a medication questionnaire message
+			# Update state
+			feedbacks = message.feedbacks.all()
+			for feedback in feedbacks:
+				feedback.completed = False
+				feedback.datetime_responded = now
+				feedback.save()
+
+			# Create a questionnaire message
+			template = 'messages/refill_questionnaire_message.txt'
+			context = {'response_dict': iter(sorted(Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY.items()))}
+			content = render_to_string(template, context)
+
+			# Create new message
+			new_m = Message.objects.create(to=sender, type=Message.REFILL_QUESTIONNAIRE, previous_message=message,
+			                               content=content)
+			for feedback in feedbacks:
+				new_m.feedbacks.add(feedback)
+			return HttpResponse(content=content, content_type='text/plain')
+
+		elif self.is_med_info(response):
+			# Send out a med info message
+			pass
+		# Unknown response
+		else:
+			message.datetime_responded = None
+			message.save()
+			template = 'messages/unknown_response.txt'
+			content = render_to_string(template)
+			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			return HttpResponse(content=content, content_type='text/plain')
 		raise Exception("Not yet implemented")
 
 	def process_refill_questionnaire_response(self, sender, message, response):
@@ -313,7 +406,55 @@ class ResponseCenter(object):
 		now = datetime.datetime.now()
 		message.datetime_responded = now
 		message.save()
-		raise Exception("Not yet implemented")
+
+		def process_response(return_message_type):
+			for feedback in message.feedbacks.all():
+				feedback.note = Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()]
+				feedback.save()
+			template = 'messages/refill_questionnaire_responses/' + \
+			           Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
+			           '.txt'
+			content = render_to_string(template)
+			new_m = Message.objects.create(to=sender, type=return_message_type, content=content, previous_message=message)
+			return HttpResponse(content=content, content_type='text/plain')
+
+
+		# Switch on type of response
+		# a - Haven't gotten the chance
+		if response.lower() == 'a':
+			# Schedule a medication reminder for later
+			one_hour = datetime.datetime.now() + datetime.timedelta(hours=1)
+
+			# Send response
+			return process_response(Message.STATIC_ONE_OFF)
+
+		# b - Too expensive
+		elif response.lower() == 'b':
+			#TODO(mgaba): Figure out what else should happen if someone needs to refill
+			# Send response
+			return process_response(Message.STATIC_ONE_OFF)
+
+		# c - Concerned about side effects
+		elif response.lower() == 'c':
+			#TODO(mgaba): Figure out what else should happen if someone has side effects
+			#TODO(mgaba): Add doctors name to personalize messages
+			# Send response
+			return process_response(Message.STATIC_ONE_OFF)
+
+		# d - Other
+		elif response.lower() == 'd':
+			#TODO(mgaba): Add doctors name to personalize messages
+			return process_response(Message.OPEN_ENDED_QUESTION)
+
+		# Unknown response
+		else:
+			message.datetime_responded = None
+			message.save()
+			template = 'messages/unknown_response.txt'
+			content = render_to_string(template)
+			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			return HttpResponse(content=content, content_type='text/plain')
+
 
 	def process_med_info_response(self, sender, message, response):
 		""" Process a response to a med info message

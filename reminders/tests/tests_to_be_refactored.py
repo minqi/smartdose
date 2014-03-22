@@ -154,7 +154,7 @@ class NotificationCenterTest(TestCase):
 		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+ \
 		                     "For more info, you can visit www.smartdo.se"
 		self.assertEqual(messages[0].content, expected_message_2)
-		
+
 	def test_send_refill_notifications(self):
 		# see if you can send refill notification
 		self.assertTrue(self.patient2.status == UserProfile.NEW)

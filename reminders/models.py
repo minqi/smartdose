@@ -160,6 +160,8 @@ class Notification(models.Model):
 
 	day_of_week         = models.PositiveSmallIntegerField(null=True, blank=True)
 
+	times_sent          = models.PositiveIntegerField(default=0)
+
 	# Required types: REFILL, MEDICATION
 	prescription        = models.ForeignKey(Prescription, null=True, blank=True)
 
@@ -234,6 +236,7 @@ class Notification(models.Model):
 		self.YEARLY:   self.__update_yearly_send_time,
 		self.CUSTOM:   self.__update_custom_send_time,
 		}
+		self.times_sent += 1
 		update_periodic_send_time[self.repeat]()
 
 	# return the optimal time to send notification
@@ -374,6 +377,11 @@ class Message(models.Model):
 	                                               'e':'Prescription changed',
 	                                               'f':'I feel sad :(',
 	                                               'g':'Other'}
+
+	REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY = {'a':'Haven\'t gotten the chance',
+	                                                'b':'Too expensive',
+	                                                'c':'Concerned about side effects',
+	                                                'd':'Other'}
 
 	MESSAGE_TYPE_CHOICES = (                                            # Non-standard required fields:
 		(MEDICATION,                'medication'),                      ## notifications, feedbacks, nth_message_of_day_of_type

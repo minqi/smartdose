@@ -1,1 +1,5 @@
-It's important you fill your {% for prescription_name in prescription_name_list %}{% if forloop.first %}{{ prescription_name }}{% elif forloop.last %} and {{ prescription_name }}{% else %}, {{ prescription_name }}{% endif %}{% endfor %} prescription as soon as possible. Reply '{{ message_number }}' when you've received your medicine.
+{% if times_sent == 1 %}Hello again. {% elif times_sent == 2 %}We haven't forgotten about you. {% endif %}Have you picked up new meds from the pharmacy? Reply:
+y - yes
+n - no
+
+To see your meds reply m.

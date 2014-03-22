@@ -1,0 +1,2 @@
+{% autoescape off %}Why not? Reply:
+{% for response, value in response_dict %}{{ response }} - {{ value }}{% if not forloop.last %}{% include "messages/utility/newline.txt" %}{% endif %}{% endfor %}{% endautoescape %}

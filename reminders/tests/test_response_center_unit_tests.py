@@ -4,6 +4,7 @@ from common.utilities import list_to_queryset
 from django.http import HttpResponseNotFound
 from django.test import TestCase
 from doctors.models import DoctorProfile
+from freezegun import freeze_time
 import mock
 from patients.models import PatientProfile
 from reminders.models import Message, Prescription, Notification, Feedback
@@ -264,6 +265,9 @@ class ResponseCenterTest(TestCase):
 		self.notification = Notification.objects.create(to=self.minqi, type=Notification.MEDICATION,
 		                                                prescription=self.prescription, repeat=Notification.DAILY,
 		                                                send_datetime=datetime.datetime.now())
+		self.refill_notification = Notification.objects.create(to=self.minqi, type=Notification.REFILL,
+		                                                prescription=self.prescription, repeat=Notification.DAILY,
+		                                                send_datetime=datetime.datetime.now())
 
 	def test_process_medication_response_yes(self):
 		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
@@ -467,6 +471,142 @@ class ResponseCenterTest(TestCase):
 							"For more information on how to use Smartdose, you can visit www.smartdo.se"
 		self.assertEqual(response.content, expected_response)
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_response_yes(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
+		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.refill_notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.refill_notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		freezer = freeze_time(datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=9)))
+		freezer.start()
+		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today() + datetime.timedelta(days=1), datetime.time(hour=8))
+		self.notification.save()
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
+		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+		response = self.rc.process_refill_response(self.minqi, message, 'y')
+		expected_response = "Great. You'll receive your first reminder tomorrow at 8:00am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		self.assertEqual(response.content, expected_response)
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, True)
+		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+
+		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=7))
+		self.notification.save()
+		response = self.rc.process_refill_response(self.minqi, message, 'y')
+		expected_response = "Great. You'll receive your first reminder tomorrow at 7:00am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		self.assertEqual(response.content, expected_response)
+
+		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=14, minute=30))
+		self.notification.save()
+		response = self.rc.process_refill_response(self.minqi, message, 'y')
+		expected_response = "Great. You'll receive your first reminder today at 2:30pm. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		self.assertEqual(response.content, expected_response)
+
+		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today()-datetime.timedelta(days=3), datetime.time(hour=0, minute=30))
+		self.notification.save()
+		response = self.rc.process_refill_response(self.minqi, message, 'y')
+		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		self.assertEqual(response.content, expected_response)
+
+
+	def test_process_refill_questionnaire_response_a(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
+		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'a')
+		expected_response = "We'll send you another reminder tomorrow. Try to pick up your meds today so you can begin your treatment as soon as possible."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_refill_questionnaire_response_b(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
+		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'b')
+		expected_response = "Medicine only works if you can afford to take it. We'll let your doctor know and someone will be in touch to help you find the best treatment."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_refill_questionnaire_response_c(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
+		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'c')
+		expected_response = "Your doctor wants to help. We'll let your doc know you're concerned.\n\n"+\
+							"You can read more about what your meds do at smartdo.se/1234567890?c=12345"
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_refill_questionnaire_response_d(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
+		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'd')
+		expected_response = "Please tell us more. We'll pass it along to your doctor."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_get_app_upsell_content(self):
 		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
