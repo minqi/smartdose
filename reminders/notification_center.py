@@ -141,9 +141,20 @@ class NotificationCenter(object):
 			return
 		notification = notifications[0]
 
-		# Construct content of message
-		template = 'messages/welcome_reminder.txt'
-		context = {'patient_first_name':to.first_name}
+		# Construct message 1 and send
+		if hasattr(notification.enroller, "doctorprofile"):
+			enroller = "Dr. " + notification.enroller.last_name
+		elif notification.enroller.pk != to.pk:
+			enroller = notification.enroller.first_name + " " + notification.enroller.last_name
+		else:
+			enroller = None
+		context = {'patient_first_name':to.first_name,
+		           'enroller':enroller}
+		template = 'messages/welcome_message_1.txt'
+		self.send_text_message(to=to, notifications=notification, template=template, context=context)
+
+		# Construct message 2 and send
+		template = 'messages/welcome_message_2.txt'
 		self.send_text_message(to=to, notifications=notification, template=template, context=context)
 
 		# Update DB

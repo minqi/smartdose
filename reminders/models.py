@@ -96,8 +96,8 @@ class NotificationManager(models.Manager):
 
 		return (refill_notification, notification_times)
 
-	def create_consumer_welcome_notification(self, to):
-		welcome_reminder = Notification.objects.get_or_create(to=to,
+	def create_consumer_welcome_notification(self, to, enroller):
+		welcome_reminder = Notification.objects.get_or_create(to=to, enroller=enroller,
 			type=Notification.WELCOME, repeat=Notification.NO_REPEAT)[0]
 		return welcome_reminder
 
@@ -173,6 +173,9 @@ class Notification(models.Model):
 	# Required type: REPEAT_MESSAGE
 	message             = models.ForeignKey('Message', null=True, blank=True, related_name="repeat_message")
 
+	# Required type: WELCOME
+	enroller            = models.ForeignKey(UserProfile, null=True, blank=True, related_name="enroller")
+
 
 
 	class Meta:
@@ -209,6 +212,10 @@ class Notification(models.Model):
 		if self.type in [Notification.REPEAT_MESSAGE]:
 			if self.message is None:
 				raise ValidationError("This type of notification requires a message pointer")
+
+		if self.type in [Notification.WELCOME]:
+			if self.enroller is None:
+				raise ValidationError("This type of notification requires an enroller")
 
 		if self.repeat == "":
 			raise ValidationError("All notifications require a repeat value")

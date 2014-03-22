@@ -93,14 +93,15 @@ class NotificationCenterTest(TestCase):
 		self.nc.send_notifications(to=self.patient1, notifications=self.med_notifications)
 		self.assertEqual(len(Message.objects.filter(to=self.patient1)), 0)
 
-		# see if a welcome message is sent
+		# see if both welcome messages are sent
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
+		                                                   enroller=self.patient1)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		# see if message is sent
-		self.assertEqual(len(Message.objects.filter(to=self.patient1)), 1)
+		self.assertEqual(len(Message.objects.filter(to=self.patient1)), 2)
 
 		# see if the patient's status is changed from NEW to ACTIVE
 		self.assertTrue(self.patient1.status == UserProfile.ACTIVE)
@@ -109,6 +110,51 @@ class NotificationCenterTest(TestCase):
 		welcome_notification = Notification.objects.filter(pk=welcome_notification.pk)[0]
 		self.assertTrue(welcome_notification.active == False)
 
+	def test_send_self_enrolled_welcome_notification(self):
+		now_datetime = datetime.datetime.now()
+		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
+		                                                   enroller=self.patient1)
+		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
+
+		messages = Message.objects.filter(to=self.patient1)
+		self.assertEqual(messages.count(), 2)
+		expected_message_1 = "Hi, Minqi! You signed up for Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		self.assertEqual(messages[1].content, expected_message_1)
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+\
+							 "For more info, you can visit www.smartdo.se"
+		self.assertEqual(messages[0].content, expected_message_2)
+
+	def test_send_safety_net_enrolled_welcome_notification(self):
+		now_datetime = datetime.datetime.now()
+		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
+		                                                   enroller=self.patient2)
+		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
+
+		messages = Message.objects.filter(to=self.patient1)
+		self.assertEqual(messages.count(), 2)
+		expected_message_1 = "Hi, Minqi! Matt Gaba is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		self.assertEqual(messages[1].content, expected_message_1)
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+ \
+		                     "For more info, you can visit www.smartdo.se"
+		self.assertEqual(messages[0].content, expected_message_2)
+
+	def test_send_doctor_net_enrolled_welcome_notification(self):
+		now_datetime = datetime.datetime.now()
+		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
+		                                                   enroller=self.doctor)
+		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
+
+		messages = Message.objects.filter(to=self.patient1)
+		self.assertEqual(messages.count(), 2)
+		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		self.assertEqual(messages[1].content, expected_message_1)
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+ \
+		                     "For more info, you can visit www.smartdo.se"
+		self.assertEqual(messages[0].content, expected_message_2)
+		
 	def test_send_refill_notifications(self):
 		# see if you can send refill notification
 		self.assertTrue(self.patient2.status == UserProfile.NEW)
@@ -194,7 +240,8 @@ class NotificationCenterTest(TestCase):
 		self.patient1.save()
 		now_datetime = datetime.datetime.now()
 		notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME, send_datetime=now_datetime,
-		                                           repeat=Notification.NO_REPEAT)
+		                                           repeat=Notification.NO_REPEAT,
+		                                           enroller=self.patient1)
 
 		self.nc.send_notifications(self.patient1, notification)
 		self.assertEqual(len(Message.objects.all()), 0)
@@ -217,7 +264,8 @@ class WelcomeMessageTest(TestCase):
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=datetime.date(year=1990, month=8, day=7))
 		Notification.objects.create(to=self.patient1, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
-		                            send_datetime=datetime.datetime.now())
+		                            send_datetime=datetime.datetime.now(),
+		                            enroller=self.patient1)
 	def test_welcome_message(self):
 		self.assertEqual(self.patient1.status, PatientProfile.NEW)
 		

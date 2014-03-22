@@ -65,7 +65,8 @@ class TestListToQuerySet(TestCase):
 			n = Notification.objects.create(to=self.patient1,
 			                                type=Notification.WELCOME,
 											 repeat=Notification.DAILY,
-											 send_datetime=send_datetime)
+											 send_datetime=send_datetime,
+											enroller=self.patient1)
 			test_list.append(n)
 			n_pks.append(n.pk)
 
