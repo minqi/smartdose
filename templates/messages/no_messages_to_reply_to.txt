@@ -1,0 +1,5 @@
+We didn't understand that response.
+
+To change the delivery time of your previous reminder, reply with a time (e.g., 9am).
+
+For info about your meds, reply m.

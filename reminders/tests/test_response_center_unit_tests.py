@@ -276,7 +276,6 @@ class ResponseCenterTest(TestCase):
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
 		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 		response = self.rc.process_medication_response(self.minqi, message, 'y')
-		self.assertEqual(response.content, 'Your family will be happy to know that you\'re taking care of your health.')
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, True)
 		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 
@@ -464,9 +463,8 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'booga booga')
-		expected_response = "We didn't understand that reply. Reply with a choice from the options above.\n\n"+ \
-							"For example, if you haven't gotten the chance to take your medicine, reply:\n"+ \
-							"a"
+		expected_response = "We didn't understand that reply. Reply with a letter matching the options above.\n\n"+ \
+							"For more information on how to use Smartdose, you can visit www.smartdo.se"
 		self.assertEqual(response.content, expected_response)
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
 
@@ -568,3 +566,83 @@ class ResponseCenterTest(TestCase):
 		content = self.rc._get_health_educational_content(self.minqi, message)
 		facts = [fact1, fact2]
 		self.assertIn(content, facts)
+
+	def test_quit_initial_quit(self):
+		message = 'q'
+		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+		self.assertEqual(self.minqi.quit_request_datetime, None)
+		response = self.rc.process_response(self.minqi, message)
+		self.assertEqual("Are you sure you'd like to quit? You can adjust your settings and learn more about Smartdose at PLACEHOLDER_URL. Reply 'quit' to quit using Smartdose.", response.content)
+		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
+		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
+	def test_quit_confirm_quit(self):
+		message = 'q'
+		self.minqi.quit_request_datetime = datetime.datetime.now()
+		self.minqi.save()
+		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+		self.assertNotEqual(self.minqi.quit_request_datetime, None)
+		response = self.rc.process_response(self.minqi, message)
+		self.assertEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
+		self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
+	def test_quit_long_after_initial_quit(self):
+		message = 'q'
+		self.minqi.quit_request_datetime = datetime.datetime.now() - datetime.timedelta(hours=2)
+		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+		response = self.rc.process_response(self.minqi, message)
+		self.assertEqual("Are you sure you'd like to quit? You can adjust your settings and learn more about Smartdose at PLACEHOLDER_URL. Reply 'quit' to quit using Smartdose.", response.content)
+		self.assertNotEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
+		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
+		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
+	def test_resume_for_quit_patient(self):
+		message = 'resume'
+		self.minqi.status = PatientProfile.QUIT
+		self.minqi.save()
+		response = self.rc.process_response(self.minqi, message)
+		self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.ACTIVE)
+		self.assertEqual("Welcome back to Smartdose.", response.content)
+
+	def test_resume_for_not_quit_patient(self):
+		message = 'resume'
+		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+		response = self.rc.process_response(self.minqi, message)
+		expected_response = "We didn't understand that response.\n\n"+\
+							"To change the delivery time of your previous reminder, reply with a time (e.g., 9am).\n\n"+\
+							"For info about your meds, reply m."
+		self.assertEqual(response.content, expected_response)
+
+	def test_is_time_change(self):
+		message = '9am'
+		expected_time = datetime.time(hour=9)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '10am'
+		expected_time = datetime.time(hour=10)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '10:27am'
+		expected_time = datetime.time(hour=10, minute=27)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '1027am'
+		expected_time = datetime.time(hour=10, minute=27)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '10'
+		expected_time = datetime.time(hour=10)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '109am'
+		expected_time = datetime.time(hour=1, minute=9)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '1pm'
+		expected_time = datetime.time(hour=13)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '12pm'
+		expected_time = datetime.time(hour=12)
+		self.assertEqual(self.rc.is_time_change(message), expected_time)
+		message = '13pm'
+		self.assertFalse(self.rc.is_time_change(message))
+		message = 'hello'
+		self.assertFalse(self.rc.is_time_change(message))
+		message = '31'
+		self.assertFalse(self.rc.is_time_change(message))
+		message = '10:2am'
+		self.assertFalse(self.rc.is_time_change(message))

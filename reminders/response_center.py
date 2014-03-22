@@ -1,5 +1,6 @@
 import glob
 import itertools
+import re
 from common.models import DrugFact
 from django.http import HttpResponseNotFound, HttpResponse
 from django.template import Context
@@ -11,15 +12,8 @@ import random
 
 
 class ResponseCenter(object):
-	@staticmethod
-	class Action:
-		ACK, QUIT, RESUME, UNKNOWN, NOT_VALID_MESSAGE = range(5)
 
-		def __init__(self):
-			pass
-
-
-	def _parse_is_ack(self, message):
+	def _is_ack(self, message):
 		""" Returns true if the message is an acknowledgment message
 		"""
 		message = message.replace("\'", "").replace("\"", "")  # Users may reply with quotation marks, so remove quotes
@@ -31,7 +25,7 @@ class ResponseCenter(object):
 		except ValueError:
 			return False
 
-	def _parse_is_quit(self, message):
+	def _is_quit(self, message):
 		""" Returns true if the message is a quit message
 		"""
 		if message.lower() == "q" or message.lower() == "quit":
@@ -47,72 +41,10 @@ class ResponseCenter(object):
 		else:
 			return False
 
-	def parse_message_to_action(self, sender, message):
-		""" Processes a message from sender and returns an action to perform
-			in response to the message.
-			sender is a PatientProfile object.
-			message is the content of the text message sent to Smartdose
-		"""
-		if message == None or sender == None:
-			return ResponseCenter.Action.NOT_VALID_MESSAGE
-
-		if self._parse_is_ack(message):
-			return ResponseCenter.Action.ACK
-		elif self._parse_is_quit(message):
-			return ResponseCenter.Action.QUIT
-		elif self._parse_is_resume(message):
-			return ResponseCenter.Action.RESUME
-		else:
-			return ResponseCenter.Action.UNKNOWN
-
-	def _get_adherence_ratio_ack_response_content(self, sender, acked_messages):
-		#TODO(mgaba): What kind of information should go in a message that reports
-		# adherence ratio to a patient? Is it adherence to a particular drug?
-		# Is it overall adherence? Over what time frame?
-		raise Exception("Not yet implemented")
-
-	def _get_motivational_ack_response_content(self, sender, acked_messages):
-		#TODO(mgaba): Add multiple motivational messages
-		content = render_to_string('messages/response_motivational_text_generic.txt')
-		return HttpResponse(content=content, content_type="text/plain")
-
-	def _get_best_ack_response_content(self, sender, acked_messages):
-		#TODO(mgaba): Ideas for other types of responses:
-		# Educational: Contains information about a drug you just acked
-		# Social: How adherent are others on the system?
-		# Family: How does your safety net feel when you take your medicine?
-		# Gamification: How many adherence points have you gained?
-		ack_message_types = [self._get_motivational_ack_response_content,
-		                     self._get_adherence_ratio_ack_response_content]
-
-		# When we're ready we can simply randomize the choice. In the future, use what we know about the user to
-		# choose the optimal type of message.
-		#return random.choice(ack_message_types)(sender,acked_messages)
-
-		# We will only call the motivational response for now. When we're ready, go to random approach that
-		# is commented out above.
-		return self._get_motivational_ack_response_content(sender, acked_messages)
-
-	def _process_not_valid_response(self):
+	def process_not_valid_response(self):
 		return HttpResponseNotFound()
 
-	def _process_ack_response(self, sender, message):
-		message_number = message.replace("\'", "").replace("\"",
-		                                                   "")  # Users may reply with quotation marks, so remove quotes
-		acked_messages = Message.objects.filter(patient=sender,
-		                                        message_number=message_number,
-		                                        state=Message.UNACKED)
-		if not acked_messages:
-			context = {'message_number': message_number}
-			content = render_to_string('messages/response_nothing_to_ack.txt', context)
-		else:
-			for acked_message in acked_messages:
-				acked_message.processAck()
-			content = self._get_best_ack_response_content(sender, acked_messages)
-
-		return HttpResponse(content=content, content_type="text/plain")
-
-	def _process_quit_response(self, sender):
+	def process_quit_response(self, sender):
 		if sender.did_request_quit_within_quit_response_window():
 			sender.quit()
 			content = render_to_string('messages/response_quit_is_confirmed.txt')
@@ -121,17 +53,11 @@ class ResponseCenter(object):
 			content = render_to_string('messages/response_quit_break_the_glass.txt')
 		return HttpResponse(content=content)
 
-	def _process_unknown_response(self):
-		content = render_to_string('messages/response_unknown.txt')
-		return HttpResponse(content=content, content_type="text/plain")
-
-	def _process_resume_response(self, sender):
+	def process_resume_response(self, sender):
 		if sender.did_quit():
 			sender.resume()
 			content = render_to_string('messages/response_resume_welcome_back.txt')
 			return HttpResponse(content=content, content_type="text/plain")
-		else:
-			return self._process_unknown_response()
 
 	def _get_adherence_ratio_ack_response_content(self, sender, acked_messages):
 		#TODO(mgaba): What kind of information should go in a message that reports
@@ -141,7 +67,7 @@ class ResponseCenter(object):
 
 	def _get_app_upsell_content(self, sender, acked_message):
 		# Select path to the appropriate upsell content
-		upsell_content_choices = glob.glob("templates/messages/medication_yes_responses/app_upsell/*.txt")
+		upsell_content_choices = glob.glob("templates/messages/medication_responses/yes_responses/app_upsell/*.txt")
 		remove_preceding_content = "templates/"
 		upsell_content	= random.choice(upsell_content_choices)
 		upsell_content = upsell_content[remove_preceding_content.__len__():]
@@ -158,7 +84,7 @@ class ResponseCenter(object):
 		dict = {'app_upsell_content' : upsell_content,
 		        'happy_person' : happy_person}
 		# TODO: Make this template so that if it gets too long it will choose the shorter name
-		content = render_to_string('messages/medication_yes_responses/app_upsell.txt', dict)
+		content = render_to_string('messages/medication_responses/app_upsell.txt', dict)
 		return content
 
 	def _get_health_educational_content(self, sender, acked_message):
@@ -200,6 +126,47 @@ class ResponseCenter(object):
 		else:
 			return False
 
+	def is_time_change(self, response):
+		# Parse time from response
+		time_with_minutes_re = "^(?P<hour>[0-9]{1,2})(:)?(?P<minute>[0-9][0-9])(\\s)?(?i)(?P<ampm>am|pm)?$"
+		time_without_minutes_re = "^(?P<hour>[0-9]{1,2})(\\s)?(?i)(?P<ampm>am|pm)?$"
+		time_res = [time_with_minutes_re, time_without_minutes_re]
+		for regex in time_res:
+			formatted_time = re.match(regex, response.lower())
+			if formatted_time:
+				break
+
+		if formatted_time:
+			extracted_hour = formatted_time.group("hour")
+			try:
+				extracted_minute = formatted_time.group("minute")
+			except:
+				extracted_minute = None
+			if int(extracted_hour) < 24:
+				hours = int(extracted_hour)
+			else:
+				return False
+			if extracted_minute:
+				if int(extracted_minute) < 60:
+					minutes = int(extracted_minute)
+				else:
+					return False
+			else:
+				minutes = 0
+
+			# Hours greater than 12 shouldn't have ampm. For example 13pm. Or 13am
+			if formatted_time.group("ampm") != "" and hours > 12:
+				return False
+
+			if formatted_time.group("ampm") == 'pm' and hours < 12:
+				hours = hours+12
+
+
+			time = datetime.time(hour=hours, minute=minutes)
+			return time
+		else:
+			return False
+
 	def process_medication_response(self, sender, message, response):
 		""" Process a response to a medication message
 		"""
@@ -218,7 +185,7 @@ class ResponseCenter(object):
 				feedback.save()
 
 			# Create new message
-			content = self._get_best_ack_response_content(sender, message)
+			content = self._return_best_ack_response_content(sender, message)
 			Message.objects.create(to=sender, type=Message.MEDICATION_ACK, previous_message=message, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
 
@@ -250,6 +217,16 @@ class ResponseCenter(object):
 		elif self.is_time_change(response):
 			# Update reminder time and send out a time change ack
 			pass
+		# Unknown response
+		else:
+			message.datetime_responded = None
+			message.save()
+			template = 'messages/unknown_response.txt'
+			content = render_to_string(template)
+			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			return HttpResponse(content=content, content_type='text/plain')
+
+
 
 	def process_medication_questionnaire_response(self, sender, message, response):
 		""" Process a response to a medication questionnaire message
@@ -316,7 +293,7 @@ class ResponseCenter(object):
 		else:
 			message.datetime_responded = None
 			message.save()
-			template = 'messages/medication_questionnaire_responses/Unknown_Response.txt'
+			template = 'messages/unknown_response.txt'
 			content = render_to_string(template)
 			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
@@ -370,6 +347,18 @@ class ResponseCenter(object):
 		message.save()
 		raise Exception("Not yet implemented")
 
+	def process_no_recent_message_response(self, sender, response):
+
+		if self.is_med_info(response):
+			raise Exception("Not yet implemented")
+		elif self.is_time_change(response):
+			raise Exception("Not yet implemented")
+		else:
+			template = "messages/no_messages_to_reply_to.txt"
+			content = render_to_string(template)
+			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			return HttpResponse(content=content, content_type='text/plain')
+
 
 	RESPONSE_MAP = \
 		{Message.MEDICATION: process_medication_response,
@@ -386,31 +375,18 @@ class ResponseCenter(object):
 		"""
 
 		if sender is None or (sender.did_quit() and not self._is_resume(response)):
-			return self._process_not_valid_response()
+			return self.process_not_valid_response()
 
 		# Generic logic for responding to any type of message goes here
-		# PUT IT HERE
+		if self._is_quit(response):
+			return self.process_quit_response(sender)
+		elif sender.did_quit() and self._is_resume(response):
+			return self.process_resume_response(sender)
 
 		last_sent_message = Message.objects.get_last_sent_message_requiring_response(to=sender)
+
 		if not last_sent_message:
-			#TODO Implement code for when there is no sent message
-			return HttpResponseNotFound()
+			return self.process_no_recent_message_response(sender, response)
+
 		return ResponseCenter.RESPONSE_MAP[last_sent_message.type](self, sender, last_sent_message, response)
 
-"""
-		elif action == ResponseCenter.Action.QUIT:
-			return self._process_quit_response(sender)
-		elif action == ResponseCenter.Action.RESUME:
-			return self._process_resume_response(sender)
-"""
-"""
-		if action == ResponseCenter.Action.NOT_VALID_MESSAGE or \
-			(sender and sender.did_quit() and action != ResponseCenter.Action.RESUME):
-			return self._process_not_valid_response()
-		elif action == ResponseCenter.Action.ACK:
-			return self._process_ack_response(sender, message)
-		elif action == ResponseCenter.Action.UNKNOWN:
-			return self._process_unknown_response()
-		else:
-			raise Exception("ResponseCenter asked to process an action it doesn't know about")
-			"""
