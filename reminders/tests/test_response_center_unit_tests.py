@@ -1,12 +1,14 @@
 import datetime
+from common.models import Drug, DrugFact
 from common.utilities import list_to_queryset
 from django.http import HttpResponseNotFound
 from django.test import TestCase
+from doctors.models import DoctorProfile
 import mock
 from patients.models import PatientProfile
-from reminders.models import Message
+from reminders.models import Message, Prescription, Notification, Feedback
 from reminders.response_center import ResponseCenter
-
+"""
 class RenderResponseFromActionTest(TestCase):
 	def setUp(self):
 		self.rc = ResponseCenter()
@@ -137,7 +139,7 @@ class RenderResponseFromActionTest(TestCase):
 		  self.rc.render_response_from_action(ResponseCenter.Action.MADE_UP_ACTION, self.minqi, message)
 
 
-class ParseMessageToActionTest(TestCase):
+class ResponseCenterTest(TestCase):
 	def setUp(self):
 		self.rc = ResponseCenter()
 		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
@@ -242,3 +244,327 @@ class ParseMessageToActionTest(TestCase):
 		unknown_sender = None
 		message = "1"
 		self.assertEqual(self.rc.parse_message_to_action(unknown_sender, message), ResponseCenter.Action.NOT_VALID_MESSAGE)
+"""
+
+class ResponseCenterTest(TestCase):
+	def setUp(self):
+		self.rc = ResponseCenter()
+		self.minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                           primary_phone_number="8569067308",
+		                                           birthday=datetime.date(year=1990, month=4, day=21),
+		                                           gender=PatientProfile.MALE,
+		                                           address_line1="4266 Cesar Chavez",
+		                                           postal_code="94131",
+		                                           city="San Francisco", state_province="CA", country_iso_code="US")
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
+		                                           primary_phone_number="2029163381", birthday=datetime.date(1960, 1, 1))
+		self.drug = Drug.objects.create(name='advil')
+		self.prescription = Prescription.objects.create(prescriber=self.doctor,
+		                                                 patient=self.minqi, drug=self.drug, filled=True)
+		self.notification = Notification.objects.create(to=self.minqi, type=Notification.MEDICATION,
+		                                                prescription=self.prescription, repeat=Notification.DAILY,
+		                                                send_datetime=datetime.datetime.now())
+
+	def test_process_medication_response_yes(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
+		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+		response = self.rc.process_medication_response(self.minqi, message, 'y')
+		self.assertEqual(response.content, 'Your family will be happy to know that you\'re taking care of your health.')
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, True)
+		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+
+	def test_process_medication_response_no(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
+		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		self.assertFalse(Message.objects.filter(type=Message.MEDICATION_QUESTIONNAIRE))
+		response = self.rc.process_medication_response(self.minqi, message, 'n')
+		expected_response = "Why not? Reply:\n" \
+		                    "a - Haven't gotten the chance\n" \
+		                    "b - Need to refill\n" \
+		                    "c - Side effects\n" \
+		                    "d - Meds don't work\n" \
+		                    "e - Prescription changed\n" \
+		                    "f - I feel sad :(\n" \
+		                    "g - Other"
+		self.assertEqual(response.content, expected_response)
+		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
+		self.assertTrue(Message.objects.filter(type=Message.MEDICATION_QUESTIONNAIRE))
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_a(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		self.assertFalse(Notification.objects.filter(type=Notification.REPEAT_MESSAGE))
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'a')
+		expected_response = "No problem. We'll send you another reminder in an hour."
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+		self.assertTrue(Notification.objects.filter(type=Notification.REPEAT_MESSAGE))
+
+	def test_process_medication_questionnaire_response_b(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'b')
+		expected_response = "We'll let your doctor's office know you need a refill."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_c(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'c')
+		expected_response = "We'll let your doctor know you've been having trouble with side effects."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_d(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'd')
+		expected_response = "We'll let your doctor know that you don't think your meds are having the correct effects."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_e(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'e')
+		expected_response = "We'll let your doctor know about your change in prescription."
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_f(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'f')
+		expected_response = "Confucious says, taking your meds is one small step to happiness. :)"
+		for feedback in preceding_message.feedbacks.all():
+			self.assertTrue(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_process_medication_questionnaire_response_unknown_response(self):
+		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		preceding_message.notifications.add(self.notification)
+		preceding_message.feedbacks.add(feedback)
+		preceding_message.save()
+		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		                                 previous_message=preceding_message)
+		for feedback in preceding_message.feedbacks.all():
+			message.feedbacks.add(feedback)
+
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+		for feedback in preceding_message.feedbacks.all():
+			self.assertFalse(feedback.note)
+			self.assertEqual(feedback.completed, False)
+		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'booga booga')
+		expected_response = "We didn't understand that reply. Reply with a choice from the options above.\n\n"+ \
+							"For example, if you haven't gotten the chance to take your medicine, reply:\n"+ \
+							"a"
+		self.assertEqual(response.content, expected_response)
+		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
+
+	def test_get_app_upsell_content(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		content = self.rc._get_app_upsell_content(self.minqi, message)
+		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
+							 "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+
+		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
+							 "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+
+		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+
+		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+		self.assertIn(content, expected_responses)
+
+	def test_get_app_upsell_content_with_safety_net(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		self.minqis_safety_net = PatientProfile.objects.create(
+			first_name='Jianna', last_name='Jiang', primary_phone_number='1234567890')
+		self.minqi.add_safety_net_contact(
+			target_patient=self.minqis_safety_net, relationship='mother')
+
+		content = self.rc._get_app_upsell_content(self.minqi, message)
+		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+
+		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+
+		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+
+		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+
+		expected_response5 = "Jianna will be happy you're taking care of your health.\n\n"+ \
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+
+		expected_response6 = "Jianna will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+
+		expected_response7 = "Jianna will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+
+		expected_response8 = "Jianna will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4,
+		                      expected_response5, expected_response6, expected_response7, expected_response8]
+		print content
+		self.assertIn(content, expected_responses)
+
+	def test_get_health_educational_content(self):
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self.prescription)
+		message.notifications.add(self.notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		# Test when there are no facts (same behavior as get_app_upsell_content)
+		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+
+		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+
+		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+
+		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+		content = self.rc._get_health_educational_content(self.minqi, message)
+		self.assertIn(content, expected_responses)
+
+		# Now test after we've added facts
+		fact1 = "That vitamin you're taking helps protect your immune system from deficiencies."
+		fact2 = "That vitamin you're taking gives you more energy."
+		DrugFact.objects.create(drug=self.prescription.drug, fact=fact1)
+		DrugFact.objects.create(drug=self.prescription.drug, fact=fact2)
+
+		content = self.rc._get_health_educational_content(self.minqi, message)
+		facts = [fact1, fact2]
+		self.assertIn(content, facts)

@@ -243,6 +243,75 @@ class ReminderDeliveryTest(TestCase):
 		self.assertEqual(messages[0]['to'], self.minqi.primary_phone_number)
 		self.assertEqual(messages[0]['content'], refill_content)
 
+	# TEST 5: Test the behavior after a user says "n" to a med reminder and answers a questionnaire
+	def test_medication_reminder_and_questionnaire_response(self):
+		# Minqi is signed up for his daily vitamin reminder
+		prescription = Prescription.objects.create(prescriber=self.bob,
+		                                           patient=self.minqi,
+		                                           drug=self.vitamin,
+		                                           filled=True,
+		                                           note="To make you strong")
+		delivery_time = self.current_time + datetime.timedelta(hours=3)
+		notification_schedule = [[Notification.DAILY, delivery_time]]
+		(refill_reminder, reminder_times) = \
+			Notification.objects.create_prescription_notifications_from_notification_schedule(
+				to=self.minqi,
+				prescription=prescription,
+				notification_schedule=notification_schedule)
+		# Mark Minqi as active so that he can receive reminders
+		self.minqi.status = PatientProfile.ACTIVE
+		self.minqi.save()
+		# Emulate the scheduler task and make sure no reminders are sent until it's time to send a reminder
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage(), None)
+		# Time is now expected_delivery_time, so make sure the message is sent
+		reminder_tasks.sendRemindersForNow()
+		message = SMSLogger.getLastSentMessage()
+		expected_content = "Time to take your:\n"+\
+						   "vitamin\n\n"+\
+						   "Did you take it?\n"+\
+						   "y - yes\n"+\
+						   "n - no\n\n"+\
+						   "To see med info reply m."
+
+
+		self.assertEqual(message['datetime_sent'], delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], expected_content)
+
+		# Send a no response and get back a questionnaire
+		c = Client()
+		response = c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'n'})
+		expected_content = "Why not? Reply:\n" \
+		                    "a - Haven't gotten the chance\n" \
+		                    "b - Need to refill\n" \
+		                    "c - Side effects\n" \
+		                    "d - Meds don't work\n" \
+		                    "e - Prescription changed\n" \
+		                    "f - I feel sad :(\n" \
+		                    "g - Other"
+		self.assertEqual(response.content, expected_content)
+
+		# Send an "a" response and get back a message
+		response = c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'a'})
+		expected_content = "No problem. We'll send you another reminder in an hour."
+		self.assertEqual(response.content, expected_content)
+
+		# Advance an hour to see if the message gets sent
+		delivery_time = delivery_time + datetime.timedelta(hours=1)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
+		reminder_tasks.sendRemindersForNow()
+		message = SMSLogger.getLastSentMessage()
+		expected_content = "Time to take your:\n"+ \
+		                   "vitamin\n\n"+ \
+		                   "Did you take it?\n"+ \
+		                   "y - yes\n"+ \
+		                   "n - no\n\n"+ \
+		                   "To see med info reply m."
+		self.assertEqual(message['datetime_sent'], delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], expected_content)
+
 	def test_primary_contact_delivery(self):
 		# create a primary contact
 		primary_contact = PatientProfile.objects.create(

@@ -21,9 +21,9 @@ class SafetyNetCenter(object):
 		if it's gone unacknowledged for longer than timeout.
 		"""
 		reminders = Feedback.objects.filter(
-			time_sent__gte=window_start,
-			time_sent__lte=window_finish,
-			notification__notification_type=Notification.MEDICATION).exclude(time_sent__gte=time - timeout)
+			datetime_sent__gte=window_start,
+			datetime_sent__lte=window_finish,
+			notification__type=Notification.MEDICATION).exclude(datetime_sent__gte=time - timeout)
 		# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
 		reminders = reminders.prefetch_related('notification').prefetch_related('notification__prescription')
 
@@ -38,7 +38,7 @@ class SafetyNetCenter(object):
 			for patient_reminder in patient_reminders:
 				if patient_reminder.prescription.safety_net_on:
 					dose_count += 1
-					if patient_reminder.ack == True:
+					if patient_reminder.completed == True:
 						acked_dose_count += 1
 			if dose_count != 0:
 				adherence_percentage_for_patients_list.append(
@@ -70,9 +70,10 @@ class SafetyNetCenter(object):
 					SafetyNetRelationship.objects.get(source_patient=patient, 
 						target_patient=safety_net_contact).target_to_source_relationship
 				message_body = render_to_string('messages/safety_net_message.txt', dictionary)
-				SafetyNetNotification.objects.create(to=safety_net_contact,
-				                                     safety_net_member=patient,
-				                                     adherence_rate=adherence_percentage)
+				Notification.objects.create(to=safety_net_contact, type=Notification.SAFETY_NET,
+				                            repeat=Notification.NO_REPEAT,
+				                            patient_of_safety_net=patient,
+				                            adherence_rate=adherence_percentage)
 
 	def schedule_safety_net_messages(self, window_start, window_finish, threshold, timeout):
 		"""

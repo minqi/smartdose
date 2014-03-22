@@ -1,0 +1,3 @@
+{{ happy_person }} will be happy you're taking care of your health.
+
+{% include app_upsell_content %}

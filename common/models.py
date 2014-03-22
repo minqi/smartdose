@@ -174,3 +174,8 @@ class Drug(models.Model):
 		if self.id:
 			return
 		self.name = self.name.lower()
+
+class DrugFact(models.Model):
+	"""Model for facts about drugs"""
+	fact = models.CharField(max_length=160)
+	drug = models.ForeignKey(Drug)

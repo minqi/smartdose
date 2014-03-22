@@ -39,6 +39,24 @@ class NotificationCenter(object):
 			return tuple(chunks)
 		return
 
+	def resend_text_message(self, to, message):
+		"""
+		Resend a previously sent message <message> to patient <to>.
+		"""
+
+		# Perform record keeping in DB
+		new_message = Message.objects.create(to=to, type=message.type, content=message.content, previous_message=message,
+		                                     nth_message_of_day_of_type=message.nth_message_of_day_of_type)
+		for notification in message.notifications.all():
+			new_message.notifications.add(notification)
+		for feedback in message.feedbacks.all():
+			new_message.feedbacks.add(feedback)
+
+
+		# send message
+		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
+		sendTextMessageToNumber(message.content, primary_phone_number)
+
 	def send_text_message(self, to, notifications, template=None, context=None, body=None):
 		"""
 		Send text message to patient <to>, where message body is a message template <template>
@@ -54,10 +72,13 @@ class NotificationCenter(object):
 		if notifications.__class__ == Notification:
 			notifications = [notifications]
 
+		# compose message
+		body = render_to_string(template, context)
+		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
 
 		# Perform record keeping in DB
 		type = notifications[0].type
-		message = Message.objects.create(to=to, type=type)
+		message = Message.objects.create(to=to, type=type, content=body)
 		for one_notification in notifications:
 			message.notifications.add(one_notification)
 			one_notification.update_to_next_send_time()
@@ -68,9 +89,6 @@ class NotificationCenter(object):
 				message.feedbacks.add(feedback)
 
 
-		# send message
-		body = render_to_string(template, context)
-		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
 		sendTextMessageToNumber(body, primary_phone_number)
 
 	def send_refill_notifications(self, to, notifications):
@@ -86,7 +104,7 @@ class NotificationCenter(object):
 
 		for notification_group in notification_groups:
 			# Construct content of message
-			template = 'messages/refill_reminder.txt'
+			template = 'messages/refill_message.txt'
 			def get_drug_name(notification):
 				return notification.prescription.drug.name
 			prescription_names = list(itertools.imap(get_drug_name, notification_group))
@@ -107,7 +125,7 @@ class NotificationCenter(object):
 
 		for notification_group in notification_groups:
 			# Construct content of message
-			template = 'messages/medication_reminder.txt'
+			template = 'messages/medication_message.txt'
 			def get_drug_name(notification):
 				return notification.prescription.drug.name
 			prescription_names = list(itertools.imap(get_drug_name, notification_group))
@@ -129,9 +147,6 @@ class NotificationCenter(object):
 		self.send_text_message(to=to, notifications=notification, template=template, context=context)
 
 		# Update DB
-		for notification in notifications:
-			notification.active = False
-			notification.save()
 		to.status = UserProfile.ACTIVE
 		to.save()
 
@@ -151,10 +166,6 @@ class NotificationCenter(object):
 			context = {'adherence_percentage':notification.adherence_rate}
 			self.send_text_message(to=to, notifications=notification, template=template, context=context)
 
-			# Update DB
-			notification.active = False
-			notification.save()
-
 	def send_static_one_off_notifications(self, to, notifications):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
@@ -168,6 +179,19 @@ class NotificationCenter(object):
 		for notification in notifications:
 			# Construct content of message
 			self.send_text_message(to=to, notifications=notification, body=notification.content)
+
+	def send_repeat_message_notifications(self, to, notifications):
+		"""
+		Send repeat message notifications in QuerySet <notifications> to recipient <to>
+		"""
+		notifications = notifications.filter(to=to, type=Notification.REPEAT_MESSAGE)
+
+		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
+			return
+
+		notifications = notifications.order_by("send_datetime")
+		for notification in notifications:
+			self.resend_text_message(to=to, message=notification.message)
 
 
 	def send_notifications(self, to, notifications):
@@ -189,3 +213,4 @@ class NotificationCenter(object):
 		self.send_medication_notifications(to, notifications)
 		self.send_safetynet_notifications(to, notifications)
 		self.send_static_one_off_notifications(to, notifications)
+		self.send_repeat_message_notifications(to, notifications)

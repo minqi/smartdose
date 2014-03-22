@@ -72,7 +72,7 @@ class NotificationCenterTest(TestCase):
 		self.patient1.status = UserProfile.ACTIVE
 		sent_time = datetime.datetime.now()
 		self.nc.send_text_message(to=self.patient1, notifications=self.med_notifications,
-			template='messages/medication_reminder.txt', context={'reminder_list':list(self.med_notifications)})
+			template='messages/medication_message.txt', context={'reminder_list':list(self.med_notifications)})
 
 		# see if the right messages are created
 		self.assertEqual(len(Message.objects.filter(to=self.patient1)), 1)
@@ -161,6 +161,32 @@ class NotificationCenterTest(TestCase):
 		# check that safety-net notification is deactivated
 		self.safetynet_notification = Notification.objects.get(pk=self.safetynet_notification.pk)
 		self.assertTrue(self.safetynet_notification.active == False)
+
+	def test_send_repeat_message_notifications(self):
+		# Prepare initial med reminder to send
+		self.patient2.status = UserProfile.ACTIVE
+		self.prescription2.filled = True
+		self.prescription2.save()
+		# Send initial med reminder
+		self.assertEqual(len(Message.objects.filter(to=self.patient2)), 0)
+		self.nc.send_notifications(to=self.patient2, notifications=self.med_reminder)
+		self.assertEqual(len(Message.objects.filter(to=self.patient2)), 1)
+		# Get the message object that was created by sending
+		message = Message.objects.filter(to=self.patient2)[0]
+		repeat_notification = Notification.objects.create(to=self.patient2, type=Notification.REPEAT_MESSAGE,
+		                                                  repeat=Notification.NO_REPEAT,
+		                                                  message = message,
+		                                                  send_datetime=datetime.datetime.now())
+		self.nc.send_notifications(to=self.patient2, notifications=repeat_notification)
+		messages = Message.objects.filter(to=self.patient2)
+		original_message = messages[0]
+		new_message = messages[1]
+		self.assertEqual(len(Message.objects.filter(to=self.patient2)), 2)
+		self.assertEqual(original_message.type, new_message.type)
+		for feedback in new_message.feedbacks.all():
+			self.assertIn(feedback, original_message.feedbacks.all())
+		for notification in new_message.notifications.all():
+			self.assertIn(notification, original_message.notifications.all())
 
 	def test_send_notifications_deactivated_user(self):
 		# Should not send messages to deactivated account

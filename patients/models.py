@@ -9,10 +9,12 @@ from common.models import UserProfile, UserProfileManager
 
 
 class SafetyNetRelationship(models.Model):
-	# what the patient calls this safety net contact
+	# The patient
 	source_patient = models.ForeignKey('PatientProfile', related_name='target_patient_safety_net')
+	# The safety net member/primary contact
 	target_patient = models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
 
+	# what the patient calls this safety net contact
 	source_to_target_relationship		= \
 		models.CharField(null=False, blank=False, max_length=20, 
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
