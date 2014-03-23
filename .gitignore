@@ -1,5 +1,4 @@
 *.pyc
-*.png
 *~
 .venv/
 fake_datasources/*

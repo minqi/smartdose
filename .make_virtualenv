@@ -1,4 +1,4 @@
-if ! [-d .venv];
+if ! [ -d .venv ];
 then
 	virtualenv --no-site-packages --distribute .venv
 fi
