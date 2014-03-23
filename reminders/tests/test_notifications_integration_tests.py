@@ -573,6 +573,8 @@ class TestSafetyNetDelivery(TestCase):
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'w', settings.SMS_ENCODING) # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close()
 		self.client = Client()
+	def tearDown(self):
+		self.freezer.stop()
 
 	# Test the case where Minqi goes a week without acknowledging his medication
 	def test_nonadherent_message(self):

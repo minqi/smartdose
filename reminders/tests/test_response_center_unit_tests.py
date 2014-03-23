@@ -271,6 +271,7 @@ class ResponseCenterTest(TestCase):
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
 		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
 		self.assertEqual(response.content, expected_response)
+		freezer.stop()
 
 
 	def test_process_refill_questionnaire_response_a(self):
