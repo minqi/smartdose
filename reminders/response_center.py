@@ -498,7 +498,7 @@ class ResponseCenter(object):
 		message.save()
 
 		previous_message = message.previous_message
-		while hasattr(previous_message, "previous_message"):
+		while hasattr(previous_message, "previous_message") and previous_message.previous_message != None:
 			previous_message = previous_message.previous_message
 
 		for feedback in previous_message.feedbacks.all():
@@ -506,7 +506,7 @@ class ResponseCenter(object):
 			feedback.datetime_responded=now
 			feedback.save()
 
-		template = 'message/response_open_ended_question.txt'
+		template = 'messages/response_open_ended_question.txt'
 		content = render_to_string(template)
 		new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
 		return HttpResponse(content=content, content_type='text/plain')
