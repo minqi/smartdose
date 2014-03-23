@@ -7,7 +7,7 @@ from common.models import UserProfile, Drug
 from common.utilities import SMSLogger
 from patients.models import PatientProfile
 from doctors.models import DoctorProfile
-from reminders.models import Notification, Prescription, Message
+from reminders.models import Notification, Prescription, Message, Feedback
 from reminders import tasks as reminder_tasks
 
 from freezegun import freeze_time
@@ -41,13 +41,14 @@ class EndToEndScenariosTest(TestCase):
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'w', settings.SMS_ENCODING) # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close()
+	def tearDown(self):
+		self.freezer.stop()
 
 	# 1. Patient is enrolled in Smartdose
 	# 2. Patient picks up prescriptions from pharmacy
 	# 3. Patient takes first med with no problem
 	# 4. Patient forgets second med because he hasn't gotten the chance.
 	# 5. He waits an hour and then takes it when he gets the second reminder
-
 	def scenario_one(self):
 		# Simulate enrolling the patient
 		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
@@ -205,6 +206,76 @@ class EndToEndScenariosTest(TestCase):
 		self.assertEqual(medication_reminder['datetime_sent'], fourth_reminder_delivery_time)
 		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
 		self.assertEqual(medication_reminder['content'], expected_message_6)
+
+	# 1. Patient is enrolled in Smartdose
+	# 2. Patient does not pick up medication because his car broke down
+	# 3. Patient reports that his car broke down
+	def scenario_two(self):
+		# Simulate enrolling the patient
+		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                      primary_phone_number="8569067308",
+		                                      birthday=datetime.date(year=1990, month=4, day=21),
+		                                      gender=PatientProfile.MALE,
+		                                      address_line1="4266 Cesar Chavez",
+		                                      postal_code="94131",
+		                                      city="San Francisco", state_province="CA", country_iso_code="US")
+		prescription = Prescription.objects.create(prescriber=self.bob,
+		                                           patient=minqi,
+		                                           drug=self.vitamin,
+		                                           note="To make you strong")
+		welcome_delivery_time = self.current_time + datetime.timedelta(hours=3)
+		notification_schedule = [[Notification.DAILY, welcome_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=minqi,
+		                                                                                  prescription=prescription,
+		                                                                                  notification_schedule=notification_schedule)
+		Notification.objects.create(to=minqi, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
+		                            send_datetime=welcome_delivery_time, enroller=self.bob)
+
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, welcome_delivery_time,
+		                                                                            datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage(), None)
+		reminder_tasks.sendRemindersForNow()
+		# There should have been 3 messages delivered: two welcome messages and a refill message
+		messages = SMSLogger.getLastNSentMessages(3)
+		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose to improve your medication experience. "+ \
+		                     "You can reply 'q' at any time to quit."
+		self.assertEqual(messages[0]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[0]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[0]['content'], expected_message_1)
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose " \
+		                     "at the right time.\n\n" \
+		                     "For more info, you can visit www.smartdo.se"
+		self.assertEqual(messages[1]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[1]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[1]['content'], expected_message_2)
+		expected_message_3 = "Have you picked up your new meds from the pharmacy? Reply:\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see your meds reply m."
+		self.assertEqual(messages[2]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[2]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[2]['content'], expected_message_3)
+
+		# Minqi responds 'n' to the message five minutes later
+		five_minutes_later = self.current_time + datetime.timedelta(minutes=5)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, five_minutes_later, datetime.timedelta(minutes=1))
+
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'n' })
+		expected_response = "Why not? Reply:\n" \
+		                    "a - Haven't gotten the chance\n" \
+		                    "b - Too expensive\n" \
+		                    "c - Concerned about side effects\n" \
+		                    "d - Other"
+		self.assertEqual(response.content, expected_response)
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'d' })
+		expected_response = "Please tell us more. We'll pass it along to your doctor."
+		self.assertEqual(response.content, expected_response)
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':"My car broke down, so I won't be able to go for the next three days" })
+		expected_response = "Thanks for sharing. We'll pass it along to your doctor."
+		self.assertEqual(response.content, expected_response)
+		feedback = Feedback.objects.filter(prescription=prescription)
+		self.assertEqual(feedback[0].note, "My car broke down, so I won't be able to go for the next three days")
+
 
 
 class ReminderDeliveryTest(TestCase):
@@ -503,6 +574,8 @@ class TestSafetyNetDelivery(TestCase):
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'w', settings.SMS_ENCODING) # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close()
 		self.client = Client()
+	def tearDown(self):
+		self.freezer.stop()
 
 	# Test the case where Minqi goes a week without acknowledging his medication
 	def test_nonadherent_message(self):

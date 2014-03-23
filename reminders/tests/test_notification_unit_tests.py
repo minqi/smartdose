@@ -336,17 +336,6 @@ class UpdateSendDateTimeTest(TestCase):
 		self.assertTrue((self.n_yearly.send_datetime.year - future_datetime.year) == 1)
 		freezer.stop()
 
-class TestHelper():
-	@staticmethod
-	def advance_test_time_to_end_time_and_emulate_reminder_periodic_task(test, end_time, period):
-		""" Advance test.current_time to end_time running sendRemindersForNow every period, where period is a timedelta object
-		"""
-		while test.current_time < end_time:
-			reminder_tasks.sendRemindersForNow()
-			test.current_time = test.current_time + period
-			test.freezer = freeze_time(test.current_time)
-			test.freezer.start()
-
 class TestSafetyNetTemplate(TestCase):
 
 	def test_adherent_template_male_response(self):

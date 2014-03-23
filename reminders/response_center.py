@@ -13,18 +13,6 @@ import random
 
 class ResponseCenter(object):
 
-	def _is_ack(self, message):
-		""" Returns true if the message is an acknowledgment message
-		"""
-		message = message.replace("\'", "").replace("\"", "")  # Users may reply with quotation marks, so remove quotes
-		try:
-			if float(message) >= 0:
-				return True
-			else:
-				return False
-		except ValueError:
-			return False
-
 	def _is_quit(self, message):
 		""" Returns true if the message is a quit message
 		"""
@@ -329,6 +317,7 @@ class ResponseCenter(object):
 				notification.active = False
 				notification.save()
 
+			# Calculate the time of the next earliest notification to put in the message that gets sent back
 			earliest_notification = None
 			now = datetime.datetime.now()
 			for feedback in feedbacks:
@@ -341,6 +330,7 @@ class ResponseCenter(object):
 					if earliest_notification == None or earliest_notification.send_datetime - now > med_notification.send_datetime - now:
 						earliest_notification = med_notification
 
+			# Convert the time of the next earliest notification to a string for the template
 			hour = earliest_notification.send_datetime.hour
 			minute = earliest_notification.send_datetime.minute
 			if hour == 0:
@@ -508,7 +498,7 @@ class ResponseCenter(object):
 		message.save()
 
 		previous_message = message.previous_message
-		while hasattr(previous_message, "previous_message"):
+		while hasattr(previous_message, "previous_message") and previous_message.previous_message != None:
 			previous_message = previous_message.previous_message
 
 		for feedback in previous_message.feedbacks.all():
@@ -516,7 +506,7 @@ class ResponseCenter(object):
 			feedback.datetime_responded=now
 			feedback.save()
 
-		template = 'message/response_open_ended_question.txt'
+		template = 'messages/response_open_ended_question.txt'
 		content = render_to_string(template)
 		new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
 		return HttpResponse(content=content, content_type='text/plain')
