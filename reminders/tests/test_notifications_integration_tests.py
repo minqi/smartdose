@@ -1,15 +1,17 @@
-import codecs
-from django.test import TestCase
-from common.models import UserProfile, Drug
-from django.test import Client
-from doctors.models import DoctorProfile
-from freezegun import freeze_time
-from patients.models import PatientProfile
-from reminders.models import ReminderTime, Prescription, Message, SentReminder
-from reminders import tasks as reminder_tasks
-from common.utilities import SMSLogger
+import datetime, codecs
+
+from django.test import TestCase, Client
+
 from configs.dev import settings
-import datetime
+from common.models import UserProfile, Drug
+from common.utilities import SMSLogger
+from patients.models import PatientProfile
+from doctors.models import DoctorProfile
+from reminders.models import Notification, Prescription, Message
+from reminders import tasks as reminder_tasks
+
+from freezegun import freeze_time
+
 
 class TestHelper():
 	@staticmethod
@@ -21,6 +23,189 @@ class TestHelper():
 			test.current_time = test.current_time + period
 			test.freezer = freeze_time(test.current_time)
 			test.freezer.start()
+
+class EndToEndScenariosTest(TestCase):
+	def setUp(self):
+		self.vitamin = Drug.objects.create(name="vitamin")
+		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
+		                                        primary_phone_number="2029163381",
+		                                        username="2029163381",
+		                                        birthday=datetime.date(year=1960, month=10, day=20),
+		                                        address_line1="4262 Cesar Chavez", postal_code="94131",
+		                                        city="San Francisco", state_province="CA", country_iso_code="US")
+		# Set the time the test should begin
+		self.current_time = datetime.datetime(year=2013, month=10, day=13, hour=11, minute=0)
+		self.freezer = freeze_time(self.current_time)
+		self.freezer.start()
+		self.client = Client()
+		settings.MESSAGE_LOG_FILENAME="test_message_output"
+		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'w', settings.SMS_ENCODING) # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
+		f.close()
+
+	# 1. Patient is enrolled in Smartdose
+	# 2. Patient picks up prescriptions from pharmacy
+	# 3. Patient takes first med with no problem
+	# 4. Patient forgets second med because he hasn't gotten the chance.
+	# 5. He waits an hour and then takes it when he gets the second reminder
+
+	def scenario_one(self):
+		# Simulate enrolling the patient
+		minqi = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                           primary_phone_number="8569067308",
+		                                           birthday=datetime.date(year=1990, month=4, day=21),
+		                                           gender=PatientProfile.MALE,
+		                                           address_line1="4266 Cesar Chavez",
+		                                           postal_code="94131",
+		                                           city="San Francisco", state_province="CA", country_iso_code="US")
+		prescription = Prescription.objects.create(prescriber=self.bob,
+		                                           patient=minqi,
+		                                           drug=self.vitamin,
+		                                           note="To make you strong")
+		welcome_delivery_time = self.current_time + datetime.timedelta(hours=3)
+		notification_schedule = [[Notification.DAILY, welcome_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
+		Notification.objects.create(to=minqi, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
+		                            send_datetime=welcome_delivery_time, enroller=self.bob)
+
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, welcome_delivery_time,
+		                                                                            datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage(), None)
+		reminder_tasks.sendRemindersForNow()
+		# There should have been 3 messages delivered: two welcome messages and a refill message
+		messages = SMSLogger.getLastNSentMessages(3)
+		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose to improve your medication experience. "+\
+							 "You can reply 'q' at any time to quit."
+		self.assertEqual(messages[0]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[0]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[0]['content'], expected_message_1)
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose " \
+		                     "at the right time.\n\n" \
+		                     "For more info, you can visit www.smartdo.se"
+		self.assertEqual(messages[1]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[1]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[1]['content'], expected_message_2)
+		expected_message_3 = "Have you picked up your new meds from the pharmacy? Reply:\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see your meds reply m."
+		self.assertEqual(messages[2]['datetime_sent'], welcome_delivery_time)
+		self.assertEqual(messages[2]['to'], minqi.primary_phone_number)
+		self.assertEqual(messages[2]['content'], expected_message_3)
+
+		# Minqi responds 'y' to the message five minutes later
+		five_minutes_later = self.current_time + datetime.timedelta(minutes=5)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, five_minutes_later, datetime.timedelta(minutes=1))
+
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'y' })
+		expected_response = "Great. You'll receive your first reminder tomorrow at 2:00pm. To change the time of your " \
+		                    "reminder, visit smartdo.se/1234567890/r?c=12345"
+		self.assertEqual(response.content, expected_response)
+
+		# Advance to 2:00pm the following day to see if we make good on our promise to Minqi.
+		first_reminder_delivery_time = datetime.datetime.combine(self.current_time.date() + datetime.timedelta(days=1),
+																 datetime.time(hour=14))
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, first_reminder_delivery_time,
+		                                                                            datetime.timedelta(minutes=5))
+		self.assertEqual(SMSLogger.getLastSentMessage()['datetime_sent'], welcome_delivery_time)
+		reminder_tasks.sendRemindersForNow()
+		# There should be a medication reminder for Minqi.
+		medication_reminder = SMSLogger.getLastSentMessage()
+		expected_message_4 = "Time to take your:\n" \
+		                     "Vitamin\n\n" \
+		                     "Did you take it?\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see med info reply m."
+		self.assertEqual(medication_reminder['datetime_sent'], first_reminder_delivery_time)
+		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
+		self.assertEqual(medication_reminder['content'], expected_message_4)
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'y' })
+		expected_response_fragment = "happy you're taking care"
+		self.assertIn(expected_response_fragment, response.content)
+
+		# Advance to 2:00pm the following day for the next reminder
+		second_reminder_delivery_time = datetime.datetime.combine(self.current_time.date() + datetime.timedelta(days=1),
+		                                                         datetime.time(hour=14))
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, second_reminder_delivery_time,
+		                                                                            datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage()['datetime_sent'], first_reminder_delivery_time)
+		reminder_tasks.sendRemindersForNow()
+		# There should be a medication reminder for Minqi.
+		medication_reminder = SMSLogger.getLastSentMessage()
+		expected_message_4 = "Time to take your:\n" \
+		                     "Vitamin\n\n" \
+		                     "Did you take it?\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see med info reply m."
+		self.assertEqual(medication_reminder['datetime_sent'], second_reminder_delivery_time)
+		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
+		self.assertEqual(medication_reminder['content'], expected_message_4)
+		# He says he didn't take it and gets a response
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'n' })
+		expected_response_fragment = "Why not?"
+		self.assertIn(expected_response_fragment, response.content)
+		# He says the reason was he didn't get the chance (a)
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'a' })
+		expected_response_fragment = "No problem. We'll send you another reminder in an hour."
+		self.assertEqual(expected_response_fragment, response.content)
+
+		# He should get a reminder an hour later
+		followup_reminder_delivery_time = second_reminder_delivery_time + datetime.timedelta(hours=1)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, followup_reminder_delivery_time,
+		                                                                            datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage()['datetime_sent'], second_reminder_delivery_time)
+		reminder_tasks.sendRemindersForNow()
+		medication_reminder = SMSLogger.getLastSentMessage()
+		expected_message_5 = "Time to take your:\n" \
+		                     "Vitamin\n\n" \
+		                     "Did you take it?\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see med info reply m."
+		self.assertEqual(medication_reminder['datetime_sent'], followup_reminder_delivery_time)
+		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
+		self.assertEqual(medication_reminder['content'], expected_message_5)
+		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':'y' })
+		expected_response_fragment = "happy you're taking care"
+		self.assertIn(expected_response_fragment, response.content)
+
+		# Now let's go to the next day to be sure the reminder is sent at the correct time.
+		third_reminder_delivery_time = second_reminder_delivery_time + datetime.timedelta(days=1)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, third_reminder_delivery_time,
+		                                                                            datetime.timedelta(minutes=10))
+		self.assertEqual(SMSLogger.getLastSentMessage()['datetime_sent'], followup_reminder_delivery_time)
+		reminder_tasks.sendRemindersForNow()
+		medication_reminder = SMSLogger.getLastSentMessage()
+		expected_message_6 = "Time to take your:\n" \
+		                     "Vitamin\n\n" \
+		                     "Did you take it?\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see med info reply m."
+		self.assertEqual(medication_reminder['datetime_sent'], third_reminder_delivery_time)
+		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
+		self.assertEqual(medication_reminder['content'], expected_message_6)
+
+		# And once more, to be sure the followup isn't lingering
+		fourth_reminder_delivery_time = third_reminder_delivery_time + datetime.timedelta(days=1)
+		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, fourth_reminder_delivery_time,
+		                                                                            datetime.timedelta(hours=1))
+		self.assertEqual(SMSLogger.getLastSentMessage()['datetime_sent'], third_reminder_delivery_time)
+		reminder_tasks.sendRemindersForNow()
+		medication_reminder = SMSLogger.getLastSentMessage()
+		expected_message_6 = "Time to take your:\n" \
+		                     "Vitamin\n\n" \
+		                     "Did you take it?\n" \
+		                     "y - yes\n" \
+		                     "n - no\n\n" \
+		                     "To see med info reply m."
+		self.assertEqual(medication_reminder['datetime_sent'], fourth_reminder_delivery_time)
+		self.assertEqual(medication_reminder['to'], minqi.primary_phone_number)
+		self.assertEqual(medication_reminder['content'], expected_message_6)
+
 
 class ReminderDeliveryTest(TestCase):
 	def setUp(self):
@@ -48,7 +233,7 @@ class ReminderDeliveryTest(TestCase):
 	def tearDown(self):
 		self.freezer.stop()
 
-	# TEST 1: Test that a refill reminder is delivered daily.
+	# Test that a refill reminder is delivered daily.
 	def test_daily_delivery(self):
 		# Minqi is signed up for his daily vitamin reminder. He'll receive refill reminders
 		prescription = Prescription.objects.create(prescriber=self.bob,
@@ -56,10 +241,10 @@ class ReminderDeliveryTest(TestCase):
 		                                           drug=self.vitamin,
 		                                           note="To make you strong")
 		expected_delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[ReminderTime.DAILY, expected_delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
+		notification_schedule = [[Notification.DAILY, expected_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
 		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		                                                                          notification_schedule=notification_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
@@ -84,7 +269,7 @@ class ReminderDeliveryTest(TestCase):
 		self.assertEqual(message['datetime_sent'], expected_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
-	# TEST 2: Test that a prescription reminder is delivered bi-weekly.
+	# Test that a prescription reminder is delivered bi-weekly.
 	def test_biweekly_delivery(self):
 		# Minqi is signed up for his biweekly vitamin reminder
 		prescription = Prescription.objects.create(prescriber=self.bob,
@@ -97,10 +282,10 @@ class ReminderDeliveryTest(TestCase):
 		self.minqi.save()
 		sunday_delivery_time = self.current_time + datetime.timedelta(hours=3)
 		tuesday_delivery_time = sunday_delivery_time + datetime.timedelta(days=2)
-		reminder_schedule = [[ReminderTime.WEEKLY, sunday_delivery_time], [ReminderTime.WEEKLY, tuesday_delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
+		notification_schedule = [[Notification.WEEKLY, sunday_delivery_time], [Notification.WEEKLY, tuesday_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
 		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		                                                                          notification_schedule=notification_schedule)
 		# Test the first weeks worth of messages
 		# Emulate the scheduler task and make sure no reminders are sent
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, sunday_delivery_time, datetime.timedelta(hours=1))
@@ -147,7 +332,7 @@ class ReminderDeliveryTest(TestCase):
 		self.assertEqual(message['datetime_sent'], tuesday_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
-	# TEST 3: Test that a prescription reminder is delivered monthly
+	# Test that a prescription reminder is delivered monthly
 	def test_monthly_delivery(self):
 		# Minqi is signed up for his daily vitamin reminder
 		prescription = Prescription.objects.create(prescriber=self.bob,
@@ -159,10 +344,10 @@ class ReminderDeliveryTest(TestCase):
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
 		expected_delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[ReminderTime.MONTHLY, expected_delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.MONTHLY, expected_delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																			  prescription=prescription,
+																			  notification_schedule=notification_schedule)
 		# Test the first months message
 		# Emulate the scheduler task and make sure no reminders are sent
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, expected_delivery_time, datetime.timedelta(hours=1))
@@ -185,63 +370,74 @@ class ReminderDeliveryTest(TestCase):
 		self.assertEqual(message['datetime_sent'], expected_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 
-	# TEST 4: Test the behavior after a user acks a refill reminder
-	def test_refill_ack_and_medication_reminder(self):
+	# Test the behavior after a user says "n" to a med reminder and answers a questionnaire
+	def test_medication_reminder_and_questionnaire_response(self):
 		# Minqi is signed up for his daily vitamin reminder
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
 		                                           drug=self.vitamin,
+		                                           filled=True,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=3)
-		reminder_schedule = [[ReminderTime.DAILY, delivery_time]]
+		notification_schedule = [[Notification.DAILY, delivery_time]]
 		(refill_reminder, reminder_times) = \
-			ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(
+			Notification.objects.create_prescription_notifications_from_notification_schedule(
 				to=self.minqi,
 				prescription=prescription,
-				reminder_schedule=reminder_schedule)
+				notification_schedule=notification_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
 		# Emulate the scheduler task and make sure no reminders are sent until it's time to send a reminder
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
 		self.assertEqual(SMSLogger.getLastSentMessage(), None)
-		# Time is delivery_time so make sure a refill reminder is sent
-		refill_content = "It's important you fill your " + self.vitamin.name + " prescription as soon as possible. Reply '1' when you've received your medicine."
+		# Time is now expected_delivery_time, so make sure the message is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
+		expected_content = "Time to take your:\n"+\
+						   "Vitamin\n\n"+\
+						   "Did you take it?\n"+\
+						   "y - yes\n"+\
+						   "n - no\n\n"+\
+						   "To see med info reply m."
+
+
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
-		self.assertEqual(message['content'], refill_content)
-		# User acknowledges they have received their prescription an hour after receiving refill reminder
-		self.current_time = self.current_time + datetime.timedelta(hours=1)
-		self.freezer = freeze_time(self.current_time)
-		self.freezer.start()
-		c = Client()
-		c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': '1'})
+		self.assertEqual(message['content'], expected_content)
 
-		updated_reminder = ReminderTime.objects.get(pk=reminder_times[0].pk)
-		if delivery_time < self.current_time + datetime.timedelta(hours=1):
-			self.assertTrue((updated_reminder.send_time.date() - delivery_time.date()).days == 1)
-		else:
-			self.assertTrue((updated_reminder.send_time.date() - delivery_time.date()).days == 0)
-		# Advance time another day and be sure no reminders are sent
-		old_delivery_time = delivery_time
-		delivery_time = delivery_time + datetime.timedelta(hours=24)
+		# Send a no response and get back a questionnaire
+		c = Client()
+		response = c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'n'})
+		expected_content = "Why not? Reply:\n" \
+		                    "a - Haven't gotten the chance\n" \
+		                    "b - Need to refill\n" \
+		                    "c - Side effects\n" \
+		                    "d - Meds don't work\n" \
+		                    "e - Prescription changed\n" \
+		                    "f - I feel sad :(\n" \
+		                    "g - Other"
+		self.assertEqual(response.content, expected_content)
+
+		# Send an "a" response and get back a message
+		response = c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'a'})
+		expected_content = "No problem. We'll send you another reminder in an hour."
+		self.assertEqual(response.content, expected_content)
+
+		# Advance an hour to see if the message gets sent
+		delivery_time = delivery_time + datetime.timedelta(hours=1)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
-		self.assertEqual(message['datetime_sent'], old_delivery_time)
-		self.assertEqual(message['to'], self.minqi.primary_phone_number)
-		self.assertEqual(message['content'], refill_content)
-		# Time is now delivery_time, so be sure the appropriate medication reminder is sent
-		medicine_content = "Time to take your " + self.vitamin.name + ". Reply '1' when you finish."
 		reminder_tasks.sendRemindersForNow()
-		# Test the two most recent messages to be sure the med reminder was sent and a new refill reminder did not slip in there.
-		messages = SMSLogger.getLastNSentMessages(2)
-		self.assertEqual(messages[1]['datetime_sent'], delivery_time)
-		self.assertEqual(messages[1]['to'], self.minqi.primary_phone_number)
-		self.assertEqual(messages[1]['content'], medicine_content)
-		self.assertEqual(messages[0]['datetime_sent'], old_delivery_time)
-		self.assertEqual(messages[0]['to'], self.minqi.primary_phone_number)
-		self.assertEqual(messages[0]['content'], refill_content)
+		message = SMSLogger.getLastSentMessage()
+		expected_content = "Time to take your:\n"+ \
+		                   "Vitamin\n\n"+ \
+		                   "Did you take it?\n"+ \
+		                   "y - yes\n"+ \
+		                   "n - no\n\n"+ \
+		                   "To see med info reply m."
+		self.assertEqual(message['datetime_sent'], delivery_time)
+		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], expected_content)
 
 	def test_primary_contact_delivery(self):
 		# create a primary contact
@@ -257,12 +453,12 @@ class ReminderDeliveryTest(TestCase):
 		                                           drug=self.vitamin,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=1)
-		reminder_schedule = [[ReminderTime.DAILY, delivery_time]]
+		notification_schedule = [[Notification.DAILY, delivery_time]]
 		(refill_reminder, reminder_times) = \
-			ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(
+			Notification.objects.create_prescription_notifications_from_notification_schedule(
 				to=self.minqi,
 				prescription=prescription,
-				reminder_schedule=reminder_schedule)
+				notification_schedule=notification_schedule)
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
@@ -308,7 +504,7 @@ class TestSafetyNetDelivery(TestCase):
 		f.close()
 		self.client = Client()
 
-	# TEST 1: Test the case where Minqi goes a week without acknowledging his medication
+	# Test the case where Minqi goes a week without acknowledging his medication
 	def test_nonadherent_message(self):
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
@@ -322,21 +518,21 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[ReminderTime.WEEKLY, delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.WEEKLY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has had some trouble with his meds this week (0% taken). Maybe you should give him a call?"
+		safety_net_message_content = "Your son, Minqi, has had trouble with his medicine this week. He's reported taking 0% of his meds. Maybe you should give him a call?"
 		message = SMSLogger.getLastSentMessage()
 		self.assertEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertEqual(message['content'], safety_net_message_content)
 
-	# TEST 2: Test the case where Minqi goes a week and acknowledges every message
+	# Test the case where Minqi goes a week and acknowledges every message
 	def test_adherent_message(self):
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
@@ -350,23 +546,24 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[ReminderTime.WEEKLY, delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.DAILY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
-			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
-			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': '1'})
+			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, self.current_time + datetime.timedelta(days=1), datetime.timedelta(days=1))
+			reminder_tasks.sendRemindersForNow()
+			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'y'})
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
+		safety_net_message_content = "Great news - your son, Minqi, has been taking care this week. He's reported taking 100% of his meds."
 		message = SMSLogger.getLastSentMessage()
 		self.assertEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertEqual(message['content'], safety_net_message_content)
 
-	# TEST 3: Test the case where Minqi goes a week and gets no reminders
+	# Test the case where Minqi goes a week and gets no reminders
 	def test_no_reminder_message(self):
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
@@ -380,10 +577,10 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		reminder_schedule = [[ReminderTime.MONTHLY, delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.MONTHLY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = self.current_time + datetime.timedelta(weeks=1)
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
 		reminder_tasks.schedule_safety_net_messages()
@@ -392,7 +589,7 @@ class TestSafetyNetDelivery(TestCase):
 		message = SMSLogger.getLastSentMessage()
 		self.assertEqual(message, None)
 
-	# TEST 4: Test the case where a patient has no safety net. Be sure the safety net does not get contacted
+	# Test the case where a patient has no safety net. Be sure the safety net does not get contacted
 	def test_reminders_to_no_safety_net(self):
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.no_safety_net_patient,
@@ -404,18 +601,19 @@ class TestSafetyNetDelivery(TestCase):
 		# Mark patients as active so that they can receive reminders
 		self.no_safety_net_patient.status = PatientProfile.ACTIVE
 		self.no_safety_net_patient.save()
-		reminder_schedule = [[ReminderTime.DAILY, delivery_time]]
-		ReminderTime.objects.create_prescription_reminders_from_reminder_schedule(to=self.no_safety_net_patient,
-		                                                                          prescription=prescription,
-		                                                                          reminder_schedule=reminder_schedule)
+		notification_schedule = [[Notification.DAILY, delivery_time]]
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.no_safety_net_patient,
+																		  prescription=prescription,
+																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
-			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
-			self.client.get('/textmessage_response/', {'From': self.no_safety_net_patient.primary_phone_number, 'Body': '1'})
+			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, self.current_time + datetime.timedelta(days=1), datetime.timedelta(days=1))
+			reminder_tasks.sendRemindersForNow()
+			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'y'})
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
+		safety_net_message_content = "Great news - your son, Minqi, has been taking care this week. He's reported taking 100% of his meds."
 		message = SMSLogger.getLastSentMessage()
 		self.assertNotEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertNotEqual(message['content'], safety_net_message_content)

@@ -1,1 +1,0 @@
-It's important you fill your {% for reminder in reminder_list %}{% if forloop.first %}{{ reminder.prescription.drug.name }}{% elif forloop.last %} and {{ reminder.prescription.drug.name }}{% else %}, {{ reminder.prescription.drug.name }}{% endif %}{% endfor %} prescription as soon as possible. Reply '{{ message_number }}' when you've received your medicine.

@@ -11,7 +11,7 @@ from django.db.models import Q
 from common.models import UserProfile
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile, SafetyNetRelationship
-from reminders.models import ReminderTime, Message, SentReminder
+from reminders.models import Notification, Message
 from reminders.notification_center import NotificationCenter
 from reminders.safety_net_center import SafetyNetCenter
 
@@ -36,7 +36,7 @@ def sendRemindersForNow():
 	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
 	"""
 	now = datetime.datetime.now()
-	reminders_for_now = ReminderTime.objects.reminders_at_time(now)
+	reminders_for_now = Notification.objects.notifications_at_time(now)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 
@@ -44,7 +44,7 @@ def sendRemindersForNow():
 	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
-		p_reminders = reminders_for_now.filter(Q(prescription__patient=p) | Q(to=p))
+		p_reminders = reminders_for_now.filter(to=p)
 		nc.send_notifications(to=p, notifications=p_reminders)
 
 @shared_task()

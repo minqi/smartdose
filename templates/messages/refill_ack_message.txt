@@ -1,0 +1,1 @@
+Great. You'll receive your first reminder {{ day }} at {{ hour }}:{{ minute|stringformat:"02d" }}{{ ampm }}. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345

@@ -239,12 +239,18 @@ class RegistrationProfile(models.Model):
 
 
 class Drug(models.Model):
-    """Model for all FDA approved drugs and medication"""
-    name = models.CharField(max_length=64, blank=False, unique=True)
-    # AI(minqi): add appropriate fields
+	"""Model for all FDA approved drugs and medication"""
+	name = models.CharField(max_length=64, blank=False, unique=True)
+	# AI(minqi): add appropriate fields
 
-    def __init__(self, *args, **kwargs):
-        super(Drug, self).__init__(*args, **kwargs)
-        if self.id:
-            return
-        self.name = self.name.lower()
+	def __init__(self, *args, **kwargs):
+		super(Drug, self).__init__(*args, **kwargs)
+		if self.id:
+			return
+		self.name = self.name.lower()
+
+class DrugFact(models.Model):
+	"""Model for facts about drugs"""
+	fact = models.CharField(max_length=160)
+	drug = models.ForeignKey(Drug)
+

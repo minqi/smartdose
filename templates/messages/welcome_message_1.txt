@@ -1,0 +1,1 @@
+Hi, {{ patient_first_name }}! {% if not enroller %}You signed up for Smartdose{% else %}{{ enroller }} is giving you Smartdose{% endif %} to improve your medication experience. You can reply 'q' at any time to quit.

@@ -1,1 +1,0 @@
-Hi, {{ patient_first_name }}! Your doctor enrolled you in Smartdose to receive simple med reminders that fit into your life. Text back 'q' to quit Smartdose.

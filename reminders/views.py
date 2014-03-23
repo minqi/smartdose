@@ -11,8 +11,7 @@ def handle_text(request):
 	except:
 		patient = None
 	rc = ResponseCenter()
-	action = rc.parse_message_to_action(patient, request.GET['Body'])
-	return rc.render_response_from_action(action, patient, request.GET['Body'])
+	return rc.process_response(patient, request.GET['Body'])
 
 
 def adherence_history_csv(request):

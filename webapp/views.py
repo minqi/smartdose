@@ -20,7 +20,7 @@ from common.registration_services import create_inactive_patientprofile, \
 from common.models import RegistrationProfile, Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
-from reminders.models import ReminderTime, Prescription, Message, SentReminder
+from reminders.models import Notification, Prescription, Message
 
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 from guardian.models import UserObjectPermission, GroupObjectPermission
@@ -178,13 +178,13 @@ class DeleteReminderForm(forms.Form):
 		if not Prescription.objects.filter(patient=patient, drug__name=drug_name):
 			raise ValidationError('Reminder does not exist')
 
-		reminders = ReminderTime.objects.filter(
+		reminders = Notification.objects.filter(
 			to=patient, prescription__drug__name__iexact=drug_name, 
-			reminder_type=ReminderTime.MEDICATION)
+			type=Notification.MEDICATION)
 		reminders_for_deletion = []
 		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
-			if r.send_time.time() == reminder_time:
+			if r.send_datetime.time() == reminder_time:
 				reminders_for_deletion.append(r)
 		if len(reminders_for_deletion) == 0:
 			raise ValidationError('Reminder does not exist')
@@ -411,8 +411,7 @@ def create_patient(request, *args, **kwargs):
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
-			ReminderTime.objects.create_welcome_notification(to=patient)
-			
+			Notification.objects.create_consumer_welcome_notification(to=patient, enroller=request_user_patient)
 			patient.save()
 
 			c = RequestContext(request)
@@ -444,17 +443,17 @@ def retrieve_patient(request, *args, **kwargs):
 				c['patient'] = patient
 
 				# get reminders
-				reminders = ReminderTime.objects.filter(
-					to=patient, reminder_type=ReminderTime.MEDICATION)
-				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_time.time()))
+				reminders = Notification.objects.filter(
+					to=patient, type=Notification.MEDICATION)
+				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_datetime.time()))
 				reminder_groups = []
 				for drug, outer_group in groupby(reminders, lambda x: x.prescription.drug.name):
 					drug_group = {'drug_name':drug, 'schedules':[]}
-					for send_time, time_group in groupby(outer_group, lambda y: y.send_time.time()):
+					for send_datetime, time_group in groupby(outer_group, lambda y: y.send_datetime.time()):
 						days_of_week = []
 						for reminder in time_group:
 							days_of_week.append(reminder.day_of_week)
-						drug_group['schedules'].append({'time':send_time, 'days_of_week':days_of_week})
+						drug_group['schedules'].append({'time':send_datetime, 'days_of_week':days_of_week})
 					reminder_groups.append(drug_group)
 				c['reminder_groups'] = tuple(reminder_groups)
 
@@ -521,7 +520,7 @@ def delete_patient(request, *args, **kwargs):
 			# Note we keep outstanding Messages and SentReminders
 			if patient.num_caregivers == 0:
 				Prescription.objects.filter(patient=patient).delete()
-				ReminderTime.objects.filter(to=patient).delete()
+				Notification.objects.filter(to=patient).delete()
 				SafetyNetRelationship.objects.filter(source_patient=patient).delete()
 				# delete permissions
 				filters = Q(content_type=ContentType.objects.get_for_model(patient), 
@@ -588,7 +587,7 @@ def create_reminder(request, *args, **kwargs):
 				prescriber=request.user, patient=patient, drug=drug)
 
 			reminder_time = form.cleaned_data['reminder_time']
-			existing_reminders = ReminderTime.objects.filter(
+			existing_reminders = Notification.objects.filter(
 				to=patient, prescription__drug__name__iexact=drug_name)
 
 			# check if it's a daily reminder
@@ -598,15 +597,15 @@ def create_reminder(request, *args, **kwargs):
 			if is_daily_reminder:
 				# remove all other reminders at this time, and replace with single daily reminder
 				for r in existing_reminders:
-					if r.send_time.time() == reminder_time:
+					if r.send_datetime.time() == reminder_time:
 						r.delete()
 				send_datetime = datetime.datetime.combine(
 					datetime.datetime.today().date(), reminder_time)
-				med_reminder = ReminderTime.objects.get_or_create(
+				med_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=ReminderTime.MEDICATION,
-					send_time = send_datetime, 
-					repeat=ReminderTime.DAILY, 
+					type=Notification.MEDICATION,
+					send_datetime = send_datetime,
+					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(med_reminder)
 				med_reminder.update_to_next_send_time()
@@ -619,10 +618,10 @@ def create_reminder(request, *args, **kwargs):
 					if active_day:
 						skip_day = False # skip day if already reminder at this time
 						existing_reminders_for_day = existing_reminders.filter( 
-							Q(day_of_week=idx+1) | Q(repeat=ReminderTime.DAILY)
+							Q(day_of_week=idx+1) | Q(repeat=Notification.DAILY)
 						)
 						for r in existing_reminders_for_day:
-							if r.send_time.time() == reminder_time:
+							if r.send_datetime.time() == reminder_time:
 								skip_day = True
 								break
 						if not skip_day:
@@ -633,11 +632,11 @@ def create_reminder(request, *args, **kwargs):
 								send_datetime = datetime.datetime.combine(
 									next_weekday(today.date(), idx), reminder_time
 								)
-							med_reminder = ReminderTime.objects.get_or_create(
+							med_reminder = Notification.objects.get_or_create(
 								to=patient, 
-								reminder_type=ReminderTime.MEDICATION,
-								send_time = send_datetime, 
-								repeat=ReminderTime.WEEKLY, 
+								type=Notification.MEDICATION,
+								send_datetime = send_datetime,
+								repeat=Notification.WEEKLY,
 								prescription=prescription)[0]
 							new_reminders.append(med_reminder)
 							med_reminder.day_of_week = idx + 1
@@ -645,18 +644,18 @@ def create_reminder(request, *args, **kwargs):
 			# create a refill reminder for the patient if prescription is not filled
 			send_refill_reminder = form.cleaned_data['send_refill_reminder']
 			if send_refill_reminder and not prescription.filled:
-				refill_reminder = ReminderTime.objects.get_or_create(
+				refill_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					reminder_type=ReminderTime.REFILL, 
-					repeat=ReminderTime.DAILY, 
+					type=Notification.REFILL,
+					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(refill_reminder)
 			elif not send_refill_reminder and prescription_created:
 				prescription.filled = True
 				prescription.save()
 			for r in new_reminders:
-				assign_perm('view_notification', request.user, r)
-				assign_perm('change_notification', request.user, r)
+				assign_perm('view_notification_smartdose', request.user, r)
+				assign_perm('change_notification_smartdose', request.user, r)
 			return HttpResponse('')
 	return HttpResponseBadRequest()
 
@@ -679,9 +678,9 @@ def delete_reminder(request, *args, **kwargs):
 
 			drug_name = form.cleaned_data['drug_name']
 			if form.cleaned_data['all_deleted']: # delete all reminder objects
-				ReminderTime.objects.filter(
+				Notification.objects.filter(
 					to=patient, prescription__drug__name__iexact=drug_name, 
-					reminder_type=ReminderTime.REFILL).delete()
+					type=Notification.REFILL).delete()
 			for r in form.cleaned_data['reminders_for_deletion']: 
 				r.delete()
 			return HttpResponse('')

@@ -1,0 +1,8 @@
+Time to take your:
+{% for drug_name in prescription_name_list %}{{ drug_name }}
+{% endfor %}
+Did you take {% if prescription_name_list|length == 1 %}it{% else %}them{% endif %}?
+y - yes
+n - no
+
+To see med info reply m.
