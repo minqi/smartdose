@@ -27,7 +27,7 @@ def regprofile_activate_user_phonenumber(regprofile, activation_key):
 def regprofile_activate_user_email(regprofile, activation_key):
 	if regprofile.email_activation_key != activation_key:
 		return False
-	elif profile.email_activation_key_expired():
+	elif regprofile.email_activation_key_expired():
 		# send email confirmation
 		userprofile = regprofile.userprofile
 		userprofile.is_active = True
