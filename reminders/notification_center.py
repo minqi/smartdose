@@ -73,7 +73,8 @@ class NotificationCenter(object):
 			notifications = [notifications]
 
 		# compose message
-		body = render_to_string(template, context)
+		if body is None:
+			body = render_to_string(template, context)
 		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
 
 		# Perform record keeping in DB
@@ -174,9 +175,7 @@ class NotificationCenter(object):
 		notifications = notifications.order_by("send_datetime")
 		for notification in notifications:
 			# Construct content of message
-			template = 'messages/safety_net_message.txt'
-			context = {'adherence_percentage':notification.adherence_rate}
-			self.send_text_message(to=to, notifications=notification, template=template, context=context)
+			self.send_text_message(to=to, notifications=notification, body=notification.content)
 
 	def send_static_one_off_notifications(self, to, notifications):
 		"""

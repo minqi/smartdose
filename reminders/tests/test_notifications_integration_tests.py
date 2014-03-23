@@ -526,7 +526,7 @@ class TestSafetyNetDelivery(TestCase):
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has had some trouble with his meds this week (0% taken). Maybe you should give him a call?"
+		safety_net_message_content = "Your son, Minqi, has had trouble with his medicine this week. He's reported taking 0% of his meds. Maybe you should give him a call?"
 		message = SMSLogger.getLastSentMessage()
 		self.assertEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertEqual(message['content'], safety_net_message_content)
@@ -545,18 +545,19 @@ class TestSafetyNetDelivery(TestCase):
 		self.minqi.save()
 		self.minqis_safety_net.status = PatientProfile.ACTIVE
 		self.minqis_safety_net.save()
-		notification_schedule = [[Notification.WEEKLY, delivery_time]]
+		notification_schedule = [[Notification.DAILY, delivery_time]]
 		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
 																		  prescription=prescription,
 																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
-			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
-			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': '1'})
+			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, self.current_time + datetime.timedelta(days=1), datetime.timedelta(days=1))
+			reminder_tasks.sendRemindersForNow()
+			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'y'})
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
+		safety_net_message_content = "Great news - your son, Minqi, has been taking care this week. He's reported taking 100% of his meds."
 		message = SMSLogger.getLastSentMessage()
 		self.assertEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertEqual(message['content'], safety_net_message_content)
@@ -605,12 +606,13 @@ class TestSafetyNetDelivery(TestCase):
 																		  notification_schedule=notification_schedule)
 		safety_net_notification_time = delivery_time + datetime.timedelta(weeks=1)
 		while (safety_net_notification_time > self.current_time):
-			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, safety_net_notification_time, datetime.timedelta(days=1))
-			self.client.get('/textmessage_response/', {'From': self.no_safety_net_patient.primary_phone_number, 'Body': '1'})
+			TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, self.current_time + datetime.timedelta(days=1), datetime.timedelta(days=1))
+			reminder_tasks.sendRemindersForNow()
+			self.client.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'y'})
 		reminder_tasks.schedule_safety_net_messages()
 		reminder_tasks.sendRemindersForNow()
 
-		safety_net_message_content = "Your son, Minqi, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
+		safety_net_message_content = "Great news - your son, Minqi, has been taking care this week. He's reported taking 100% of his meds."
 		message = SMSLogger.getLastSentMessage()
 		self.assertNotEqual(message['to'], self.minqis_safety_net.primary_phone_number)
 		self.assertNotEqual(message['content'], safety_net_message_content)

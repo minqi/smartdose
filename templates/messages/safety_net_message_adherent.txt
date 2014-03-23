@@ -1,0 +1,1 @@
+Great news - your {{ patient_relationship }}, {{ patient_first }}, has been taking care this week. {% if patient_gender == 'f' %}She's{% elif patient_gender == 'm' %}He's{% else %}They've{% endif %} reported taking {{ adherence_percentage|floatformat:"0" }}% of {% if patient_gender == 'f' %}her{% elif patient_gender == 'm' %}his{% else %}their{% endif %} meds.

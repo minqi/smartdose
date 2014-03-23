@@ -202,7 +202,7 @@ class Notification(models.Model):
 			if self.prescription is None:
 				raise ValidationError("This type of notification requires a foreign-key to a prescription")
 
-		if self.type in [Notification.STATIC_ONE_OFF]:
+		if self.type in [Notification.STATIC_ONE_OFF, Notification.SAFETY_NET]:
 			if self.content is None:
 				raise ValidationError("This type of notification requires predefined content")
 

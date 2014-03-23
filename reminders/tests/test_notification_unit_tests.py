@@ -55,6 +55,7 @@ class NotificationCenterTest(TestCase):
 			to=self.patient2, repeat=Notification.DAILY, prescription=self.prescription2)
 
 		self.safetynet_notification = Notification.objects.create(to=self.patient1, type=Notification.SAFETY_NET,
+		                                                               content="Your mother was adherent",
 																	   patient_of_safety_net=self.patient2,
 																	   adherence_rate=80, repeat=Notification.NO_REPEAT)
 
@@ -357,8 +358,8 @@ class TestSafetyNetTemplate(TestCase):
 		    'patient_gender':PatientProfile.MALE,
 		    'patient_relationship':'son'
 		}
-		correct_message = "Your son, Matthew, has been doing well with his meds this week (100% taken). Give him a call and let him know you're proud!"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Great news - your son, Matthew, has been taking care this week. He's reported taking 100% of his meds."
+		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_adherent_template_female_response(self):
@@ -369,8 +370,8 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.FEMALE,
 		'patient_relationship':'mother'
 		}
-		correct_message = "Your mother, Marge, has been doing well with her meds this week (100% taken). Give her a call and let her know you're proud!"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Great news - your mother, Marge, has been taking care this week. She's reported taking 100% of her meds."
+		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_adherent_template_gender_neutral_response(self):
@@ -381,8 +382,8 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.UNKNOWN,
 		'patient_relationship':'sibling'
 		}
-		correct_message = "Your sibling, Pat, has been doing well with their meds this week (100% taken). Give them a call and let them know you're proud!"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Great news - your sibling, Pat, has been taking care this week. They've reported taking 100% of their meds."
+		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_borderline_adherent_template_female_response(self):
@@ -393,8 +394,8 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.FEMALE,
 		'patient_relationship':'mother'
 		}
-		correct_message = "Your mother, Marge, has been doing well with her meds this week (80% taken). Give her a call and let her know you're proud!"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Great news - your mother, Marge, has been taking care this week. She's reported taking 80% of her meds."
+		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_nonadherent_template_male_response(self):
@@ -405,8 +406,8 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.MALE,
 		'patient_relationship':'grandfather'
 		}
-		correct_message = "Your grandfather, John, has had some trouble with his meds this week (30% taken). Maybe you should give him a call?"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Your grandfather, John, has had trouble with his medicine this week. He's reported taking 30% of his meds. Maybe you should give him a call?"
+		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_nonadherent_template_female_response(self):
@@ -417,8 +418,8 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.FEMALE,
 		'patient_relationship':'grandmother'
 		}
-		correct_message = "Your grandmother, Jane, has had some trouble with her meds this week (30% taken). Maybe you should give her a call?"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Your grandmother, Jane, has had trouble with her medicine this week. She's reported taking 30% of her meds. Maybe you should give her a call?"
+		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
 	def test_nonadherent_template_gender_neutral_response(self):
@@ -429,13 +430,6 @@ class TestSafetyNetTemplate(TestCase):
 		'patient_gender':PatientProfile.UNKNOWN,
 		'patient_relationship':'grandparent'
 		}
-		correct_message = "Your grandparent, Jan, has had some trouble with their meds this week (30% taken). Maybe you should give them a call?"
-		message_body = render_to_string('messages/safety_net_message.txt',dictionary)
+		correct_message = "Your grandparent, Jan, has had trouble with their medicine this week. They've reported taking 30% of their meds. Maybe you should give them a call?"
+		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
-
-class TestPrimaryContact(TestCase):
-	#TODO(mgaba): Write tests for primary contact
-	#TODO(mgaba): Test case where primary contact receives messages
-	def setUp(self):
-		return
-

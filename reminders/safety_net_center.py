@@ -20,12 +20,12 @@ class SafetyNetCenter(object):
 		window_start and window_finish at time time. A dose is considered missed 
 		if it's gone unacknowledged for longer than timeout.
 		"""
-		reminders = Feedback.objects.filter(
+		feedbacks = Feedback.objects.filter(
 			datetime_sent__gte=window_start,
 			datetime_sent__lte=window_finish,
 			notification__type=Notification.MEDICATION).exclude(datetime_sent__gte=time - timeout)
 		# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
-		reminders = reminders.prefetch_related('notification').prefetch_related('notification__prescription')
+		feedbacks = feedbacks.prefetch_related('notification').prefetch_related('notification__prescription')
 
 		patients = PatientProfile.objects.all()
 		if patients == None:
@@ -34,8 +34,8 @@ class SafetyNetCenter(object):
 		for patient in patients:
 			dose_count = 0
 			acked_dose_count = 0
-			patient_reminders = reminders.filter(notification__to=patient)
-			for patient_reminder in patient_reminders:
+			patient_feedbacks = feedbacks.filter(notification__to=patient)
+			for patient_reminder in patient_feedbacks:
 				if patient_reminder.prescription.safety_net_on:
 					dose_count += 1
 					if patient_reminder.completed == True:
@@ -67,13 +67,17 @@ class SafetyNetCenter(object):
 			safety_net_contacts = patient.safety_net_contacts.all()
 			for safety_net_contact in safety_net_contacts:
 				dictionary['patient_relationship'] = \
-					SafetyNetRelationship.objects.get(source_patient=patient, 
+					SafetyNetRelationship.objects.get(source_patient=patient,
 						target_patient=safety_net_contact).target_to_source_relationship
-				message_body = render_to_string('messages/safety_net_message.txt', dictionary)
+				if adherence_percentage > threshold:
+					message_body = render_to_string('messages/safety_net_message_adherent.txt', dictionary)
+				else:
+					message_body = render_to_string('messages/safety_net_message_nonadherent.txt', dictionary)
 				Notification.objects.create(to=safety_net_contact, type=Notification.SAFETY_NET,
 				                            repeat=Notification.NO_REPEAT,
-				                            patient_of_safety_net=patient,
-				                            adherence_rate=adherence_percentage)
+				                            content=message_body,
+				                            adherence_rate=adherence_percentage,
+				                            patient_of_safety_net=patient)
 
 	def schedule_safety_net_messages(self, window_start, window_finish, threshold, timeout):
 		"""
