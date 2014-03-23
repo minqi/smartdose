@@ -39,6 +39,8 @@ class EndToEndScenariosTest(TestCase):
 		settings.MESSAGE_LOG_FILENAME="test_message_output"
 		f = codecs.open(settings.MESSAGE_LOG_FILENAME, 'w', settings.SMS_ENCODING) # Open file with 'w' permission to clear log file. Will get created in logging code when it gets written to.
 		f.close()
+	def tearDown(self):
+		self.freezer.stop()
 
 	# 1. Patient is enrolled in Smartdose
 	# 2. Patient picks up prescriptions from pharmacy
