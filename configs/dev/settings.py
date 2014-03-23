@@ -17,7 +17,7 @@ PROJECT_ROOT = cwd[:result.end()]
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = False
+SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
@@ -186,14 +186,14 @@ SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 
 # Account Sid and Auth Token from twilio.com/user/account
 # Minqi's account
-TWILIO_ACCOUNT_SID = "AC4a10cf41d0de1592f6610f2e3e142688"
-TWILIO_AUTH_TOKEN = "913e14ea4cfd187138979bcc1d2e9720"
-TWILIO_NUMBER =  "+18563243138"
+# TWILIO_ACCOUNT_SID = "AC4a10cf41d0de1592f6610f2e3e142688"
+# TWILIO_AUTH_TOKEN = "913e14ea4cfd187138979bcc1d2e9720"
+# TWILIO_NUMBER =  "+18563243138"
 
 # Corp account
-# TWILIO_ACCOUNT_SID = "AC39e0bfb48abba5b063eced0660b50bb1"
-# TWILIO_AUTH_TOKEN = "0b95b6377c8ce0866b0a14a7419d57f7"
-# TWILIO_NUMBER =  "+8562811617"
+TWILIO_ACCOUNT_SID = "AC39e0bfb48abba5b063eced0660b50bb1"
+TWILIO_AUTH_TOKEN = "0b95b6377c8ce0866b0a14a7419d57f7"
+TWILIO_NUMBER =  "+14153602341"
 
 TWILIO_MAX_SMS_LEN = 160
 
