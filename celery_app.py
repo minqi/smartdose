@@ -12,7 +12,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'configs.dev.settings')
 app = Celery('smartdose', 
 			 include=[
 			 'reminders.tasks', 
-			 'common.registration_services.delete_expired_regprofiles',
+			 'common.registration_services',
 			 ])
 
 # Using a string here means the worker will not have to

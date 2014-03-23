@@ -29,6 +29,7 @@ def fetch_new_patient_records(source="fake_csv"):
 		datasources.load_patient_data(source)
 		print "Fetched new patient records"
 
+
 @shared_task()
 def sendRemindersForNow():
 	"""
@@ -46,6 +47,7 @@ def sendRemindersForNow():
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(to=p)
 		nc.send_notifications(to=p, notifications=p_reminders)
+
 
 @shared_task()
 def schedule_safety_net_messages():
