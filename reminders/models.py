@@ -343,6 +343,7 @@ class MessageManager(models.Manager):
 			message = None
 		return message
 
+
 class Message(models.Model):
 	"""Model for messages that have been sent to users"""
 	class Meta:
@@ -413,6 +414,8 @@ class Message(models.Model):
 
 	objects		    = MessageManager()
 
+	content             = models.CharField(max_length=160)
+
 	# Required types: MEDICATION, REFILL, NON_ADHERENT, SAFETY_NET
 	notifications       = models.ManyToManyField(Notification, blank=True, null=True, related_name='notifications')
 
@@ -423,8 +426,6 @@ class Message(models.Model):
 	# Required types: RESPONSE_MESSAGES
 	previous_message    = models.ForeignKey('Message', blank=True, null=True)
 
-	# Required types: STATIC_ONE_OFF
-	content             = models.CharField(max_length=160, blank=True, null=True)
 
 	# Required types: MEDICATION
 	nth_message_of_day_of_type = models.PositiveSmallIntegerField(blank=True, null=True)
@@ -436,19 +437,12 @@ class Message(models.Model):
 			if self.previous_message is None:
 				raise ValidationError("A messages sent as a response requires a pointer to a previous message")
 
-		if self.type in [Message.STATIC_ONE_OFF, Message.MEDICATION_ACK]:
-			if self.content is None:
-				raise ValidationError("This type of message requires static content to be defined")
-
 		if self.type in [Message.MEDICATION]:
 			if self.nth_message_of_day_of_type is None:
 				raise ValidationError("This type of message needs to know how many messages like it have been sent"
 									  "today (nth_message_of_day_of_type)")
 
 
-	def processAck(self):
-		self.datetime_responded = datetime.datetime.now()
-		self.save()
 
 class Feedback(models.Model):
 	"""Records information on a patients feedback for a given event tied to a notification

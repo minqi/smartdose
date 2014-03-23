@@ -487,7 +487,7 @@ class ResponseCenterTest(TestCase):
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
 		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 8:00am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		expected_response = "Great. You'll receive your first reminder tomorrow at 8:00am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
 		self.assertEqual(response.content, expected_response)
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, True)
 		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
@@ -495,19 +495,19 @@ class ResponseCenterTest(TestCase):
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=7))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 7:00am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		expected_response = "Great. You'll receive your first reminder tomorrow at 7:00am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
 		self.assertEqual(response.content, expected_response)
 
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=14, minute=30))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder today at 2:30pm. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		expected_response = "Great. You'll receive your first reminder today at 2:30pm. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
 		self.assertEqual(response.content, expected_response)
 
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today()-datetime.timedelta(days=3), datetime.time(hour=0, minute=30))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am. To change the time of your reminder, simply reply with the time (e.g., 9am)."
+		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
 		self.assertEqual(response.content, expected_response)
 
 

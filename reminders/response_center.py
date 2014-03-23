@@ -212,6 +212,13 @@ class ResponseCenter(object):
 
 		elif self.is_med_info(response):
 			# Send out a med info message
+			message.datetime_responded = None
+			message.save()
+			content = "Medication information is a work in progress.\n\n"+ \
+			          "Did you take your meds?\n"+ \
+			          "y - yes\n"+ \
+			          "n - no"
+			return HttpResponse(content=content, content_type='text/plain')
 			pass
 
 		elif self.is_time_change(response):
@@ -317,6 +324,11 @@ class ResponseCenter(object):
 				feedback.datetime_responded = now
 				feedback.save()
 
+			notifications = message.notifications.all()
+			for notification in notifications:
+				notification.active = False
+				notification.save()
+
 			earliest_notification = None
 			now = datetime.datetime.now()
 			for feedback in feedbacks:
@@ -389,6 +401,14 @@ class ResponseCenter(object):
 
 		elif self.is_med_info(response):
 			# Send out a med info message
+			# TODO:Implement med info for real
+			message.datetime_responded = None
+			message.save()
+			content = "Medication information is a work in progress.\n\n"+\
+					  "Did you pick up your meds?\n"+\
+					  "y - yes\n"+\
+					  "n - no"
+			return HttpResponse(content=content, content_type='text/plain')
 			pass
 		# Unknown response
 		else:
@@ -486,13 +506,27 @@ class ResponseCenter(object):
 		now = datetime.datetime.now()
 		message.datetime_responded = now
 		message.save()
-		raise Exception("Not yet implemented")
+
+		previous_message = message.previous_message
+		while hasattr(previous_message, "previous_message"):
+			previous_message = previous_message.previous_message
+
+		for feedback in previous_message.feedbacks.all():
+			feedback.note=response
+			feedback.datetime_responded=now
+			feedback.save()
+
+		template = 'message/response_open_ended_question.txt'
+		content = render_to_string(template)
+		new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+		return HttpResponse(content=content, content_type='text/plain')
+
 
 	def process_no_recent_message_response(self, sender, response):
-
 		if self.is_med_info(response):
 			raise Exception("Not yet implemented")
 		elif self.is_time_change(response):
+			#TODO(mgaba): Figure out the best way to allow a user to change times (right now just an upsell)
 			raise Exception("Not yet implemented")
 		else:
 			template = "messages/no_messages_to_reply_to.txt"

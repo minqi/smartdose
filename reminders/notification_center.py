@@ -128,7 +128,7 @@ class NotificationCenter(object):
 			# Construct content of message
 			template = 'messages/medication_message.txt'
 			def get_drug_name(notification):
-				return notification.prescription.drug.name
+				return notification.prescription.drug.name.capitalize()
 			prescription_names = list(itertools.imap(get_drug_name, notification_group))
 			context = {'prescription_name_list': prescription_names}
 			self.send_text_message(to=to, notifications=notification_group, template=template, context=context)
@@ -203,6 +203,8 @@ class NotificationCenter(object):
 
 		notifications = notifications.order_by("send_datetime")
 		for notification in notifications:
+			notification.active = False
+			notification.save()
 			self.resend_text_message(to=to, message=notification.message)
 
 
