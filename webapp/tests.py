@@ -9,8 +9,9 @@ from django.test import TestCase, Client
 
 import mock
 
+from common.models import Drug, RegistrationProfile
 from common.utilities import next_weekday
-from common.models import Drug
+from common.registration_services import create_inactive_patientprofile
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import Prescription, ReminderTime, Message
@@ -86,11 +87,37 @@ class UserRegistrationTest(TestCase):
 			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
 			'email':'test@smartdose.co', 'password1':'testpassword',
 			'password2':'testpassword'})
-		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.status_code, 200)
 
 		q = PatientProfile.objects.filter(full_name='Test User')
 		self.assertTrue(q.exists())
 		self.assertEqual(q[0].num_caregivers, 1)
+
+		p = q[0]
+		self.assertTrue(
+			RegistrationProfile.objects.filter(userprofile=p.userprofile_ptr).exists())
+		self.assertTrue(not p.is_active)
+
+
+class VerifyMobileTest(TestCase):
+	def test_verify_bad_otp(self):
+		response = c.post('/fishfood/signup/verifymobile/', {'otp':'1234567890'})
+		self.assertEqual(response.status_code, 400)
+
+	def test_verify_mobile(self):
+		# create regprofile and userprofile
+		(regprofile, patient) = create_inactive_patientprofile(
+			full_name='Test User', 
+			email='test@test.test', 
+			primary_phone_number='1234567890',
+			password='testpassword')
+
+		c.cookies['reg_id'] = regprofile.id
+		otp = regprofile.phonenumber_activation_key
+		response = c.post('/fishfood/signup/verifymobile/', {'otp':otp})
+
+		patient = PatientProfile.objects.get(pk=patient.pk)
+		self.assertTrue(patient.is_active)
 
 
 class CreatePatientTest(TestCase):

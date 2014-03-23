@@ -49,6 +49,7 @@ def create_inactive_patientprofile(
 		full_name=full_name,
 		email=email,
 		primary_phone_number=primary_phone_number,
+		is_active=False,
 		# status=PatientProfile.PENDING, # for number validation
 	)
 

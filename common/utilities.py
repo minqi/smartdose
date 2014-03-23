@@ -79,9 +79,10 @@ def sendTextMessageToNumber(body, to):
 			print e
 
 	if settings.DEBUG:
-		print body
+		pass
+		# print body
 
-	# SMSLogger.log(to, body, datetime_orig.datetime.now())
+	SMSLogger.log(to, body, datetime_orig.datetime.now())
 	return True
 
 
@@ -316,6 +317,8 @@ class InterpersonalRelationship():
 
 		OTHER:OTHER
 	}
+
+	
 	@staticmethod
 	def lookup_backwards_relationship(relationship,patient):
 		""" Given a relationship to a patient, return the inverse relationship.
