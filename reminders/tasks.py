@@ -41,11 +41,18 @@ def sendRemindersForNow():
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 
+	if not distinct_reminders:
+		print "No reminders"
+
 	# Send a reminder to each patient with the pills they need to take
 	nc = NotificationCenter()
 	for reminder in distinct_reminders:
 		p = reminder.to
 		p_reminders = reminders_for_now.filter(to=p)
+		for p_reminder in p_reminders:
+			print "Type: ", p_reminder.type
+			if p_reminder.prescription != None: print "Name: ", p_reminder.prescription.drug.name
+			print "To: ", p_reminder.to
 		nc.send_notifications(to=p, notifications=p_reminders)
 
 

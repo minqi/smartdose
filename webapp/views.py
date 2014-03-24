@@ -11,6 +11,7 @@ from django.core.context_processors import csrf
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import resolve
 from django.db.models import Q
+from django.template.loader import render_to_string
 from localflavor.us.forms import USPhoneNumberField
 from itertools import groupby
 
@@ -280,6 +281,8 @@ def verify_mobile(request):
 			if regprofile_activate_user_phonenumber(regprofile, otp):
 				patient = authenticate(regprofile=regprofile, phonenumber=True)
 				login(request, patient)
+				patient.status = PatientProfile.ACTIVE
+				patient.save()
 				return redirect('/fishfood/')
 
 			response = HttpResponse('Unauthorized')
