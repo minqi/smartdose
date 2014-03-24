@@ -16,6 +16,7 @@ def handle_text(request):
 
 def adherence_history_csv(request):
 	if request.GET:
+		AVG_RATE = .60
 		headers = [
 			'date',
 			'adherence_rate',
@@ -29,7 +30,8 @@ def adherence_history_csv(request):
 		adherence_count = 0
 		for i in range(100):
 			current_datetime += dt
-			adherence_count += random.randint(0,1)
+			gain = 1 if random.random() < AVG_RATE else 0 
+			adherence_count += gain
 			data = {
 				'date':current_datetime.strftime('%e-%b-%y').strip(),
 				'adherence_rate':float(adherence_count)/(i+1),
