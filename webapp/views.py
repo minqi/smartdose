@@ -411,7 +411,8 @@ def create_patient(request, *args, **kwargs):
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
-			Notification.objects.create_consumer_welcome_notification(to=patient, enroller=request_user_patient)
+			Notification.objects.create_consumer_welcome_notification(
+				to=patient, enroller=request_user_patient)
 			patient.save()
 
 			c = RequestContext(request)
