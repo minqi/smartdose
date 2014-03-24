@@ -512,7 +512,8 @@ def delete_patient(request, *args, **kwargs):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			# patient loses a caregiver
-			patient.num_caregivers -= 1
+			if patient.num_caregivers > 0:
+				patient.num_caregivers -= 1
 
 			# if patient is request user, delete the patient 
 			if request.user == patient:

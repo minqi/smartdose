@@ -176,6 +176,7 @@
 		function load_add_patient_view(e){
 			$("#mainContentView").children().hide();
 			$("#addPatientView").fadeIn();
+			$("addPatientButton").fadeIn();
 			update_main_header_text("Add a patient");
 		};
 		add_patient_button.on("click", load_add_patient_view);
