@@ -2,7 +2,6 @@
 	{% for drug_group in reminder_groups %}
 	<div class="prescriptionsListItem">
 		<div class="prescriptionDrugName">{{ drug_group.drug_name|capfirst }}</div>
-		<div id="spark-vod" class="adherence-sparkline"></div>
 		<div class="remindersListContainer">
 			<ul class="remindersList unstyledList">
 				{% for schedule in drug_group.schedules %}
@@ -51,6 +50,7 @@
 				{% endfor %}
 			</ul>
 		</div>
+		<div class="adherence-sparkline"></div>
 	</div>
 	{% endfor %}
 </div>

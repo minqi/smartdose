@@ -349,8 +349,8 @@ def fishfood(request):
 		c = RequestContext(request)
 		user = request.user
 
-		# results = get_objects_for_user(user, 'patients.manage_patient_profile')
-		results = PatientProfile.objects.all()
+		results = get_objects_for_user(user, 'patients.manage_patient_profile')
+		# results = PatientProfile.objects.all()
 		results = results.filter(
 			Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW)).order_by('full_name')
 
@@ -751,3 +751,7 @@ def delete_safety_net_contact(request):
 	return HttpResponseBadRequest('something went wrong')
 
 
+@login_required
+def dashboard(request):
+	# stub
+	return render_to_response('fishfood/dashboard.html')
