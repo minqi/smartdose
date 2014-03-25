@@ -375,7 +375,7 @@ class ResponseCenterTest(TestCase):
 		self.assertEqual(response.content, expected_response)
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
-	def test_get_app_upsell_content(self):
+	def test_get_app_upsell_content_with_doctor_prescriber(self):
 		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
 		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
@@ -385,16 +385,44 @@ class ResponseCenterTest(TestCase):
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
 		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
-							 "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+							 "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
 		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
-							 "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+							 "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
 		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
 		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
+		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+		self.assertIn(content, expected_responses)
+
+	def test_get_app_upsell_content_with_self_prescriber(self):
+		self_prescription = Prescription.objects.create(prescriber=self.minqi,
+		                                                patient=self.minqi, drug=self.drug, filled=True)
+		self_prescription_notification = Notification.objects.create(to=self.minqi, type=Notification.MEDICATION,
+		                                                prescription=self.prescription, repeat=Notification.DAILY,
+		                                                send_datetime=datetime.datetime.now())
+		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		                                   prescription=self_prescription)
+		message.notifications.add(self_prescription_notification)
+		message.feedbacks.add(feedback)
+		message.save()
+
+		content = self.rc._get_app_upsell_content(self.minqi, message)
+		expected_response1 = "Your family will be happy you're taking care of your health.\n\n"+ \
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
+
+		expected_response2 = "Your family will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
+
+		expected_response3 = "Your family will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
+
+		expected_response4 = "Your family will be happy you're taking care of your health.\n\n"+ \
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
 		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
 		self.assertIn(content, expected_responses)
 
@@ -413,28 +441,28 @@ class ResponseCenterTest(TestCase):
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
 		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
 		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
 		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
 		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
 
 		expected_response5 = "Jianna will be happy you're taking care of your health.\n\n"+ \
-		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
 		expected_response6 = "Jianna will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
 		expected_response7 = "Jianna will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
 		expected_response8 = "Jianna will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
 		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4,
 		                      expected_response5, expected_response6, expected_response7, expected_response8]
 		self.assertIn(content, expected_responses)
@@ -449,16 +477,16 @@ class ResponseCenterTest(TestCase):
 
 		# Test when there are no facts (same behavior as get_app_upsell_content)
 		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345"
+		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
 		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
 		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
 		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345"
+		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
 		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
 		content = self.rc._get_health_educational_content(self.minqi, message)
 		self.assertIn(content, expected_responses)
