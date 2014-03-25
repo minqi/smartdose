@@ -82,7 +82,7 @@ class UserRegistrationTest(TestCase):
 
 	def test_register_new_user(self):
 		response = c.post('/fishfood/signup/', 
-			{'full_name':'Test User', 'primary_phone_number':'1234567890', 
+			{'full_name':'Test User', 'primary_phone_number':'2234567890',
 			'email':'test@smartdose.co', 'password1':'testpassword',
 			'password2':'testpassword'})
 		self.assertEqual(response.status_code, 200)
@@ -133,11 +133,11 @@ class CreatePatientTest(TestCase):
 			num_caregivers=1)
 
 		self.patient2 = PatientProfile.objects.create(
-			first_name='Test', last_name='User2', primary_phone_number='+11111111111',
+			first_name='Test', last_name='User2', primary_phone_number='+12111111111',
 			num_caregivers=1)
 
 		self.patient3 = PatientProfile.objects.create(
-			first_name='Test', last_name='User3', primary_phone_number='+11111111112',
+			first_name='Test', last_name='User3', primary_phone_number='+12111111112',
 			num_caregivers=0)
 
 	def test_invalid_request(self):
@@ -170,10 +170,10 @@ class CreatePatientTest(TestCase):
 
 	def test_create_patient_existing_unmanaged_account(self):
 		response = c.post('/fishfood/patients/new/', 
-			{'full_name':'Test UserChanged', 'primary_phone_number':'11111111112'})
+			{'full_name':'Test UserChanged', 'primary_phone_number':'12111111112'})
 		self.assertEqual(response.status_code, 200)
 
-		q = PatientProfile.objects.filter(primary_phone_number='+11111111112')
+		q = PatientProfile.objects.filter(primary_phone_number='+12111111112')
 		p = q[0]
 		self.assertTrue(q.exists())
 		self.assertEqual(p.full_name, 'Test UserChanged')
@@ -185,7 +185,7 @@ class CreatePatientTest(TestCase):
 
 	def test_create_patient_existing_managed_account(self):
 		response = c.post('/fishfood/patients/new/', 
-			{'full_name':'Test User2', 'primary_phone_number':'11111111111'})
+			{'full_name':'Test User2', 'primary_phone_number':'12111111111'})
 		self.assertEqual(response.status_code, 400)
 
 	def test_create_new_patient(self):
