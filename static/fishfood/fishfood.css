@@ -525,7 +525,9 @@ body {
 }
 
 .adherence-sparkline {
-	width: 200px;
+	float: left;
+	clear: left;
+	width: 300px;
 	height: 100px;
 	/*border: 1px solid red;*/
 }
@@ -557,9 +559,8 @@ body {
 	border-bottom: 1px solid #eee;
 	box-sizing: border-box;
 	width: 100%;
-	margin-bottom: 10px;
-	padding-top: 10px;
-	padding-bottom: 10px;
+	padding-top: 15px;
+	padding-bottom: 15px;
 }
 
 .caregivers-list-item {
@@ -567,10 +568,10 @@ body {
 }
 
 .prescriptionsListItem {
-	border: 1px solid #eee;
+/*	border: 1px solid #eee;
 	border-bottom: 1px solid #ddd;
-	border-radius: 3px;
-	padding-bottom: 5px;
+	border-radius: 3px;*/
+	/*padding-bottom: 5px;*/
 }
 
 .prescriptionDrugName, .adherence-sparkline, 
@@ -584,15 +585,15 @@ body {
 }
 
 .prescriptionDrugName {
-	margin-bottom: 10px;
+	float: left;
+	margin-bottom: 5px;
 }
 
 .remindersListContainer {
-	float: left;
-	width: 450px;
+	float: right;
+	/* width: 450px; */
 	padding: 0;
-	margin-top: 5px;
-	width: 100%;
+	margin-top: -5px;
 }
 
 .deleteReminderButton, .delete-caregiver-button {
@@ -623,7 +624,7 @@ body {
 	background: #ccc;
 	float: left;
 	border-radius: 20px;
-	margin-top: 4px;
+	margin-top: 5px;
 	margin-right: 8px;
 	text-align: center;
 	line-height: 30px;
@@ -743,6 +744,43 @@ body {
 }
 #logoutButton:hover {
 	background: #d5d7d9;
+}
+
+#dashboard {
+	width: 650px;
+	margin: auto;
+}
+#dashboard > div {
+	width: 100%;
+	background: #c1d9e7;
+	border-radius: 3px;
+	text-align:center;
+	font-family: 'HelveticaNeue-Thin';
+	font-size: 28px;
+	color: #fff;
+	margin-bottom: 15px;
+	overflow: hidden;
+}
+
+#dashboard-alerts-container {
+	height: 250px;
+}
+
+#dashboard-alerts-content {
+	margin-top: 91px;
+}
+
+#dashboard-risky-patients-container {
+	height: 200px;
+	line-height: 200px;
+}
+
+#dashboard-drg-container {
+	height: 250px;
+}
+
+#dashboard-drg-content {
+	margin-top: 91px;
 }
 
 .clearfix {

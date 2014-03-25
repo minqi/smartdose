@@ -1,3 +1,4 @@
+{% load utilities %}
 <div id="patientView" data-id={{ patient.id }}>
 	<div class="deletePatientButton">Delete</div>
 	<div class="deletePatientConfirmYes no_display">Yes</div>
@@ -7,7 +8,7 @@
 		<div class="patientListItemInfo">
 			<div class="patientListItemFullName">{{ patient.full_name }}</div>
 			{% if patient.primary_phone_number %}
-			<div class="patientListItemPhoneNumber">{{ patient.primary_phone_number }}</div>
+			<div class="patientListItemPhoneNumber">{{ patient.primary_phone_number | fancy_phonenumber }}</div>
 			{% else %}
 			<div class="patientListItemPhoneNumber">{{ patient.primary_contact.primary_phone_number }}</div>
 			{% endif %}

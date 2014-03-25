@@ -352,8 +352,8 @@ def fishfood(request):
 		c = RequestContext(request)
 		user = request.user
 
-		# results = get_objects_for_user(user, 'patients.manage_patient_profile')
-		results = PatientProfile.objects.all()
+		results = get_objects_for_user(user, 'patients.manage_patient_profile')
+		# results = PatientProfile.objects.all()
 		results = results.filter(
 			Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW)).order_by('full_name')
 
@@ -414,7 +414,8 @@ def create_patient(request, *args, **kwargs):
 
 			patient.status = PatientProfile.NEW
 			patient.num_caregivers += 1
-			Notification.objects.create_consumer_welcome_notification(to=patient, enroller=request_user_patient)
+			Notification.objects.create_consumer_welcome_notification(
+				to=patient, enroller=request_user_patient)
 			patient.save()
 
 			c = RequestContext(request)
@@ -511,7 +512,8 @@ def delete_patient(request, *args, **kwargs):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			# patient loses a caregiver
-			patient.num_caregivers -= 1
+			if patient.num_caregivers > 0:
+				patient.num_caregivers -= 1
 
 			# if patient is request user, delete the patient 
 			if request.user == patient:
@@ -754,3 +756,7 @@ def delete_safety_net_contact(request):
 	return HttpResponseBadRequest('something went wrong')
 
 
+@login_required
+def dashboard(request):
+	# stub
+	return render_to_response('fishfood/dashboard.html')

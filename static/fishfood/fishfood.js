@@ -22,6 +22,7 @@
 		var add_patient_view = $("#addPatientView");
 		var add_reminder_form = $("#add-reminder-form");
 		var add_reminder_button = $("#add-reminder-button");
+		var left_col = $("#leftCol");
 
 		// main header states
 		var main_header_text_handlers = function() {
@@ -45,8 +46,6 @@
 		var revert_main_header_text = main_header_text_handlers[1];
 
 		// ===define and bind event-handlers===================================
-
-
 		// window resize
 		function window_resize_handler() {
 			var window_height = $(window).height();
@@ -77,7 +76,7 @@
 		// loads data from server to populate adherence sparklines
 		var load_adherence_sparklines = 
 		function() {
-			var width = 250;
+			var width = 300;
 			var height = 100;
 			var x = d3.scale.linear().range([0, width-4]);
 			var y = d3.scale.linear().range([height, 0]);
@@ -95,7 +94,7 @@
 			  y.domain([0, 1]);
 			  // y.domain(d3.extent(data, function(d) { return d.adherence_rate; }));
 
-			 var svg = d3.select(elemId)
+			 var svg = d3.selectAll(elemId)
 			              .append('svg')
 			              .attr('width', width)
 			              .attr('height', height)
@@ -130,7 +129,7 @@
 					data : dynamicData,
 					success : function(data) {
 						parsedData = d3.csv.parse(data);
-						sparkline('#spark-vod', parsedData);
+						sparkline('.adherence-sparkline', parsedData);
 					}
 				});
 			}
@@ -177,6 +176,7 @@
 		function load_add_patient_view(e){
 			$("#mainContentView").children().hide();
 			$("#addPatientView").fadeIn();
+			$("addPatientButton").fadeIn();
 			update_main_header_text("Add a patient");
 		};
 		add_patient_button.on("click", load_add_patient_view);
@@ -457,5 +457,19 @@
 			target.addClass("patient-view-nav-selected");
 		}
 		main_col.on("click", ".patient-view-nav-tab", switch_patient_view_sections);
+
+		// load dashboard button handler
+		function load_dashboard_view(e){
+			$.ajax({
+				url  : "/fishfood/dashboard/",
+				type : "get",
+				success : function(data, request) {
+					$("#mainContentView").html(data).show();
+					$("#addPatientView").hide();
+					update_main_header_text("Dashboard");
+				}
+			});
+		};
+		left_col.on("click", "#dashboard-button", load_dashboard_view);
 	});
 }));
