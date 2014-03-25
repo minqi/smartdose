@@ -353,7 +353,7 @@ class DeletePatientTest(TestCase):
 
 		self.welcome_reminder = Notification.objects.create(
 			to=self.patient1, type=Notification.WELCOME, repeat=Notification.DAILY,
-			send_datetime=datetime.datetime.now(), enroller=client_user)
+			send_datetime=datetime.datetime.now())
 		self.refill_reminder = Notification.objects.create(
 			to=self.patient1, type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription1, send_datetime=datetime.datetime.now())
@@ -369,7 +369,7 @@ class DeletePatientTest(TestCase):
 
 		self.welcome_reminder2 = Notification.objects.create(
 			to=self.patient2, type=Notification.WELCOME, repeat=Notification.DAILY,
-			send_datetime=datetime.datetime.now(), enroller=client_user)
+			send_datetime=datetime.datetime.now())
 		self.refill_reminder2 = Notification.objects.create(
 			to=self.patient2, type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription2, send_datetime=datetime.datetime.now())

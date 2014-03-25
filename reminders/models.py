@@ -96,8 +96,8 @@ class NotificationManager(models.Manager):
 
 		return (refill_notification, notification_times)
 
-	def create_consumer_welcome_notification(self, to, enroller):
-		welcome_reminder = Notification.objects.get_or_create(to=to, enroller=enroller,
+	def create_consumer_welcome_notification(self, to):
+		welcome_reminder = Notification.objects.get_or_create(to=to,
 			type=Notification.WELCOME, repeat=Notification.NO_REPEAT)[0]
 		return welcome_reminder
 
@@ -108,21 +108,23 @@ class Notification(models.Model):
 	Notifications are periodically grouped into Messages and sent to users."""
 
 	# Notification type
-	MEDICATION 	    = 'm'
-	REFILL 		    = 'r'
-	WELCOME         = 'w'
-	SAFETY_NET      = 'sn'
-	NON_ADHERENT    = 'n'
-	STATIC_ONE_OFF  = 'sof'
-	REPEAT_MESSAGE  = 'rm'
+	MEDICATION 	        = 'm'
+	REFILL 		        = 'r'
+	WELCOME             = 'w'
+	NON_ADHERENT        = 'n'
+	SAFETY_NET          = 'sn'
+	SAFETY_NET_WELCOME  = 'snw'
+	STATIC_ONE_OFF      = 'sof'
+	REPEAT_MESSAGE      = 'rm'
 
 	NOTIFICATION_TYPE_CHOICES = (
-		(MEDICATION, 'medication'),
-		(REFILL,	 'refill'),
-		(WELCOME,    'welcome'),
-		(SAFETY_NET, 'safety_net'),
-		(NON_ADHERENT, 'non_adherent'),
-		(STATIC_ONE_OFF, 'static_one_off')
+		(MEDICATION,            'medication'),
+		(REFILL,	            'refill'),
+		(WELCOME,               'welcome'),
+		(SAFETY_NET,            'safety_net'),
+		(SAFETY_NET_WELCOME,    'safety_net_welcome'),
+		(NON_ADHERENT,          'non_adherent'),
+		(STATIC_ONE_OFF,        'static_one_off')
 	)
 
 	@classmethod
@@ -175,11 +177,6 @@ class Notification(models.Model):
 	# Required type: REPEAT_MESSAGE
 	message             = models.ForeignKey('Message', null=True, blank=True, related_name="repeat_message")
 
-	# Required type: WELCOME
-	enroller            = models.ForeignKey(UserProfile, null=True, blank=True, related_name="enroller")
-
-
-
 	class Meta:
 		get_latest_by = 'send_time'
 		permissions = (
@@ -214,10 +211,6 @@ class Notification(models.Model):
 		if self.type in [Notification.REPEAT_MESSAGE]:
 			if self.message is None:
 				raise ValidationError("This type of notification requires a message pointer")
-
-		if self.type in [Notification.WELCOME]:
-			if self.enroller is None:
-				raise ValidationError("This type of notification requires an enroller")
 
 		if self.repeat == "":
 			raise ValidationError("All notifications require a repeat value")

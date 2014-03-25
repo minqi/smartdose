@@ -144,12 +144,12 @@ class NotificationCenter(object):
 		notification = notifications[0]
 
 		# Construct message 1 and send
-		if hasattr(notification.enroller, "doctorprofile"):
-			enroller = "Dr. " + notification.enroller.last_name
-		elif notification.enroller.pk != to.pk:
-			enroller = notification.enroller.first_name + " " + notification.enroller.last_name
-		else:
+		if to.enroller == None:
 			enroller = None
+		elif hasattr(to.enroller, "doctorprofile"):
+			enroller = "Dr. " + to.enroller.last_name
+		else:
+			enroller = to.enroller.first_name + " " + to.enroller.last_name
 		context = {'patient_first_name':to.first_name,
 		           'enroller':enroller}
 		template = 'messages/welcome_message_1.txt'

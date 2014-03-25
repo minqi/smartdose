@@ -57,7 +57,8 @@ class EndToEndScenariosTest(TestCase):
 		                                           gender=PatientProfile.MALE,
 		                                           address_line1="4266 Cesar Chavez",
 		                                           postal_code="94131",
-		                                           city="San Francisco", state_province="CA", country_iso_code="US")
+		                                           city="San Francisco", state_province="CA", country_iso_code="US",
+		                                           enroller=self.bob)
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=minqi,
 		                                           drug=self.vitamin,
@@ -68,7 +69,7 @@ class EndToEndScenariosTest(TestCase):
 																		  prescription=prescription,
 																		  notification_schedule=notification_schedule)
 		Notification.objects.create(to=minqi, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
-		                            send_datetime=welcome_delivery_time, enroller=self.bob)
+		                            send_datetime=welcome_delivery_time)
 
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, welcome_delivery_time,
 		                                                                            datetime.timedelta(hours=1))

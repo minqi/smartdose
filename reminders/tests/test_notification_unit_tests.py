@@ -25,14 +25,16 @@ from freezegun import freeze_time
 class NotificationCenterTest(TestCase):
 	def setUp(self):
 		self.nc = NotificationCenter()
-		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  birthday=datetime.date(year=1990, month=8, day=7))
-		self.patient2 = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
-								 				  primary_phone_number="2147094720", 
-								 				  birthday=datetime.date(year=1989, month=10, day=13))
-		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher", 
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
 			primary_phone_number="2029163381", birthday=datetime.date(1960, 1, 1))
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                              primary_phone_number="8569067308",
+		                                              birthday=datetime.date(year=1990, month=8, day=7),
+		                                              enroller=self.doctor)
+		self.patient2 = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
+		                                              primary_phone_number="2147094720",
+		                                              birthday=datetime.date(year=1989, month=10, day=13),
+		                                              enroller=self.patient1)
 		self.drug1 = Drug.objects.create(name='advil')
 		self.prescription1 = Prescription.objects.create(prescriber=self.doctor, 
 			patient=self.patient1, drug=self.drug1, filled=True)
@@ -96,8 +98,7 @@ class NotificationCenterTest(TestCase):
 		# see if both welcome messages are sent
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient1)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		# see if message is sent
@@ -112,9 +113,10 @@ class NotificationCenterTest(TestCase):
 
 	def test_send_self_enrolled_welcome_notification(self):
 		now_datetime = datetime.datetime.now()
+		self.patient1.enroller = None
+		self.patient1.save()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient1)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -127,9 +129,10 @@ class NotificationCenterTest(TestCase):
 
 	def test_send_safety_net_enrolled_welcome_notification(self):
 		now_datetime = datetime.datetime.now()
+		self.patient1.enroller = self.patient2
+		self.patient1.save()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient2)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -143,8 +146,7 @@ class NotificationCenterTest(TestCase):
 	def test_send_doctor_net_enrolled_welcome_notification(self):
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.doctor)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -240,8 +242,7 @@ class NotificationCenterTest(TestCase):
 		self.patient1.save()
 		now_datetime = datetime.datetime.now()
 		notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME, send_datetime=now_datetime,
-		                                           repeat=Notification.NO_REPEAT,
-		                                           enroller=self.patient1)
+		                                           repeat=Notification.NO_REPEAT)
 
 		self.nc.send_notifications(self.patient1, notification)
 		self.assertEqual(len(Message.objects.all()), 0)
@@ -264,8 +265,7 @@ class WelcomeMessageTest(TestCase):
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=datetime.date(year=1990, month=8, day=7))
 		Notification.objects.create(to=self.patient1, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
-		                            send_datetime=datetime.datetime.now(),
-		                            enroller=self.patient1)
+		                            send_datetime=datetime.datetime.now())
 	def test_welcome_message(self):
 		self.assertEqual(self.patient1.status, PatientProfile.NEW)
 		
