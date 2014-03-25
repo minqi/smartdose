@@ -173,7 +173,7 @@ class CreatePatientTest(TestCase):
 			{'full_name':'Test UserChanged', 'primary_phone_number':'11111111112'})
 		self.assertEqual(response.status_code, 200)
 
-		q = PatientProfile.objects.filter(primary_phone_number='+1111111112')
+		q = PatientProfile.objects.filter(primary_phone_number='+11111111112')
 		p = q[0]
 		self.assertTrue(q.exists())
 		self.assertEqual(p.full_name, 'Test UserChanged')
