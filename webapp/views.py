@@ -89,7 +89,8 @@ class CreatePatientForm(forms.Form):
 
     def clean_primary_phone_number(self):
     	primary_phone_number = self.cleaned_data['primary_phone_number'].strip()
-    	return convert_to_e164(primary_phone_number)
+    	primary_phone_number = convert_to_e164(primary_phone_number)
+    	return primary_phone_number
 
 
 class UpdatePatientForm(CreatePatientForm):
@@ -420,6 +421,7 @@ def create_patient(request, *args, **kwargs):
 
 			c = RequestContext(request)
 			c['patient'] = patient
+
 			return render_to_response('fishfood/patient_view.html', c) # change to redirect
 
 	return HttpResponseBadRequest("Something went wrong.")

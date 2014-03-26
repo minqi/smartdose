@@ -203,10 +203,10 @@
 				type: "post",
 				data: form.serialize(),
 				success: function(data) {
-					$("#mainContentView").children().show();
 					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
-					get_patient_search_results_list()
+					$("#patient-view-reminders-section").show();
+					get_patient_search_results_list();
 				}
 			});
 		}

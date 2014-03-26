@@ -183,8 +183,8 @@ class Notification(models.Model):
 	class Meta:
 		get_latest_by = 'send_time'
 		permissions = (
-		('view_notification_smartdose', 'View notification'),
-		('change_notification_smartdose', 'Change notification'),
+			('view_notification_smartdose', 'View notification'),
+			('change_notification_smartdose', 'Change notification'),
 		)
 
 	def __init__(self, *args, **kwargs):
