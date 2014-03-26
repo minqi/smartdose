@@ -1,0 +1,1 @@
+Hi, {{ safety_net_first_name }}! Your {{ patient_relationship }}, {{ patient_first_name }}, is using Smartdose to improve {% if patient_gender == 'm' %}his{% elif patient_gender == 'f' %}her{% else %}their{% endif %} medication experience.

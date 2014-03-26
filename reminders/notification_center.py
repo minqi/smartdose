@@ -1,7 +1,7 @@
 import itertools
 from common.utilities import sendTextMessageToNumber, list_to_queryset
 from common.models import UserProfile
-from patients.models import PatientProfile
+from patients.models import PatientProfile, SafetyNetRelationship
 from reminders.models import Notification, Message, Feedback
 from configs.dev import settings
 from django.template.loader import render_to_string
@@ -163,7 +163,7 @@ class NotificationCenter(object):
 		to.status = UserProfile.ACTIVE
 		to.save()
 
-	def send_safetynet_notifications(self, to, notifications):
+	def send_safety_net_notifications(self, to, notifications):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
@@ -176,6 +176,38 @@ class NotificationCenter(object):
 		for notification in notifications:
 			# Construct content of message
 			self.send_text_message(to=to, notifications=notification, body=notification.content)
+
+	def send_safety_net_welcome_notifications(self, to, notifications):
+		"""
+		Send a welcome safety-net notifications in QuerySet <notifications> to recipient <to>
+		"""
+		notifications = notifications.filter(to=to, type=Notification.SAFETY_NET_WELCOME)
+
+		if not notifications.exists():
+			return
+
+		for notification in notifications:
+			safety_nets = SafetyNetRelationship.objects.filter(target_patient=to, source_patient=notification.patient_of_safety_net)
+			if not safety_nets:
+				raise Exception("Sending safety net welcome notification to someone without a safety net")
+			relationship = safety_nets[0].target_to_source_relationship
+			context = {'patient_first_name': notification.patient_of_safety_net.first_name,
+			           'patient_gender': notification.patient_of_safety_net.gender,
+			           'patient_relationship': relationship,
+			           'safety_net_first_name': to.first_name,}
+
+			template = 'messages/safety_net_welcome_message_1.txt'
+			self.send_text_message(to=to, notifications=notification, template=template, context=context)
+
+			# Construct message 2 and send
+			template = 'messages/safety_net_welcome_message_2.txt'
+			self.send_text_message(to=to, notifications=notification, template=template, context=context)
+
+			# Construct message 3 and send
+			template = 'messages/safety_net_welcome_message_3.txt'
+			self.send_text_message(to=to, notifications=notification, template=template, context=context)
+
+
 
 	def send_static_one_off_notifications(self, to, notifications):
 		"""
@@ -224,6 +256,7 @@ class NotificationCenter(object):
 		self.send_welcome_notifications(to, notifications)
 		self.send_refill_notifications(to, notifications)
 		self.send_medication_notifications(to, notifications)
-		self.send_safetynet_notifications(to, notifications)
+		self.send_safety_net_notifications(to, notifications)
+		self.send_safety_net_welcome_notifications(to, notifications)
 		self.send_static_one_off_notifications(to, notifications)
 		self.send_repeat_message_notifications(to, notifications)

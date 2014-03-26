@@ -170,8 +170,10 @@ class Notification(models.Model):
 	# Required type: STATIC_ONE_OFF
 	content             = models.CharField(max_length=160, null=True, blank=True) #Required type: STATIC_ONE_OFF
 
-	# Required type: SAFETY_NET
+	# Required type: SAFETY_NET, SAFETY_NET_WELCOME
 	patient_of_safety_net   = models.ForeignKey(PatientProfile, related_name="patient_of_safety_net", null=True, blank=True)
+
+	# Required type; SAFETY_NET
 	adherence_rate          = models.PositiveSmallIntegerField(null=True, blank=True)
 
 	# Required type: REPEAT_MESSAGE
@@ -203,9 +205,13 @@ class Notification(models.Model):
 			if self.content is None:
 				raise ValidationError("This type of notification requires predefined content")
 
+		if self.type in [Notification.SAFETY_NET, Notification.SAFETY_NET_WELCOME]:
+			if self.patient_of_safety_net is None:
+				raise ValidationError("This type of notification requires patient of safety net member "
+				                      "information")
 		if self.type in [Notification.SAFETY_NET]:
-			if self.patient_of_safety_net is None or self.adherence_rate is None:
-				raise ValidationError("This type of notification requires patient of safety net member and adherence rate "
+			if self.adherence_rate is None:
+				raise ValidationError("This type of notification requires adherence rate "
 				                      "information")
 
 		if self.type in [Notification.REPEAT_MESSAGE]:
