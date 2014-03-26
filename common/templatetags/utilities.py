@@ -21,6 +21,8 @@ def fancy_phonenumber(value):
 	"""
 	prog = re.compile('\+1([0-9]{3})([0-9]{3})([0-9]{4})')
 	result = prog.match(value)
+	if not result:
+		raise Exception("Number passed to fancy_phonenumber filter in unexpected format")
 	fancy_phonenumber = \
 		'(' + result.group(1) + ') ' + result.group(2) + '-' + result.group(3) 
 	return fancy_phonenumber

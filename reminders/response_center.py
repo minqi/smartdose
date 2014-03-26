@@ -66,7 +66,11 @@ class ResponseCenter(object):
 		if safety_net_members:
 			for safety_net_member in safety_net_members:
 				happy_people.append(safety_net_member.target_patient.first_name)
-		happy_people.append("Dr. " + acked_message.feedbacks.all()[0].prescription.prescriber.last_name)
+		prescriber = acked_message.feedbacks.all()[0].prescription.prescriber
+		if hasattr(prescriber, "doctorprofile"):
+			happy_people.append("Dr. " + prescriber.last_name)
+		elif prescriber.pk == sender.pk:
+			happy_people.append("Your family")
 		happy_person = random.choice(happy_people)
 
 		dict = {'app_upsell_content' : upsell_content,

@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from configs.dev import settings
 from configs.dev.settings import MESSAGE_CUTOFF
 from common.models import UserProfile, Drug
-from common.utilities import SMSLogger
+from common.utilities import SMSLogger, InterpersonalRelationship
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
 from reminders.models import Notification, Prescription, Message, Feedback
@@ -25,14 +25,16 @@ from freezegun import freeze_time
 class NotificationCenterTest(TestCase):
 	def setUp(self):
 		self.nc = NotificationCenter()
-		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
-								 				  primary_phone_number="8569067308", 
-								 				  birthday=datetime.date(year=1990, month=8, day=7))
-		self.patient2 = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
-								 				  primary_phone_number="2147094720", 
-								 				  birthday=datetime.date(year=1989, month=10, day=13))
-		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher", 
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
 			primary_phone_number="2029163381", birthday=datetime.date(1960, 1, 1))
+		self.patient1 = PatientProfile.objects.create(first_name="Minqi", last_name="Jiang",
+		                                              primary_phone_number="8569067308",
+		                                              birthday=datetime.date(year=1990, month=8, day=7),
+		                                              enroller=self.doctor)
+		self.patient2 = PatientProfile.objects.create(first_name="Matt", last_name="Gaba",
+		                                              primary_phone_number="2147094720",
+		                                              birthday=datetime.date(year=1989, month=10, day=13),
+		                                              enroller=self.patient1)
 		self.drug1 = Drug.objects.create(name='advil')
 		self.prescription1 = Prescription.objects.create(prescriber=self.doctor, 
 			patient=self.patient1, drug=self.drug1, filled=True)
@@ -57,6 +59,10 @@ class NotificationCenterTest(TestCase):
 		                                                               content="Your mother was adherent",
 																	   patient_of_safety_net=self.patient2,
 																	   adherence_rate=80, repeat=Notification.NO_REPEAT)
+		self.safetynet_welcome_notification = Notification.objects.create(to=self.patient1,
+		                                                          type=Notification.SAFETY_NET_WELCOME,
+		                                                          patient_of_safety_net=self.patient2,
+		                                                           repeat=Notification.NO_REPEAT)
 
 	def test_merge_notifications(self):
 		merged_notifications = self.nc.merge_notifications(self.med_notifications)
@@ -96,8 +102,7 @@ class NotificationCenterTest(TestCase):
 		# see if both welcome messages are sent
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient1)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		# see if message is sent
@@ -110,11 +115,12 @@ class NotificationCenterTest(TestCase):
 		welcome_notification = Notification.objects.filter(pk=welcome_notification.pk)[0]
 		self.assertTrue(welcome_notification.active == False)
 
-	def test_send_self_enrolled_welcome_notification(self):
+	def test_send_welcome_notification_enrolled_by_self(self):
 		now_datetime = datetime.datetime.now()
+		self.patient1.enroller = None
+		self.patient1.save()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient1)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -125,11 +131,12 @@ class NotificationCenterTest(TestCase):
 							 "For more info, you can visit www.smartdo.se"
 		self.assertEqual(messages[0].content, expected_message_2)
 
-	def test_send_safety_net_enrolled_welcome_notification(self):
+	def test_send_welcome_notification_enrolled_by_safety_net(self):
 		now_datetime = datetime.datetime.now()
+		self.patient1.enroller = self.patient2
+		self.patient1.save()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.patient2)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -140,11 +147,10 @@ class NotificationCenterTest(TestCase):
 		                     "For more info, you can visit www.smartdo.se"
 		self.assertEqual(messages[0].content, expected_message_2)
 
-	def test_send_doctor_net_enrolled_welcome_notification(self):
+	def test_send_welcome_notification_enrolled_by_doctor(self):
 		now_datetime = datetime.datetime.now()
 		welcome_notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME,
-		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime,
-		                                                   enroller=self.doctor)
+		                                                   repeat=Notification.NO_REPEAT, send_datetime=now_datetime)
 		self.nc.send_notifications(to=self.patient1, notifications=welcome_notification)
 
 		messages = Message.objects.filter(to=self.patient1)
@@ -208,6 +214,20 @@ class NotificationCenterTest(TestCase):
 		self.safetynet_notification = Notification.objects.get(pk=self.safetynet_notification.pk)
 		self.assertTrue(self.safetynet_notification.active == False)
 
+	def test_send_safetynet_welcome_notifications(self):
+		# # see if safetynet welcome notification is sent
+		self.patient1.status = UserProfile.ACTIVE
+		self.patient2.add_safety_net_contact(target_patient=self.patient1,relationship=InterpersonalRelationship.FRIEND)
+		self.nc.send_notifications(to=self.patient1, notifications=self.safetynet_welcome_notification)
+		self.assertEqual(len(Message.objects.filter(to=self.patient1)), 3)
+
+		messages = Message.objects.filter(to=self.patient1)
+
+
+		# check that safety-net-welcome notification is deactivated
+		self.safetynet_welcome_notification = Notification.objects.get(pk=self.safetynet_welcome_notification.pk)
+		self.assertFalse(self.safetynet_welcome_notification.active)
+
 	def test_send_repeat_message_notifications(self):
 		# Prepare initial med reminder to send
 		self.patient2.status = UserProfile.ACTIVE
@@ -240,8 +260,7 @@ class NotificationCenterTest(TestCase):
 		self.patient1.save()
 		now_datetime = datetime.datetime.now()
 		notification = Notification.objects.create(to=self.patient1, type=Notification.WELCOME, send_datetime=now_datetime,
-		                                           repeat=Notification.NO_REPEAT,
-		                                           enroller=self.patient1)
+		                                           repeat=Notification.NO_REPEAT)
 
 		self.nc.send_notifications(self.patient1, notification)
 		self.assertEqual(len(Message.objects.all()), 0)
@@ -264,8 +283,7 @@ class WelcomeMessageTest(TestCase):
 								 				  primary_phone_number="8569067308", 
 								 				  birthday=datetime.date(year=1990, month=8, day=7))
 		Notification.objects.create(to=self.patient1, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
-		                            send_datetime=datetime.datetime.now(),
-		                            enroller=self.patient1)
+		                            send_datetime=datetime.datetime.now())
 	def test_welcome_message(self):
 		self.assertEqual(self.patient1.status, PatientProfile.NEW)
 		
@@ -336,9 +354,9 @@ class UpdateSendDateTimeTest(TestCase):
 		self.assertTrue((self.n_yearly.send_datetime.year - future_datetime.year) == 1)
 		freezer.stop()
 
-class TestSafetyNetTemplate(TestCase):
+class TestTemplates(TestCase):
 
-	def test_adherent_template_male_response(self):
+	def test_safety_net_adherent_template_male_response(self):
 		dictionary = {
 			'adherence_percentage':100,
 		    'threshold':80,
@@ -350,7 +368,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_adherent_template_female_response(self):
+	def test_safety_net_adherent_template_female_response(self):
 		dictionary = {
 		'adherence_percentage':100,
 		'threshold':80,
@@ -362,7 +380,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_adherent_template_gender_neutral_response(self):
+	def test_safety_net_adherent_template_gender_neutral_response(self):
 		dictionary = {
 		'adherence_percentage':100,
 		'threshold':80,
@@ -374,7 +392,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_borderline_adherent_template_female_response(self):
+	def test_borderline_safety_net_adherent_template_female_response(self):
 		dictionary = {
 		'adherence_percentage':80,
 		'threshold':80,
@@ -386,7 +404,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_adherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_nonadherent_template_male_response(self):
+	def test_safety_net_nonadherent_template_male_response(self):
 		dictionary = {
 		'adherence_percentage':30,
 		'threshold':80,
@@ -398,7 +416,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_nonadherent_template_female_response(self):
+	def test_safety_net_nonadherent_template_female_response(self):
 		dictionary = {
 		'adherence_percentage':30,
 		'threshold':80,
@@ -410,7 +428,7 @@ class TestSafetyNetTemplate(TestCase):
 		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
 
-	def test_nonadherent_template_gender_neutral_response(self):
+	def test_safety_net_nonadherent_template_gender_neutral_response(self):
 		dictionary = {
 		'adherence_percentage':30,
 		'threshold':80,
@@ -421,3 +439,18 @@ class TestSafetyNetTemplate(TestCase):
 		correct_message = "Your grandparent, Jan, has had trouble with their medicine this week. They've reported taking 30% of their meds. Maybe you should give them a call?"
 		message_body = render_to_string('messages/safety_net_message_nonadherent.txt',dictionary)
 		self.assertEqual(message_body, correct_message)
+
+	def test_safety_net_welcome_template(self):
+		dictionary = {
+		'patient_first_name':'Matthew',
+		'patient_gender':PatientProfile.MALE,
+		'patient_relationship':'friend',
+		'safety_net_first_name':'Minqi',
+		}
+		correct_message_1 = "Hi, Minqi! Your friend, Matthew, is using Smartdose to improve his medication experience."
+		message_body_1 = render_to_string('messages/safety_net_welcome_message_1.txt',dictionary)
+		self.assertEqual(message_body_1, correct_message_1)
+
+		correct_message_2 = "Matthew added you as a caregiver. Smartdose will send you weekly updates on Matthew's medicine taking habits so you can help him stay healthy."
+		message_body_2 = render_to_string('messages/safety_net_welcome_message_2.txt',dictionary)
+		self.assertEqual(message_body_2, correct_message_2)

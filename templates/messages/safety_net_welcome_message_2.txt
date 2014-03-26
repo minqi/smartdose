@@ -1,0 +1,1 @@
+{{ patient_first_name|capfirst }} added you as a caregiver. Smartdose will send you weekly updates on {{ patient_first_name }}'s medicine taking habits so you can help {% if patient_gender == 'm' %}him{% elif patient_gender == 'f' %}her{% else %}them{% endif %} stay healthy.

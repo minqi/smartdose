@@ -77,6 +77,9 @@ class PatientProfile(UserProfile):
 	weight_unit = models.CharField(max_length=2,
 									choices=HEIGHT_UNIT_CHOICES,
 									default=POUNDS)
+
+	# If enroller is None it means the patient enrolled themselves
+	enroller    = models.ForeignKey(UserProfile, related_name='enroller', null=True, blank=True)
 	
 	safety_net_contacts 	= models.ManyToManyField('self', 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
