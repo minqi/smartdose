@@ -327,6 +327,7 @@ PIPELINE_JS = {
     'login': {
         'source_filenames': (
           'js/jquery-1.11.0.min.js',
+          'js/jquery.inputmask.js',
           'fishfood/login.js',
           'js/ganalytics.js',
         ),
