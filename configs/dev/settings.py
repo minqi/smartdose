@@ -16,7 +16,6 @@ PROJECT_ROOT = cwd[:result.end()]
 
 # Reminder system parameters
 DEBUG = False
-PIPELINE = True
 TEMPLATE_DEBUG = DEBUG
 SEND_TEXT_MESSAGES = True 
 MESSAGE_CUTOFF = 23 # hours
