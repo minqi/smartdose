@@ -27,16 +27,17 @@
 			e.preventDefault();
 
 			form = $("#hero-signup-form");
+			var kicker = $("#kicker");
+			var kicker_height = kicker.height();
+			kicker.height(kicker_height).text("Great! We'll be in touch.");
+			form.css("visibility", "hidden");
+			
 			var data = form.serialize();
 			$.ajax({
 				url: "/early_signup/",
 				type: "post",
 				data: data,
 				success: function(data) {
-					var kicker = $("#kicker");
-					var kicker_height = kicker.height();
-					kicker.height(kicker_height).text("Great! We'll be in touch.");
-					form.css("visibility", "hidden");
 				}
 			});
 		}

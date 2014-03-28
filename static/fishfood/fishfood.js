@@ -9,14 +9,14 @@
 		// DOM is ready
 		var DEBUG = false;
 		if (DEBUG) {
-			$(document).click(function(e){console.log(e.target)});
+			$(document).click(function(e){console.log(e.target);});
 		}
 
 		// cache DOM elements of interest in local vars
 		var patient_search_box = $("#patientSearchBox");
 		var patient_search_results = $("#patientSearchResults");
 		var add_patient_button = $("#addPatientButton");
-		var main_col = $("#mainCol")
+		var main_col = $("#mainCol");
 		var main_content_view = $("#mainContentView");
 		var patient_view = $("#patientView");
 		var add_patient_view = $("#addPatientView");
@@ -33,12 +33,12 @@
 				main_header_text_prev = main_header_text;
 				main_header_text = new_text;
 				$("#main-header").text(main_header_text);
-			} 
+			}; 
 
 			var revert_main_header_text = function() {
 				main_header_text = main_header_text_prev;
 				$("#main-header").text(main_header_text);
-			}
+			};
 
 			return [update_main_header_text, revert_main_header_text];
 		}();
@@ -105,7 +105,7 @@
 			  	 .attr('x1', x(data[0].date))
 			  	 .attr('y1', y(.5))
 			  	 .attr('x2', x(data[data.length-1].date))
-			  	 .attr('y2', y(.5))
+			  	 .attr('y2', y(.5));
 			  svg.append('path')
 			     .datum(data)
 			     .attr('class', 'sparkline')
@@ -132,7 +132,7 @@
 						sparkline('.adherence-sparkline', parsedData);
 					}
 				});
-			}
+			};
 		}();
 
 
@@ -165,7 +165,7 @@
 					$("#mainContentView").html(data).show();
 					add_patient_view.hide();
 					load_adherence_sparklines();
-					update_main_header_text("Medication record")
+					update_main_header_text("Medication record");
 				}
 			});
 		}
@@ -178,7 +178,7 @@
 			$("#addPatientView").fadeIn();
 			$("addPatientButton").fadeIn();
 			update_main_header_text("Add a patient");
-		};
+		}
 		add_patient_button.on("click", load_add_patient_view);
 
 
@@ -294,7 +294,7 @@
 			if (okToSubmit) {
 				form = $("#add-reminder-form");
 				p_id = $("#patientView").attr("data-id");
-				data = "p_id=" + p_id + "&"
+				data = "p_id=" + p_id + "&";
 				$.ajax({
 					url: "/fishfood/reminders/new/",
 					type: "post",
@@ -324,7 +324,7 @@
 			dynamicData['p_id'] = $("#patientView").attr("data-id");
 			// need to get the drug name + time
 			var target = $(e.target);
-			var prescriptionsListItem = target.parents(".prescriptionsListItem")
+			var prescriptionsListItem = target.parents(".prescriptionsListItem");
 			dynamicData['drug_name'] = 
 				prescriptionsListItem.children(".prescriptionDrugName").text();
 			dynamicData['reminder_time'] = target.siblings(".remindersListItemTime").text();
@@ -387,7 +387,7 @@
 			e.preventDefault();
 			form = $("#add-caregiver-form");
 			p_id = $("#patientView").attr("data-id");
-			data = "p_id=" + p_id + "&"
+			data = "p_id=" + p_id + "&";
 			$.ajax({
 				url: "/fishfood/patients/create_safety_net_contact/",
 				type: "post",
