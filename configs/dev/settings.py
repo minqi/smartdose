@@ -17,7 +17,7 @@ PROJECT_ROOT = cwd[:result.end()]
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = False
+SEND_TEXT_MESSAGES = True 
 MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
@@ -273,4 +273,10 @@ LOGGING = {
 
 LOGIN_URL = '/fishfood/login/'
 LOCKDOWN_PASSWORDS = ('4266cesarchavez__',)
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'founders.smartdose@gmail.com'
+EMAIL_HOST_PASSWORD = '__4266ccnc'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
 

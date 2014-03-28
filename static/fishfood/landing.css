@@ -1,0 +1,310 @@
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+body {
+	direction:ltr;
+	width: 100%;
+	font-family: "HelveticaNeue-Medium";
+	min-width: 760px;
+	overflow: scroll;
+}
+
+
+div#navbar-top {
+	width: 100%;
+/*	height: 60px;
+	line-height: 60px;
+	box-sizing: border-box;
+	background: #fff;
+	font-family: 'HelveticaNeue-Thin';*/
+}
+
+div#navbar-top-content {
+	width: 960px;
+	margin: auto;
+}
+
+div#navbar-top-brand-logo {
+	float: left;
+	width: 100px;
+	height: 52px;
+	background-image: url('/static/img/landing-logo-black.png');
+	background-size: cover;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+div#navbar-top-brand-text {
+	float: left;
+	margin-left: 18px;
+	margin-right: 25px;
+	font-size: 32px;
+	font-family: "HelveticaNeue-Medium";
+}
+
+ul#navbar-top-nav li {
+	float: left;
+	padding: 0px 25px;
+	cursor: pointer;
+	height: 60px;
+	line-height: 72px;
+}
+ul#navbar-top-nav li:hover {
+	color: #169fda;
+}
+
+div#navbar-access > * {
+	float:right;
+	height: 60px;
+	line-height: 72px;
+}
+
+#navbar-top-content ul > li {
+	float: right;
+	margin-top: 10px;
+	margin-left: 20px;
+	cursor: pointer;
+	font-family: 'HelveticaNeue-Thin';
+	color: #fff;
+	opacity: .25;
+	padding-bottom: 5px;
+	border-bottom: 2px solid #fff;
+}
+
+#navbar-top-content a {
+	text-decoration: none;
+	color: #fff;
+}
+
+#top-bar-login-button {
+/*	padding: 0px 25px;*/
+	
+}
+#top-bar-login-button:hover {
+	color: #fff;
+	opacity: 1;
+}
+
+div.landing-unit {
+	width: 100%;
+}
+
+div#hero-unit {
+	background-image: url('/static/img/bedside01.png');
+	background-size: cover;
+    background-repeat: no-repeat;
+	overflow: hidden;
+	min-height: 696px;
+	border-top: 4px solid #169fda;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+div#hero-content {
+	width: 960px;
+	margin: auto;
+}
+
+div#hero-content > #phone-model {
+	background-image: url('/static/img/model-phones-02.png');
+	width: 423px;
+	height: 509px;
+	float: left;
+}
+
+div#hero-content > #main-copy {
+	float: right;
+	width: 502px;
+}
+
+div#hero-content #headline {
+	float: left;
+	margin-top: 25px;
+	color: #fff;
+	font-size: 36px;
+	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
+	line-height: 48px;
+}
+div#hero-content #kicker {
+	float: left;
+	margin-top: 25px;
+	margin-bottom: 25px;
+	color: #fff;;
+	font-size: 36px;
+	font-family: 'HelveticaNeue-Thin';
+	text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
+	line-height: 48px;
+}
+
+div#hero-content #kicker > span {
+	font-weight: bold;
+}
+
+#hero-signup-form > input[name="email"] {
+	display: block;
+	float: left;
+	outline: none;
+	border: none;
+	border-bottom: 1px solid #eee;
+	font-size: 24px;
+	font-family: "HelveticaNeue-Thin";
+	width: 300px;
+	padding: 10px;
+	margin: 0px 0px;
+	height: 50px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	border-top-left-radius: 3px;
+	border-bottom-left-radius: 3px;
+}
+
+#hero-signup-form > input[name="submit"] {
+	display: block;
+	float: left;
+	border: none;
+	margin: 0px 0px;
+	height: 50px;
+	font-size: 18px;
+	padding: 10px;
+	cursor: pointer;
+	/*text-shadow: 0px 1px rgba(255, 255, 255, 0.5);*/
+	background: #169fda;
+	color: #fff;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	border-top-right-radius: 3px;
+	border-bottom-right-radius: 3px;
+}	
+
+div#details-unit > section {
+	height:300px;
+	background: #fff;
+	border-bottom: 1px solid #ccc;
+}
+
+section.details-index-header > h1 {
+	font-size: 32px;
+	width: 550px;
+	text-align: center;
+	margin: 50px auto;
+}
+
+div#details-unit > section.details-index-header {
+	height: 100px;
+}
+
+div#mission-unit {
+	height:600px;
+	background: yellow;
+}
+
+div#smartdose-brand-container {
+	float: left;
+	margin-top: 90px;
+}
+
+div#smartdose-brand-big {
+	float: left;
+	width: 200px;
+	height: 104px;
+	background-image: url('/static/img/landing-logo-white.png');
+	background-size: cover;
+    background-repeat: no-repeat;
+}
+
+div#smartdose-brand-text-big {
+	height: 104px;
+	line-height: 104px;
+	margin-left: 10px;
+	float: left;
+	font-size: 64px;
+	color: #fff;
+	font-family: 'HelveticaNeue-Thin';
+}
+
+div#footer-unit {
+	position: fixed;
+	bottom: 0px;
+	width: 100%;
+	height: 25px;
+	background: #000;
+	opacity: .5;
+}
+
+footer {
+	width: 960px;
+	margin: auto;
+}
+
+footer ul.left > li, footer ul.right > li {
+	float: left;
+	font-family: 'HelveticaNeue-Thin';
+	font-size: 12px;
+	color: #fff;
+	line-height: 25px;
+	opacity: .5;	
+}
+
+footer ul.right > li {
+	float: right;
+	margin-left: 10px;
+}
+
+footer a {
+	color: #fff;
+	text-decoration: none;
+}
+footer a:hover {
+	text-decoration: underline;
+}
+
+.clearfix {
+	clear: both; 
+	display: block;
+	visibility: none;
+	list-style-type: none;
+}

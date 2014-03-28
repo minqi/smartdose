@@ -1,0 +1,58 @@
+<!doctype html>
+<html itemscope="" itemtype="http://schema.org/WebPage">
+	<head>
+		<meta name="description" 
+			content="The future of prescription medication. Smartdose has many special features to help you track your medical needs." />
+		<meta name="robots" content="noodp"/>
+		<meta name="referer" content="default" id="mref"/>
+		<link rel="shortcut icon" href="" />
+		<link type="text/css" rel="stylesheet" media="screen" href="/static/fishfood/landing.css">
+		<title>Smartdose</title>
+	</head>
+	<body>
+		<div id="hero-unit" class="landing-unit">
+			<div id="navbar-top">
+				<div id="navbar-top-content">
+					<ul>
+						<li id="top-bar-login-button">
+							<a href="/fishfood/login/">Early access login</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+			<div id="hero-content">
+				<div id="phone-model"></div>
+				<div id="main-copy">
+					<!-- <div id="headline">Does your EHR <br> improve adherence?</div> -->
+					<div id="kicker">Use your EHR to keep patients<br> on track with their treatments. <br>For <span>Free.</span></div>
+					<form id="hero-signup-form" action="/early_signup/" method="post">
+						{% csrf_token %}
+						<input type="text" name="email" placeholder="name@company.com"></input>
+						<input type="submit" name="submit" value="Keep me updated"></input>
+					</form>
+					<div id="smartdose-brand-container">
+						<div id="smartdose-brand-big"></div>
+						<div id="smartdose-brand-text-big">Smartdose</div>
+						<div class="clearfix"></div>
+					</div>
+					<div class="clearfix"></div>
+				</div>
+				<div class="clearfix"></div>
+			</div>
+		</div>
+
+		<div id="footer-unit">
+			<footer>
+				<ul class="left">
+					<li>Copyright © 2014 Smartdose Inc. All rights reserved.</li>
+				</ul>
+				<ul class="right">
+					<li>(415) 944-7377</li>
+					<li><a href="mailto:founders@smartdose.co">Contact Us</a></li>
+				</ul>
+				<script src="http://code.jquery.com/jquery-1.11.0.min.js" type="text/javascript"></script>
+				<script src="/static/fishfood/landing.js" type="text/javascript"></script>
+			</footer>
+		</div>
+	</body>
+</html>

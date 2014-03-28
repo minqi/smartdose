@@ -1,0 +1,74 @@
+<!doctype html>
+<html itemscope="" itemtype="http://schema.org/WebPage">
+	<head>
+		<meta name="description" 
+			content="The future of prescription medication. Smartdose has many special features to help you track your medical needs." />
+		<meta name="robots" content="noodp"/>
+		<meta name="referer" content="default" id="mref"/>
+		<link rel="shortcut icon" href="" />
+		<link type="text/css" rel="stylesheet" media="screen" href="/static/fishfood/landing.css">
+		<title>Smartdose</title>
+	</head>
+	<body>
+		<div id="navbar-top">
+			<div id="navbar-top-content">
+				<div id="navbar-top-brand-logo"></div>
+				<div id="navbar-top-brand-text">Smartdose</div>
+				<ul id="navbar-top-nav">
+					<li>How it works</li>
+					<li>Who we are</li>
+				</ul>
+				<div id="navbar-access">
+					<div id="top-bar-login-button">Login</div>
+	<!-- 				<form id="navbar-early-signup-form" action="/" method="post">
+						{% csrf_token %}
+						<input type="text" name="email"></input>
+						<input type="submit" name="submit" value="Keep me updated"></input>
+					</form> -->
+				</div>
+				<div class="clearfix"></div>
+			</div>
+		</div>
+
+		<div id="hero-unit" class="landing-unit">
+			<div id="hero-content">
+				<div id="phone-model"></div>
+				<div id="main-copy">
+					<div id="headline">Does your EHR help patients <br> stay healthy?</div>
+					<div id="kicker">Empower your EHR to keep your patients engaged with their treatments. <span>Free.</span></div>
+					<form id="hero-signup-form" action="/" method="post">
+						{% csrf_token %}
+						<input type="text" name="email" placeholder="name@company.com"></input>
+						<input type="submit" name="submit" value="Keep me updated"></input>
+					</form>
+					<div class="clearfix"></div>
+				</div>
+				<div class="clearfix"></div>
+			</div>
+		</div>
+
+		<div id="details-unit" class="landing-unit">
+			<section class="details-index-header">
+				<h1>How it works</h1>
+			</section>
+			<section id="details-index-overview"></section>
+<!-- 			<section id="details-index-remind"></section>
+			<section id="details-index-engage"></section>
+			<section id="details-index-support"></section>
+			<section id="details-index-learn"></section>
+			<section id="details-index-save"></section> -->
+		</div>
+
+		<div id="mission-unit" class="landing-unit"></div>
+
+		<div id="footer-unit" class="landing-unit">
+			<footer>
+				<span></span>
+				<span></span>
+				<span></span>
+				<script src="http://code.jquery.com/jquery-1.11.0.min.js" type="text/javascript"></script>
+				<script src="/static/fishfood/landing.js" type="text/javascript"></script>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.context_processors import csrf
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import resolve
+from django.core.mail import send_mail
 from django.db.models import Q
 from django.template.loader import render_to_string
 from localflavor.us.forms import USPhoneNumberField
@@ -22,14 +23,15 @@ from common.models import RegistrationProfile, Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import Notification, Prescription, Message
+from webapp.models import EarlySignup
 
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
 from guardian.models import UserObjectPermission, GroupObjectPermission
 from lockdown.decorators import lockdown
 
 
-def landing_page(request):
-	return HttpResponse(content="STAY TUNED", content_type="text/plain")
+class EarlySignupForm(forms.Form):
+	email = forms.EmailField()
 
 
 class UserLoginForm(forms.Form):
@@ -233,9 +235,33 @@ class DeleteSafetyNetContactForm(forms.Form):
 		return p_id
 
 
+def landing(request):
+	c = RequestContext(request)
+	if request.user.is_authenticated():
+		return redirect('/fishfood/')
+	return render_to_response('fishfood/landing.html', c)
+
+
+def early_signup(request):
+	c = RequestContext(request)
+	if request.method == 'POST':
+		form = EarlySignupForm(request.POST)
+		form.is_valid()
+		if form.is_valid():
+			email = form.cleaned_data['email']
+			EarlySignup.objects.get_or_create(email=email)
+			message = "%s just signed up for the Smartdose early access list!" % (email)
+			send_mail(message, message, 'hello@smartdose.co', 
+				['founders@smartdose.co'], fail_silently=False)
+			return HttpResponse('')
+	return HttpResponseBadRequest('')
+
+
 def user_registration(request):
 	c = RequestContext(request)
 	if request.method == 'GET':
+		if request.user.is_authenticated():
+			return redirect('/fishfood/')
 		return render_to_response('fishfood/user_registration.html', c)
 
 	if request.method == 'POST':
@@ -316,6 +342,8 @@ def resend_mobile_verification_code(request):
 def user_login(request):
 	c = RequestContext(request)
 	if request.method == 'GET':
+		if request.user.is_authenticated():
+			return redirect('/fishfood/')
 		return render_to_response('fishfood/user_login.html', c)
 
 	if request.method == 'POST':
@@ -347,7 +375,7 @@ def user_logout(request):
 	return HttpResponseBadRequest('')
 
 
-@login_required
+@login_required()
 def fishfood(request):
 	if request.method == 'GET':
 		c = RequestContext(request)
