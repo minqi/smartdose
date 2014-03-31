@@ -11,7 +11,6 @@ class DoctorProfileManager(UserProfileManager):
 class DoctorProfile(UserProfile):
 	"""Model for doctor-specific information"""
 	# Doctor specific fields
-	#TODO(mgaba): Add doctor specific information: credentials, title, specialty
 
 	# Manager fields
 	objects = DoctorProfileManager()

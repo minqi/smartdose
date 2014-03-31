@@ -222,9 +222,7 @@ MESSAGE_LOG_FILENAME="message_output"
 
 djcelery.setup_loader() 
 # Celery message broker identifying URL
-# TODO(mgaba) Setup appropriate URL for server and figure out how 
-#   the server stuff will work in productiion
-BROKER_URL = 'amqp://guest:guest@localhost:5672' 
+BROKER_URL = 'amqp://guest:guest@localhost:5672'
 CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULE = {
     'send-reminders': {
