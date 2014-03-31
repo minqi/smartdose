@@ -77,10 +77,8 @@ def sendTextMessageToNumber(body, to):
 			message = twilio_client.messages.create(body=body, to=to, from_=twilio_number)
 		except twilio.TwilioRestException as e:
 			print e
-
-	if settings.DEBUG:
-		pass
-		# print body
+	else:
+		print body
 
 	SMSLogger.log(to, body, datetime_orig.datetime.now())
 	return True
@@ -152,8 +150,13 @@ def convert_to_e164(raw_phone):
 
 	phone_representation = phonenumbers.parse(raw_phone, parse_type)
 
-	return phonenumbers.format_number(phone_representation,
+	result = phonenumbers.format_number(phone_representation,
 		phonenumbers.PhoneNumberFormat.E164)
+
+	if parse_type == "US" and result[:2] == "+1" and len(result) < 12:
+		result = "+1" + result[1:]
+
+	return result
 
 
 def next_weekday(d, weekday):

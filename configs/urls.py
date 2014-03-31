@@ -1,7 +1,8 @@
 from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
-    url(r'^$', 'webapp.views.landing_page', name='landing'),
+    url(r'^$', 'webapp.views.landing', name='landing'),
+    url(r'^early_signup/$', 'webapp.views.early_signup'),
     url(r'^textmessage_response/$', 'reminders.views.handle_text'),
 
     # Fishfood URLs
@@ -22,4 +23,7 @@ urlpatterns = patterns('',
     url(r'^fishfood/patients/create_safety_net_contact/$', 'webapp.views.create_safety_net_contact'),
     url(r'^fishfood/patients/delete_safety_net_contact/$', 'webapp.views.delete_safety_net_contact'),
     url(r'^fishfood/patients/adherence_history_csv/$', 'reminders.views.adherence_history_csv'),
+
+    # for YC
+    url(r'^fishfood/signup_yconly_11111011110/$', 'webapp.views.user_registration'),
 )

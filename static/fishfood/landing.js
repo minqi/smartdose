@@ -7,43 +7,55 @@
 // listen for 
 	$(function() {
 		// DOM is ready
+		function window_resize_handler() {
+			var window_height = $(window).height();
+			var window_width = $(window).width();
 
-		// format phone numbers as you type for login/signup pages
-	   	var phone_masks = [{ "mask": "(###) ###-####"}];
-		$("input[name=primary_phone_number]").inputmask({ 
-	    	mask: phone_masks, 
-	    	greedy: false, 
-	   		definitions: { '#': { validator: "[0-9]", cardinality: 1}}
-	   	});
+			var hero_unit = $("#hero-unit");
+			var hero_unit_height = window_height - hero_unit.offset().top;
+			hero_unit.css("height", hero_unit_height);
 
-		$("#login-form-submit").on("click", function(e) {
-			if ($("input[name=primary_phone_number]").val().length == 0 || 
-				$("input[name=password]").val().length == 0) {
-				e.preventDefault();
+			var hero_contents = $("#hero-content");
+			var hero_contents_margin_top = (hero_unit_height - hero_contents.height())/2.0;
+			hero_contents.css("margin-top", hero_contents_margin_top);
+
+		}
+		window_resize_handler();
+		$(window).on("resize", window_resize_handler);
+
+
+		function validateEmail(email) { 
+		    var re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+		    return re.test(email);
+		}
+
+		function earlysignup_submit_handler(e) {
+			e.preventDefault();
+
+			var email_input = $("#hero-signup-form input[name=email]");
+			var email = email_input.val();
+			console.log(validateEmail(email));
+			if (validateEmail(email)) {
+				form = $("#hero-signup-form");
+				var kicker = $("#kicker");
+				var kicker_height = kicker.height();
+				kicker.height(kicker_height).text("Great! We'll be in touch.");
+				form.css("visibility", "hidden");
+				
+				var data = form.serialize();
+				$.ajax({
+					url: "/early_signup/",
+					type: "post",
+					data: data,
+					success: function(data) {
+					}
+				});
 			}
-		});
-
-		$("#signup-form-submit").on("click", function(e) {
-			if ($("input[name=full_name]").val().length == 0 ||
-				$("input[name=primary_phone_number]").val().length == 0 ||
-				$("input[name=email]").val().length == 0 || 
-				$("input[name=password1]").val().length == 0 ||
-				$("input[name=password2]").val().length == 0) {
-				e.preventDefault();
-				console.log("clicked");
+			else {
+				email_input.css("border", "2px solid red");
 			}
-		});
-
-		var otp_masks = [{ "mask": "#####"}];
-		$("input[name=otp").inputmask({ 
-	    	mask: otp_masks, 
-	    	greedy: false, 
-	   		definitions: { '#': { validator: "[0-9]", cardinality: 1}}, 
-	   		placeholder:"" });
+		}
+		$("#hero-unit").on("click", "#hero-signup-form input[name=submit]", 
+			earlysignup_submit_handler);
 	});
 }));
-
-
-
-
-

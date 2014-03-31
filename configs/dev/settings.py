@@ -17,7 +17,7 @@ PROJECT_ROOT = cwd[:result.end()]
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = False
+SEND_TEXT_MESSAGES = True 
 MESSAGE_CUTOFF = 23 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
@@ -111,7 +111,11 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'pipeline.finders.PipelineFinder',
+    'pipeline.finders.FileSystemFinder',
+    'pipeline.finders.AppDirectoriesFinder',
+    'pipeline.finders.CachedFileFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -180,6 +184,7 @@ INSTALLED_APPS = (
     'guardian',
     'django_nose',
     'lockdown',
+    'pipeline',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -271,4 +276,60 @@ LOGGING = {
 
 LOGIN_URL = '/fishfood/login/'
 LOCKDOWN_PASSWORDS = ('4266cesarchavez__',)
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'hello.smartdose@gmail.com'
+EMAIL_HOST_PASSWORD = 'pjwmutnsluebtznw'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# for django-pipeline
+STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+PIPELINE_JS_COMPRESSOR = 'pipeline.compressors.yuglify.YuglifyCompressor'
+PIPELINE_CSS_COMPRESSOR = 'pipeline.compressors.yuglify.YuglifyCompressor'
+PIPELINE_YUGLIFY_BINARY = '/usr/local/lib/node_modules/yuglify/bin/yuglify'
+
+PIPELINE_CSS = {
+    'landing': {
+        'source_filenames': (
+          'fishfood/landing.css',
+        ),
+        'output_filename': 'css/landing.min.css',
+    },
+    'core': {
+        'source_filenames': (
+          'fishfood/fishfood.css',
+        ),
+        'output_filename': 'css/core.min.css',
+    },
+}
+
+PIPELINE_JS = {
+    'core': {
+        'source_filenames': (
+          'js/jquery-1.11.0.min.js',
+          'js/d3.v3.min.js',
+          'fishfood/fishfood.js',
+          'js/ganalytics.js',
+        ),
+        'output_filename': 'js/core.min.js',
+    },
+    'landing': {
+        'source_filenames': (
+          'js/jquery-1.11.0.min.js',
+          'fishfood/landing.js',
+          'js/ganalytics.js',
+        ),
+        'output_filename': 'js/landing.min.js',
+    },
+    'login': {
+        'source_filenames': (
+          'js/jquery-1.11.0.min.js',
+          'js/jquery.inputmask.js',
+          'fishfood/login.js',
+          'js/ganalytics.js',
+        ),
+        'output_filename': 'js/login.min.js',
+    },
+}
 

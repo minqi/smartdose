@@ -1,10 +1,14 @@
 import os, datetime, random, csv
-from faker import Factory
+
 from configs.dev.settings import PROJECT_ROOT
+from common.utilities import convert_to_e164
 from common.models import Drug
 from reminders.models import Prescription, Notification
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
+
+from faker import Factory
+
 
 DEFAULT_NUM = 10 # default amount of data to generate in fake data generators
 
@@ -76,8 +80,9 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 		fake_fields["with_food"] = (random.randint(0,1) == 0) and True or False
 		fake_fields["with_water"] = (random.randint(0,1) == 0) and True or False
 		fake_fields["repeat"] = Notification.DAILY
-		fake_fields["send_time"] = datetime.datetime.now() + datetime.timedelta(minutes=random.randint(0,59), 
-																 hours=random.randint(0,24))
+		fake_fields["send_time"] = \
+			datetime.datetime.now() + datetime.timedelta(minutes=random.randint(0,59), 
+				hours=random.randint(0,24))
 
 		# write out as csv to fake_patient_data.csv
 		csv_writer.writerow(fake_fields)
