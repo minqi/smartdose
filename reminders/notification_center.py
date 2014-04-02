@@ -1,15 +1,23 @@
-import itertools
+import datetime, itertools
+
+from django.template.loader import render_to_string
+
+from configs.dev import settings
 from common.utilities import sendTextMessageToNumber, list_to_queryset
 from common.models import UserProfile
 from patients.models import PatientProfile, SafetyNetRelationship
 from reminders.models import Notification, Message, Feedback
-from configs.dev import settings
-from django.template.loader import render_to_string
-import datetime
+
 
 class NotificationCenter(object):
+
 	def __init__(self, interval_sec=settings.REMINDER_MERGE_INTERVAL):
 		self.interval_sec = interval_sec
+
+	@staticmethod
+	def get_cutoff_datetime():
+		now = datetime.datetime.now()
+		return now - datetime.timedelta(hours=settings.MESSAGE_CUTOFF_HOURS)
 
 	def merge_notifications(self, notifications, interval_sec=None):
 		"""
@@ -43,27 +51,27 @@ class NotificationCenter(object):
 		"""
 		Resend a previously sent message <message> to patient <to>.
 		"""
-
 		# Perform record keeping in DB
-		new_message = Message.objects.create(to=to, type=message.type, content=message.content, previous_message=message,
+		new_message = Message.objects.create(to=to, _type=message._type, content=message.content, previous_message=message,
 		                                     nth_message_of_day_of_type=message.nth_message_of_day_of_type)
-		for notification in message.notifications.all():
+		notifications = message.notifications.all()
+		for notification in notifications:
 			new_message.notifications.add(notification)
 		for feedback in message.feedbacks.all():
 			new_message.feedbacks.add(feedback)
 
-
 		# send message
 		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
-		sendTextMessageToNumber(message.content, primary_phone_number)
+		cutoff_datetime = NotificationCenter.get_cutoff_datetime()
+		if not [n for n in notifications if n.send_datetime < cutoff_datetime]:
+			sendTextMessageToNumber(message.content, primary_phone_number)
+
+		return
 
 	def send_text_message(self, to, notifications, template=None, context=None, body=None):
 		"""
 		Send text message to patient <to>, where message body is a message template <template>
 		filled with values from dictionary <context>
-
-		In future, checks performed on additional recipient features will determine whether
-		the message should be sent via SMS, as a native app notification, or as a voice call.
 		"""
 		# Initialize function
 		if body is None:
@@ -78,25 +86,28 @@ class NotificationCenter(object):
 		primary_phone_number = to.primary_phone_number or to.primary_contact.primary_phone_number
 
 		# Perform record keeping in DB
-		type = notifications[0].type
-		message = Message.objects.create(to=to, type=type, content=body)
+		_type = notifications[0]._type
+		message = Message.objects.create(to=to, _type=_type, content=body)
 		for one_notification in notifications:
 			message.notifications.add(one_notification)
 			one_notification.update_to_next_send_time()
-			if Feedback.is_valid_type(type):
-				feedback = Feedback.objects.create(type=type,
+			if Feedback.is_valid_type(_type):
+				feedback = Feedback.objects.create(_type=_type,
 												   prescription=one_notification.prescription,
 												   notification=one_notification)
 				message.feedbacks.add(feedback)
 
+		cutoff_datetime = NotificationCenter.get_cutoff_datetime()
+		if not [n for n in notifications if n.send_datetime < cutoff_datetime]:
+			sendTextMessageToNumber(body, primary_phone_number)
 
-		sendTextMessageToNumber(body, primary_phone_number)
+		return
 
 	def send_refill_notifications(self, to, notifications):
 		"""
 		Send refill notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.REFILL)
+		notifications = notifications.filter(to=to, _type=Notification.REFILL)
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
 
@@ -117,7 +128,7 @@ class NotificationCenter(object):
 		"""
 		Send medication notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.MEDICATION) \
+		notifications = notifications.filter(to=to, _type=Notification.MEDICATION) \
 			.exclude(prescription__filled=False)
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
@@ -138,7 +149,7 @@ class NotificationCenter(object):
 		"""
 		Send welcome notification in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.WELCOME)
+		notifications = notifications.filter(to=to, _type=Notification.WELCOME)
 		if not notifications.exists() or to.status != PatientProfile.NEW:
 			return
 		notification = notifications[0]
@@ -167,7 +178,7 @@ class NotificationCenter(object):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.SAFETY_NET)
+		notifications = notifications.filter(to=to, _type=Notification.SAFETY_NET)
 
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
@@ -181,7 +192,7 @@ class NotificationCenter(object):
 		"""
 		Send a welcome safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.SAFETY_NET_WELCOME)
+		notifications = notifications.filter(to=to, _type=Notification.SAFETY_NET_WELCOME)
 
 		if not notifications.exists():
 			return
@@ -207,13 +218,11 @@ class NotificationCenter(object):
 			template = 'messages/safety_net_welcome_message_3.txt'
 			self.send_text_message(to=to, notifications=notification, template=template, context=context)
 
-
-
 	def send_static_one_off_notifications(self, to, notifications):
 		"""
 		Send safety-net notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.STATIC_ONE_OFF)
+		notifications = notifications.filter(to=to, _type=Notification.STATIC_ONE_OFF)
 
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
@@ -227,7 +236,7 @@ class NotificationCenter(object):
 		"""
 		Send repeat message notifications in QuerySet <notifications> to recipient <to>
 		"""
-		notifications = notifications.filter(to=to, type=Notification.REPEAT_MESSAGE)
+		notifications = notifications.filter(to=to, _type=Notification.REPEAT_MESSAGE)
 
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
@@ -237,7 +246,6 @@ class NotificationCenter(object):
 			notification.active = False
 			notification.save()
 			self.resend_text_message(to=to, message=notification.message)
-
 
 	def send_notifications(self, to, notifications):
 		"""

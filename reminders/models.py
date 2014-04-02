@@ -5,27 +5,28 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from configs.dev.settings import REMINDER_MERGE_INTERVAL, DOCTOR_INITIATED_WELCOME_SEND_TIME
 from common.models import UserProfile, Drug
-from configs.dev.settings import MESSAGE_CUTOFF, REMINDER_MERGE_INTERVAL, DOCTOR_INITIATED_WELCOME_SEND_TIME
 from patients.models import PatientProfile
 
 class Prescription(models.Model):
-	"""Model for prescriptions"""
-	prescriber     				= models.ForeignKey(UserProfile, blank=False, related_name='prescriptions_given')
+	"""
+	Model for prescriptions
+	"""
 	patient        				= models.ForeignKey(PatientProfile, blank=False, related_name='prescriptions_received')
-	drug           				= models.ForeignKey(Drug, blank=False)
-	
+	prescriber     				= models.ForeignKey(UserProfile, blank=False, related_name='prescriptions_given')
 	safety_net_on				= models.BooleanField(default=False)
-	with_food      				= models.BooleanField(default=False)
-	with_water     				= models.BooleanField(default=False)
-	last_edited    				= models.DateTimeField(auto_now=True)
-	sig                         = models.CharField(max_length=300)
-	note		  				= models.CharField(max_length=300)
-
 	last_contacted_safety_net 	= models.DateTimeField(null=True)
 
-	# Has the prescription been filled at the pharmacy?
+	drug           				= models.ForeignKey(Drug, blank=False)
+	with_food      				= models.BooleanField(default=False)
+	with_water     				= models.BooleanField(default=False)
+	sig                         = models.CharField(max_length=300)
+	note		  				= models.CharField(max_length=300)
 	filled						= models.BooleanField(default=False)
+
+	last_edited    				= models.DateTimeField(auto_now=True)
+
 
 #==============NOTIFICATION RELATED CLASSES=======================
 
@@ -64,15 +65,14 @@ class NotificationManager(models.Manager):
 		refill_notification = None
 		if not prescription.filled:
 			refill_notification = Notification.objects.get_or_create(to=to,
-			                                             type=Notification.REFILL,
+			                                             _type=Notification.REFILL,
 														 repeat=Notification.DAILY,
 														 prescription=prescription)[0]
 		med_notification = Notification.objects.get_or_create(to=to,
-		                                          type=Notification.MEDICATION,
+		                                          _type=Notification.MEDICATION,
 												  repeat=Notification.DAILY,
 												  prescription=prescription)[0]
 		return (refill_notification, med_notification)
-
 
 	def create_prescription_notifications_from_notification_schedule(self, to, prescription, notification_schedule):
 		""" Take a prescription and a notification schedule and schedule a refill notification and medication
@@ -81,14 +81,14 @@ class NotificationManager(models.Manager):
 		refill_notification = None
 		if not prescription.filled:
 			refill_notification = Notification.objects.get_or_create(to=to,
-			                                                     type=Notification.REFILL,
+			                                                     _type=Notification.REFILL,
 																 repeat=Notification.DAILY,
 																 send_datetime=notification_schedule[0][1],
 																 prescription=prescription)[0]
 		notification_times = []
 		for notification_schedule_entry in notification_schedule:
 			notification_time = Notification.objects.create(to=to,
-			                                            type=Notification.MEDICATION,
+			                                            _type=Notification.MEDICATION,
 														prescription=prescription,
 														repeat=notification_schedule_entry[0],
 														send_datetime=notification_schedule_entry[1])
@@ -98,14 +98,15 @@ class NotificationManager(models.Manager):
 
 	def create_consumer_welcome_notification(self, to):
 		welcome_reminder = Notification.objects.get_or_create(to=to,
-			type=Notification.WELCOME, repeat=Notification.NO_REPEAT)[0]
+			_type=Notification.WELCOME, repeat=Notification.NO_REPEAT)[0]
 		return welcome_reminder
+
 
 class Notification(models.Model):
 	"""
 	A Notification marks a point in time for when an outgoing message needs to be sent to a user.
-	A Notification has a repeat field specifying how frequently the user should be notified.
-	Notifications are periodically grouped into Messages and sent to users."""
+	repeat: Specifies how frequently the user should be notified.
+	Notifications are periodically grouped into Messages and sent to users. """
 
 	# Notification type
 	MEDICATION 	        = 'm'
@@ -136,11 +137,11 @@ class Notification(models.Model):
 
 	# repeat choices i.e., what is the period of this notification time
 	NO_REPEAT = 'nr'
-	DAILY    = 'd'
-	WEEKLY   = 'w'
-	MONTHLY  = 'm'
-	YEARLY   = 'y'
-	CUSTOM   = 'c' 
+	DAILY     = 'd'
+	WEEKLY    = 'w'
+	MONTHLY   = 'm'
+	YEARLY    = 'y'
+	CUSTOM    = 'c' 
 	REPEAT_CHOICES = (
 		(NO_REPEAT, 'no_repeat'),
 		(DAILY,    'daily'),
@@ -150,34 +151,31 @@ class Notification(models.Model):
 		(CUSTOM,   'custom'),
 	)	
 
-	type            	= models.CharField(max_length=4,
-	                                            choices=NOTIFICATION_TYPE_CHOICES, null=False, blank=False)
-	to       			= models.ForeignKey(PatientProfile, null=False, blank=False)
-	repeat 				= models.CharField(max_length=2,
+	_type            	   = models.CharField(max_length=4, choices=NOTIFICATION_TYPE_CHOICES, null=False, blank=False)
+	to       			   = models.ForeignKey(PatientProfile, null=False, blank=False)
+	repeat 				   = models.CharField(max_length=2,
 	                                         choices=REPEAT_CHOICES, null=False, blank=False)
-	send_datetime		= models.DateTimeField(null=False, blank=False)
-	active				= models.BooleanField(default=True) # is the notification still alive?
+	send_datetime		   = models.DateTimeField(null=False, blank=False)
+	active				   = models.BooleanField(default=True) # is the notification still alive?
+	day_of_week            = models.PositiveSmallIntegerField(null=True, blank=True)
+	times_sent             = models.PositiveIntegerField(default=0)
 
-	objects 			= NotificationManager()
+	# Required for REFILL, MEDICATION
+	prescription           = models.ForeignKey(Prescription, null=True, blank=True)
 
-	day_of_week         = models.PositiveSmallIntegerField(null=True, blank=True)
+	# Required for STATIC_ONE_OFF
+	content                = models.CharField(max_length=160, null=True, blank=True) #Required type: STATIC_ONE_OFF
 
-	times_sent          = models.PositiveIntegerField(default=0)
+	# Required for SAFETY_NET, SAFETY_NET_WELCOME
+	patient_of_safety_net  = models.ForeignKey(PatientProfile, related_name="patient_of_safety_net", null=True, blank=True)
 
-	# Required types: REFILL, MEDICATION
-	prescription        = models.ForeignKey(Prescription, null=True, blank=True)
+	# Required for SAFETY_NET
+	adherence_rate         = models.PositiveSmallIntegerField(null=True, blank=True)
 
-	# Required type: STATIC_ONE_OFF
-	content             = models.CharField(max_length=160, null=True, blank=True) #Required type: STATIC_ONE_OFF
+	# Required for REPEAT_MESSAGE
+	message                = models.ForeignKey('Message', null=True, blank=True, related_name="repeat_message")
 
-	# Required type: SAFETY_NET, SAFETY_NET_WELCOME
-	patient_of_safety_net   = models.ForeignKey(PatientProfile, related_name="patient_of_safety_net", null=True, blank=True)
-
-	# Required type; SAFETY_NET
-	adherence_rate          = models.PositiveSmallIntegerField(null=True, blank=True)
-
-	# Required type: REPEAT_MESSAGE
-	message             = models.ForeignKey('Message', null=True, blank=True, related_name="repeat_message")
+	objects 			   = NotificationManager()
 
 	class Meta:
 		get_latest_by = 'send_time'
@@ -197,24 +195,24 @@ class Notification(models.Model):
 		if not self.send_datetime:
 			self.set_best_send_time()
 
-		if self.type in [Notification.REFILL, Notification.MEDICATION]:
+		if self._type in [Notification.REFILL, Notification.MEDICATION]:
 			if self.prescription is None:
 				raise ValidationError("This type of notification requires a foreign-key to a prescription")
 
-		if self.type in [Notification.STATIC_ONE_OFF, Notification.SAFETY_NET]:
+		if self._type in [Notification.STATIC_ONE_OFF, Notification.SAFETY_NET]:
 			if self.content is None:
 				raise ValidationError("This type of notification requires predefined content")
 
-		if self.type in [Notification.SAFETY_NET, Notification.SAFETY_NET_WELCOME]:
+		if self._type in [Notification.SAFETY_NET, Notification.SAFETY_NET_WELCOME]:
 			if self.patient_of_safety_net is None:
 				raise ValidationError("This type of notification requires patient of safety net member "
 				                      "information")
-		if self.type in [Notification.SAFETY_NET]:
+		if self._type in [Notification.SAFETY_NET]:
 			if self.adherence_rate is None:
 				raise ValidationError("This type of notification requires adherence rate "
 				                      "information")
 
-		if self.type in [Notification.REPEAT_MESSAGE]:
+		if self._type in [Notification.REPEAT_MESSAGE]:
 			if self.message is None:
 				raise ValidationError("This type of notification requires a message pointer")
 
@@ -309,8 +307,9 @@ class Notification(models.Model):
 			self.save()
 
 	def __update_custom_send_time(self):
-		if self.type == self.CUSTOM:
+		if self._type == self.CUSTOM:
 			pass
+
 
 #==============MESSAGE RELATED CLASSES=======================
 
@@ -319,13 +318,13 @@ class MessageManager(models.Manager):
 		# Set correct value for nth_message_of_day_of_type
 		if 'nth_message_of_day_of_type' in kwargs:
 			return super(MessageManager, self).create(**kwargs)
-		if 'type' in kwargs:
-			type = kwargs['type']
+		if '_type' in kwargs:
+			_type = kwargs['_type']
 		else:
 			return super(MessageManager, self).create(**kwargs)
 
 		today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-		todays_messages = self.filter(datetime_sent__gte=today, type=type)
+		todays_messages = self.filter(datetime_sent__gte=today, _type=_type)
 		if todays_messages:
 			nth_message_of_day_of_type = todays_messages.first().nth_message_of_day_of_type + 1
 		else:
@@ -334,7 +333,7 @@ class MessageManager(models.Manager):
 
 	def get_last_sent_message_requiring_response(self, to):
 		today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-		message = self.filter(to=to, datetime_sent__gte=today, type__in=Message.REQUIRE_RESPONSE_MESSAGES,
+		message = self.filter(to=to, datetime_sent__gte=today, _type__in=Message.REQUIRE_RESPONSE_MESSAGES,
 		                      datetime_responded=None)
 		if message:
 			message = message[0]
@@ -362,85 +361,109 @@ class Message(models.Model):
 	SAFETY_NET                  = 'sn'
 	STATIC_ONE_OFF              = 'sof'
 
-	NOTIFICATION_MESSAGES = [MEDICATION, REFILL, NON_ADHERENT, WELCOME, SAFETY_NET, STATIC_ONE_OFF]
-	RESPONSE_MESSAGES = [MEDICATION_ACK, MEDICATION_QUESTIONNAIRE, REFILL_QUESTIONNAIRE, MED_INFO,
-	                     NON_ADHERENT_QUESTIONNAIRE, OPEN_ENDED_QUESTION]
+	NOTIFICATION_MESSAGES = [
+		MEDICATION, 
+		REFILL, 
+		NON_ADHERENT, 
+		WELCOME, 
+		SAFETY_NET, 
+		STATIC_ONE_OFF,
+	]
+
+	RESPONSE_MESSAGES = [
+		MEDICATION_ACK, 
+		MEDICATION_QUESTIONNAIRE, 
+		REFILL_QUESTIONNAIRE, 
+		MED_INFO,
+		NON_ADHERENT_QUESTIONNAIRE, 
+		OPEN_ENDED_QUESTION,
+	]
 
 	# Messages requiring a response
-	REQUIRE_RESPONSE_MESSAGES = [MEDICATION, MEDICATION_QUESTIONNAIRE, REFILL, REFILL_QUESTIONNAIRE, MED_INFO, NON_ADHERENT,
-	                   NON_ADHERENT_QUESTIONNAIRE, OPEN_ENDED_QUESTION]
+	REQUIRE_RESPONSE_MESSAGES = [
+		MEDICATION, 
+		MEDICATION_QUESTIONNAIRE, 
+		REFILL, 
+		REFILL_QUESTIONNAIRE, 
+		MED_INFO, 
+		NON_ADHERENT,
+		NON_ADHERENT_QUESTIONNAIRE, 
+		OPEN_ENDED_QUESTION,
+	]
 
-	MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY = {'a':'Haven\'t gotten the chance',
-	                                               'b':'Need to refill',
-	                                               'c':'Side effects',
-	                                               'd':'Meds don\'t work',
-	                                               'e':'Prescription changed',
-	                                               'f':'I feel sad :(',
-	                                               'g':'Other'}
+	MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY = {
+		'a':'Haven\'t gotten the chance',
+		'b':'Need to refill',
+		'c':'Side effects',
+		'd':'Meds don\'t work',
+		'e':'Prescription changed',
+		'f':'I feel sad :(',
+		'g':'Other',
+	}
 
-	REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY = {'a':'Haven\'t gotten the chance',
-	                                                'b':'Too expensive',
-	                                                'c':'Concerned about side effects',
-	                                                'd':'Other'}
+	REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY = {
+		'a':'Haven\'t gotten the chance',
+		'b':'Too expensive',
+		'c':'Concerned about side effects',
+		'd':'Other',
+	}
 
 	MESSAGE_TYPE_CHOICES = (                                            # Non-standard required fields:
-		(MEDICATION,                'medication'),                      ## notifications, feedbacks, nth_message_of_day_of_type
+		(MEDICATION,                'medication'),                      ## notifications, feedback, nth_message_of_day_of_type
 		(MEDICATION_ACK,            'medication_ack'),                  ## previous_message, content
-		(MEDICATION_QUESTIONNAIRE,  'medication_questionnaire'),        ## feedbacks, previous_message
-		(REFILL,	                'refill'),                          ## notifications, feedbacks
-		(REFILL_QUESTIONNAIRE,      'refill_questionnaire'),            ## feedbacks, previous_message
+		(MEDICATION_QUESTIONNAIRE,  'medication_questionnaire'),        ## feedback, previous_message
+		(REFILL,	                'refill'),                          ## notifications, feedback
+		(REFILL_QUESTIONNAIRE,      'refill_questionnaire'),            ## feedback, previous_message
 		(MED_INFO,                  'med_info'),                        ## previous_message
-		(NON_ADHERENT,              'non_adherent'),                    ## notifications, feedbacks
-		(NON_ADHERENT_QUESTIONNAIRE,'non_adherent_questionnaire'),      ## feedbacks, previous_message
-		(OPEN_ENDED_QUESTION,       'open_ended_question'),             ## feedbacks, previous_message
+		(NON_ADHERENT,              'non_adherent'),                    ## notifications, feedback
+		(NON_ADHERENT_QUESTIONNAIRE,'non_adherent_questionnaire'),      ## feedback, previous_message
+		(OPEN_ENDED_QUESTION,       'open_ended_question'),             ## feedback, previous_message
 		(WELCOME,                   'welcome'),                         ## N/A
 		(SAFETY_NET,                'safety_net'),                      ## notifications
 		(STATIC_ONE_OFF,            'static_one_off'),                  ## content
 	)
 
 	@classmethod
-	def is_valid_type(cls, type):
+	def is_valid_type(cls, _type):
 		for choice in cls.MESSAGE_TYPE_CHOICES:
-			if type == choice[0]:
+			if _type == choice[0]:
 				return True
 		return False
 
 	to                  = models.ForeignKey(PatientProfile, blank=False)
-	type                = models.CharField(max_length=4, choices=MESSAGE_TYPE_CHOICES, null=False, blank=False)
+	_type               = models.CharField(max_length=4, choices=MESSAGE_TYPE_CHOICES, null=False, blank=False)
 
 	datetime_responded  = models.DateTimeField(blank=True, null=True)
 	datetime_sent       = models.DateTimeField(auto_now_add=True)
 
-	objects		    = MessageManager()
-
 	content             = models.CharField(max_length=160)
 
-	# Required types: MEDICATION, REFILL, NON_ADHERENT, SAFETY_NET
-	notifications       = models.ManyToManyField(Notification, blank=True, null=True, related_name='notifications')
+	# Required for MEDICATION, REFILL, NON_ADHERENT, SAFETY_NET
+	notifications       = models.ManyToManyField(Notification, blank=True, null=True, related_name='messages')
 
-	# Required types: MEDICATION, MEDICATION_QUESTIONNAIRE, REFILL, REFILL_QUESTIONNAIRE
-	#                 NON_ADHERENT, NON_ADHERENT_QUESTIONNAIRE, OPEN_ENDED_QUESTION
+	# Required for MEDICATION, MEDICATION_QUESTIONNAIRE, REFILL, REFILL_QUESTIONNAIRE
+	#              NON_ADHERENT, NON_ADHERENT_QUESTIONNAIRE, OPEN_ENDED_QUESTION
 	feedbacks           = models.ManyToManyField('Feedback', blank=True, null=True)
 
-	# Required types: RESPONSE_MESSAGES
+	# Required for RESPONSE_MESSAGES
 	previous_message    = models.ForeignKey('Message', blank=True, null=True)
 
-
-	# Required types: MEDICATION
+	# Required for MEDICATION
 	nth_message_of_day_of_type = models.PositiveSmallIntegerField(blank=True, null=True)
+
+	objects		        = MessageManager()
 
 	def __init__(self, *args, **kwargs):
 		super(Message, self).__init__(*args, **kwargs)
 
-		if self.type in Message.RESPONSE_MESSAGES:
+		if self._type in Message.RESPONSE_MESSAGES:
 			if self.previous_message is None:
-				raise ValidationError("A messages sent as a response requires a pointer to a previous message")
+				raise ValidationError("A message sent as a response requires a pointer to a previous message")
 
-		if self.type in [Message.MEDICATION]:
+		if self._type in [Message.MEDICATION]:
 			if self.nth_message_of_day_of_type is None:
 				raise ValidationError("This type of message needs to know how many messages like it have been sent"
 									  "today (nth_message_of_day_of_type)")
-
 
 
 class Feedback(models.Model):
@@ -452,28 +475,27 @@ class Feedback(models.Model):
 	REFILL 		                = 'r'
 
 	FEEDBACK_TYPE_CHOICES = (
-		(MEDICATION,                'medication'),
-		(REFILL,	                'refill'),
+		(MEDICATION, 'medication'),
+		(REFILL, 'refill'),
 	)
 
 	@classmethod
-	def is_valid_type(cls, type):
+	def is_valid_type(cls, _type):
 		for choice in cls.FEEDBACK_TYPE_CHOICES:
-			if type == choice[0]:
+			if _type == choice[0]:
 				return True
 		return False
 
-	type           = models.CharField(max_length=4, choices=FEEDBACK_TYPE_CHOICES)
-	notification   = models.ForeignKey(Notification)
-	prescription   = models.ForeignKey(Prescription)
+	_type              = models.CharField(max_length=4, choices=FEEDBACK_TYPE_CHOICES)
+	notification       = models.ForeignKey(Notification)
+	prescription       = models.ForeignKey(Prescription)
+
+	note               = models.CharField(max_length=320)
+	completed          = models.BooleanField(default=False)
 
 	datetime_sent      = models.DateTimeField(auto_now_add=True)
-
 	datetime_responded = models.DateTimeField(blank=True, null=True)
-	note           = models.CharField(max_length=320)
-
-	completed      = models.BooleanField(default=False)
 
 	class Meta:
-		get_latest_by = "time_sent"
+		get_latest_by = 'datetime_sent'
 

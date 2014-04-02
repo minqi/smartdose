@@ -1,35 +1,77 @@
-import glob
-import itertools
-import re
-from common.models import DrugFact
+import glob, itertools, re, datetime, random
+
 from django.http import HttpResponseNotFound, HttpResponse
 from django.template import Context
 from django.template.loader import render_to_string
+
+from common.models import DrugFact
 from patients.models import SafetyNetRelationship
 from reminders.models import Message, Notification
-import datetime
-import random
 
 
 class ResponseCenter(object):
-
 	def _is_quit(self, message):
-		""" Returns true if the message is a quit message
+		""" 
+		Returns true if the message is a quit message
 		"""
-		if message.lower() == "q" or message.lower() == "quit":
-			return True
-		else:
-			return False
+		return message.lower() in ("q", "quit", "p", "pause")
 
 	def _is_resume(self, message):
-		""" Returns true if the message is a resume
+		""" 
+		Returns true if the message is a resume
 		"""
-		if message.lower() == "resume":
-			return True
+		return message.lower() == "resume"
+
+	def is_yes(self, response):
+		return response.lower() in ['y', 'yes']
+
+	def is_no(self, response):
+		return response.lower() in ['n', 'no']
+
+	def is_med_info(self, response):
+		return response.lower() in ['m', 'info']
+
+	def is_time_change(self, response):
+		# Parse time from response
+		time_with_minutes_re = "^(?P<hour>[0-9]{1,2})(:)?(?P<minute>[0-9][0-9])(\\s)?(?i)(?P<ampm>am|pm)?$"
+		time_without_minutes_re = "^(?P<hour>[0-9]{1,2})(\\s)?(?i)(?P<ampm>am|pm)?$"
+		time_res = [time_with_minutes_re, time_without_minutes_re]
+		for regex in time_res:
+			formatted_time = re.match(regex, response.lower())
+			if formatted_time:
+				break
+
+		if formatted_time:
+			extracted_hour = formatted_time.group("hour")
+			try:
+				extracted_minute = formatted_time.group("minute")
+			except:
+				extracted_minute = None
+			if int(extracted_hour) < 24:
+				hours = int(extracted_hour)
+			else:
+				return False
+			if extracted_minute:
+				if int(extracted_minute) < 60:
+					minutes = int(extracted_minute)
+				else:
+					return False
+			else:
+				minutes = 0
+
+			# Hours greater than 12 shouldn't have ampm. For example 13pm. Or 13am
+			if formatted_time.group("ampm") != "" and hours > 12:
+				return False
+
+			if formatted_time.group("ampm") == 'pm' and hours < 12:
+				hours = hours+12
+
+			time = datetime.time(hour=hours, minute=minutes)
+			return time
 		else:
 			return False
 
-	def process_not_valid_response(self):
+	def process_invalid_response(self):
 		return HttpResponseNotFound()
 
 	def process_quit_response(self, sender):
@@ -48,7 +90,7 @@ class ResponseCenter(object):
 			return HttpResponse(content=content, content_type="text/plain")
 
 	def _get_adherence_ratio_ack_response_content(self, sender, acked_messages):
-		#TODO(mgaba): What kind of information should go in a message that reports
+		#TODO: What kind of information should go in a message that reports
 		# adherence ratio to a patient? Is it adherence to a particular drug?
 		# Is it overall adherence? Over what time frame?
 		raise Exception("Not yet implemented")
@@ -92,75 +134,17 @@ class ResponseCenter(object):
 			return self._get_app_upsell_content(sender, acked_message)
 
 	def _return_best_ack_response_content(self, sender, acked_message):
-		random_ack_message_choices = [self._get_app_upsell_content,
-									 self._get_health_educational_content]
-
+		random_ack_message_choices = [
+			self._get_app_upsell_content,
+			self._get_health_educational_content,
+		]
 		#TODO add gamification content.
 
-		return random.choice(random_ack_message_choices)(sender,acked_message)
-
-
-	def is_yes(self, response):
-		if response.lower() in ['y', 'yes']:
-			return True
-		else:
-			return False
-
-	def is_no(self, response):
-		if response.lower() in ['n', 'no']:
-			return True
-		else:
-			return False
-
-	def is_med_info(self, response):
-		if response.lower() in ['m', 'info']:
-			return True
-		else:
-			return False
-
-	def is_time_change(self, response):
-		# Parse time from response
-		time_with_minutes_re = "^(?P<hour>[0-9]{1,2})(:)?(?P<minute>[0-9][0-9])(\\s)?(?i)(?P<ampm>am|pm)?$"
-		time_without_minutes_re = "^(?P<hour>[0-9]{1,2})(\\s)?(?i)(?P<ampm>am|pm)?$"
-		time_res = [time_with_minutes_re, time_without_minutes_re]
-		for regex in time_res:
-			formatted_time = re.match(regex, response.lower())
-			if formatted_time:
-				break
-
-		if formatted_time:
-			extracted_hour = formatted_time.group("hour")
-			try:
-				extracted_minute = formatted_time.group("minute")
-			except:
-				extracted_minute = None
-			if int(extracted_hour) < 24:
-				hours = int(extracted_hour)
-			else:
-				return False
-			if extracted_minute:
-				if int(extracted_minute) < 60:
-					minutes = int(extracted_minute)
-				else:
-					return False
-			else:
-				minutes = 0
-
-			# Hours greater than 12 shouldn't have ampm. For example 13pm. Or 13am
-			if formatted_time.group("ampm") != "" and hours > 12:
-				return False
-
-			if formatted_time.group("ampm") == 'pm' and hours < 12:
-				hours = hours+12
-
-
-			time = datetime.time(hour=hours, minute=minutes)
-			return time
-		else:
-			return False
+		return random.choice(random_ack_message_choices)(sender, acked_message)
 
 	def process_medication_response(self, sender, message, response):
-		""" Process a response to a medication message
+		"""
+		Process a response to a medication message
 		"""
 		now = datetime.datetime.now()
 		message.datetime_responded = now
@@ -178,7 +162,7 @@ class ResponseCenter(object):
 
 			# Create new message
 			content = self._return_best_ack_response_content(sender, message)
-			Message.objects.create(to=sender, type=Message.MEDICATION_ACK, previous_message=message, content=content)
+			Message.objects.create(to=sender, _type=Message.MEDICATION_ACK, previous_message=message, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
 
 		elif self.is_no(response):
@@ -196,7 +180,7 @@ class ResponseCenter(object):
 			content = render_to_string(template, context)
 
 			# Create new message
-			new_m = Message.objects.create(to=sender, type=Message.MEDICATION_QUESTIONNAIRE, previous_message=message,
+			new_m = Message.objects.create(to=sender, _type=Message.MEDICATION_QUESTIONNAIRE, previous_message=message,
 			                               content=content)
 			for feedback in feedbacks:
 				new_m.feedbacks.add(feedback)
@@ -222,10 +206,8 @@ class ResponseCenter(object):
 			message.save()
 			template = 'messages/unknown_response.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
-
-
 
 	def process_medication_questionnaire_response(self, sender, message, response):
 		""" Process a response to a medication questionnaire message
@@ -242,16 +224,15 @@ class ResponseCenter(object):
 			           Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
 			           '.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=return_message_type, content=content, previous_message=message)
+			new_m = Message.objects.create(to=sender, _type=return_message_type, content=content, previous_message=message)
 			return HttpResponse(content=content, content_type='text/plain')
-
 
 		# Switch on type of response
 		# a - Haven't gotten the chance
 		if response.lower() == 'a':
 			# Schedule a medication reminder for later
 			one_hour = datetime.datetime.now() + datetime.timedelta(hours=1)
-			n = Notification.objects.create(to=sender, type=Notification.REPEAT_MESSAGE, repeat=Notification.NO_REPEAT,
+			n = Notification.objects.create(to=sender, _type=Notification.REPEAT_MESSAGE, repeat=Notification.NO_REPEAT,
 			                                message=message.previous_message, send_datetime=one_hour)
 
 			# Send response
@@ -294,9 +275,8 @@ class ResponseCenter(object):
 			message.save()
 			template = 'messages/unknown_response.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
-
 
 	def process_refill_response(self, sender, message, response):
 		""" Process a response to a refill message
@@ -327,11 +307,11 @@ class ResponseCenter(object):
 			for feedback in feedbacks:
 				feedback.prescription.filled = True
 				feedback.prescription.save()
-				med_notifications = Notification.objects.filter(prescription=feedback.prescription, type=Notification.MEDICATION)
+				med_notifications = Notification.objects.filter(prescription=feedback.prescription, _type=Notification.MEDICATION)
 				for med_notification in med_notifications:
 					if med_notification.send_datetime < now:
 						med_notification.update_to_next_send_time()
-					if earliest_notification == None or earliest_notification.send_datetime - now > med_notification.send_datetime - now:
+					if earliest_notification == None or earliest_notification.send_datetime > med_notification.send_datetime:
 						earliest_notification = med_notification
 
 			# Convert the time of the next earliest notification to a string for the template
@@ -369,7 +349,7 @@ class ResponseCenter(object):
 			           'day':day}
 			template = 'messages/refill_ack_message.txt'
 			content = render_to_string(template, context)
-			Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, previous_message=message, content=content)
+			Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, previous_message=message, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
 
 		elif self.is_no(response):
@@ -387,7 +367,7 @@ class ResponseCenter(object):
 			content = render_to_string(template, context)
 
 			# Create new message
-			new_m = Message.objects.create(to=sender, type=Message.REFILL_QUESTIONNAIRE, previous_message=message,
+			new_m = Message.objects.create(to=sender, _type=Message.REFILL_QUESTIONNAIRE, previous_message=message,
 			                               content=content)
 			for feedback in feedbacks:
 				new_m.feedbacks.add(feedback)
@@ -410,7 +390,7 @@ class ResponseCenter(object):
 			message.save()
 			template = 'messages/unknown_response.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
 		raise Exception("Not yet implemented")
 
@@ -429,7 +409,7 @@ class ResponseCenter(object):
 			           Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
 			           '.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=return_message_type, content=content, previous_message=message)
+			new_m = Message.objects.create(to=sender, _type=return_message_type, content=content, previous_message=message)
 			return HttpResponse(content=content, content_type='text/plain')
 
 
@@ -466,9 +446,8 @@ class ResponseCenter(object):
 			message.save()
 			template = 'messages/unknown_response.txt'
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
-
 
 	def process_med_info_response(self, sender, message, response):
 		""" Process a response to a med info message
@@ -512,9 +491,8 @@ class ResponseCenter(object):
 
 		template = 'messages/response_open_ended_question.txt'
 		content = render_to_string(template)
-		new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+		new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 		return HttpResponse(content=content, content_type='text/plain')
-
 
 	def process_no_recent_message_response(self, sender, response):
 		if self.is_med_info(response):
@@ -525,26 +503,30 @@ class ResponseCenter(object):
 		else:
 			template = "messages/no_messages_to_reply_to.txt"
 			content = render_to_string(template)
-			new_m = Message.objects.create(to=sender, type=Message.STATIC_ONE_OFF, content=content)
+			new_m = Message.objects.create(to=sender, _type=Message.STATIC_ONE_OFF, content=content)
 			return HttpResponse(content=content, content_type='text/plain')
 
+	def process_unrequired_response(self, sender, response):
+		# handles responses to messages that do not require responses
+		pass
 
-	RESPONSE_MAP = \
-		{Message.MEDICATION: process_medication_response,
-		 Message.MEDICATION_QUESTIONNAIRE: process_medication_questionnaire_response,
-		 Message.REFILL: process_refill_response,
-		 Message.REFILL_QUESTIONNAIRE: process_refill_questionnaire_response,
-		 Message.MED_INFO: process_med_info_response,
-		 Message.NON_ADHERENT: process_non_adherent_response,
-		 Message.NON_ADHERENT_QUESTIONNAIRE: process_non_adherent_questionnaire_response,
-		 Message.OPEN_ENDED_QUESTION: process_open_ended_question_response}
+	RESPONSE_MAP = {
+		Message.MEDICATION: process_medication_response,
+		Message.MEDICATION_QUESTIONNAIRE: process_medication_questionnaire_response,
+		Message.REFILL: process_refill_response,
+		Message.REFILL_QUESTIONNAIRE: process_refill_questionnaire_response,
+		Message.MED_INFO: process_med_info_response,
+		Message.NON_ADHERENT: process_non_adherent_response,
+		Message.NON_ADHERENT_QUESTIONNAIRE: process_non_adherent_questionnaire_response,
+		Message.OPEN_ENDED_QUESTION: process_open_ended_question_response,
+	}
 
 	def process_response(self, sender, response):
-		""" Returns an HttpResponse object. Changes state of system based on action and sender's message
+		""" 
+		Returns an HttpResponse object. Changes state of system based on action and sender's message
 		"""
-
 		if sender is None or (sender.did_quit() and not self._is_resume(response)):
-			return self.process_not_valid_response()
+			return self.process_invalid_response()
 
 		# Generic logic for responding to any type of message goes here
 		if self._is_quit(response):
@@ -557,5 +539,8 @@ class ResponseCenter(object):
 		if not last_sent_message:
 			return self.process_no_recent_message_response(sender, response)
 
-		return ResponseCenter.RESPONSE_MAP[last_sent_message.type](self, sender, last_sent_message, response)
+		response_generator = ResponseCenter.RESPONSE_MAP.get(
+			last_sent_message._type, self.process_unrequired_response)
+
+		return response_generator(self, sender, last_sent_message, response)
 

@@ -15,11 +15,11 @@ class SafetyNetRelationship(models.Model):
 	target_patient = models.ForeignKey('PatientProfile', related_name='source_patient_safety_nets')
 
 	# what the patient calls this safety net contact
-	source_to_target_relationship		= \
+	source_to_target_relationship = \
 		models.CharField(null=False, blank=False, max_length=20, 
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
-	target_to_source_relationship       = \
+	target_to_source_relationship = \
 		models.CharField(null=False, blank=False, max_length=20, 
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
@@ -105,8 +105,8 @@ class PatientProfile(UserProfile):
 	class Meta:
 		ordering = ['full_name']
 		permissions = (
-			('view_patient_profile', 'Manage patient profile'),
-			('manage_patient_profile', 'Manage patient profile'),
+			('view_patientprofile', 'Manage patient profile'),
+			('manage_patientprofile', 'Manage patient profile'),
 		)
 
 	def __init__(self, *args, **kwargs):
@@ -143,13 +143,14 @@ class PatientProfile(UserProfile):
 		try:
 			sn_relation = SafetyNetRelationship.objects.get(
 				source_patient=self, target_patient=target_patient)
-			for key, value in defaults.iteritems():
-				setattr(sn_relation, key, value)
-			sn_relation.save()
 		except SafetyNetRelationship.DoesNotExist:
 			defaults.update({'source_patient':self, 'target_patient':target_patient})
 			sn_relation = SafetyNetRelationship(**defaults)
 			sn_relation.save()
+			
+		for key, value in defaults.iteritems():
+			setattr(sn_relation, key, value)
+		sn_relation.save()
 
 	def save(self, *args, **kwargs):
 		self.validate_unique()

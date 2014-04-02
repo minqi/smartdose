@@ -54,7 +54,7 @@ def create_inactive_patientprofile(
 	)
 
 	patient.num_caregivers += 1
-	assign_perm('manage_patient_profile', patient, patient)
+	assign_perm('manage_patientprofile', patient, patient)
 	patient.set_password(password)
 	patient.save()
 

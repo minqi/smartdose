@@ -184,7 +184,7 @@ class DeleteReminderForm(forms.Form):
 
 		reminders = Notification.objects.filter(
 			to=patient, prescription__drug__name__iexact=drug_name, 
-			type=Notification.MEDICATION)
+			_type=Notification.MEDICATION)
 		reminders_for_deletion = []
 		reminder_time = self.cleaned_data.get('reminder_time')
 		for r in reminders:
@@ -381,7 +381,7 @@ def fishfood(request):
 		c = RequestContext(request)
 		user = request.user
 
-		results = get_objects_for_user(user, 'patients.manage_patient_profile')
+		results = get_objects_for_user(user, 'patients.manage_patientprofile')
 		# results = PatientProfile.objects.all()
 		results = results.filter(
 			Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW)).order_by('full_name')
@@ -433,8 +433,8 @@ def create_patient(request, *args, **kwargs):
 				patient.full_name = full_name
 
 			# add permissions
-			assign_perm('view_patient_profile', request.user, patient)
-			assign_perm('manage_patient_profile', request.user, patient)
+			assign_perm('view_patientprofile', request.user, patient)
+			assign_perm('manage_patientprofile', request.user, patient)
 
 			# add request user as a safety net contact
 			patient.add_safety_net_contact(
@@ -471,14 +471,14 @@ def retrieve_patient(request, *args, **kwargs):
 			except PatientProfile.DoesNotExist:
 				pass
 			else:
-				if not request.user.has_perm('patients.manage_patient_profile', patient):
+				if not request.user.has_perm('patients.manage_patientprofile', patient):
 					return HttpResponseBadRequest("You don't have access to this user's profile")
 
 				c['patient'] = patient
 
 				# get reminders
 				reminders = Notification.objects.filter(
-					to=patient, type=Notification.MEDICATION)
+					to=patient, _type=Notification.MEDICATION)
 				reminders = sorted(reminders, key=lambda x: (x.prescription.drug.name, x.send_datetime.time()))
 				reminder_groups = []
 				for drug, outer_group in groupby(reminders, lambda x: x.prescription.drug.name):
@@ -508,7 +508,7 @@ def update_patient(request, *args, **kwargs):
 			p_id = form.cleaned_data['p_id']
 			patient = PatientProfile.objects.get(id=p_id)
 
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			full_name = form.cleaned_data['full_name']
@@ -538,7 +538,7 @@ def delete_patient(request, *args, **kwargs):
 			p_id = form.cleaned_data['p_id']
 			patient = PatientProfile.objects.get(id=p_id)
 
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			# patient loses a caregiver
@@ -573,7 +573,7 @@ def delete_patient(request, *args, **kwargs):
 				source_patient=patient).delete()
 			
 			# don't show the patient in the request user's patient list anymore
-			remove_perm('view_patient_profile', request.user, patient)
+			remove_perm('view_patientprofile', request.user, patient)
 
 			return redirect('/fishfood/')
 
@@ -585,7 +585,7 @@ def patient_search_results(request, *args, **kwargs):
 	if request.GET:
 		q = request.GET['q']
 
-		results = get_objects_for_user(request.user, 'patients.manage_patient_profile')
+		results = get_objects_for_user(request.user, 'patients.manage_patientprofile')
 		results = results.filter( 
 			Q(full_name__icontains=q) &
 			(Q(status=PatientProfile.ACTIVE) | Q(status=PatientProfile.NEW))
@@ -612,7 +612,7 @@ def create_reminder(request, *args, **kwargs):
 			p_id = form.cleaned_data['p_id']
 			patient = PatientProfile.objects.get(id=p_id)
 
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 			
 			drug_name = form.cleaned_data['drug_name']
@@ -638,7 +638,7 @@ def create_reminder(request, *args, **kwargs):
 					datetime.datetime.today().date(), reminder_time)
 				med_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					type=Notification.MEDICATION,
+					_type=Notification.MEDICATION,
 					send_datetime = send_datetime,
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
@@ -669,7 +669,7 @@ def create_reminder(request, *args, **kwargs):
 								)
 							med_reminder = Notification.objects.get_or_create(
 								to=patient, 
-								type=Notification.MEDICATION,
+								_type=Notification.MEDICATION,
 								send_datetime = send_datetime,
 								repeat=Notification.WEEKLY,
 								prescription=prescription)[0]
@@ -681,7 +681,7 @@ def create_reminder(request, *args, **kwargs):
 			if send_refill_reminder and not prescription.filled:
 				refill_reminder = Notification.objects.get_or_create(
 					to=patient, 
-					type=Notification.REFILL,
+					_type=Notification.REFILL,
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(refill_reminder)
@@ -708,14 +708,14 @@ def delete_reminder(request, *args, **kwargs):
 			p_id = form.cleaned_data['p_id']
 			patient = PatientProfile.objects.get(id=p_id)
 			
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			drug_name = form.cleaned_data['drug_name']
 			if form.cleaned_data['all_deleted']: # delete all reminder objects
 				Notification.objects.filter(
 					to=patient, prescription__drug__name__iexact=drug_name, 
-					type=Notification.REFILL).delete()
+					_type=Notification.REFILL).delete()
 			for r in form.cleaned_data['reminders_for_deletion']: 
 				r.delete()
 			return HttpResponse('')
@@ -731,7 +731,7 @@ def create_safety_net_contact(request):
 			p_id = form.cleaned_data['p_id']
 			patient = PatientProfile.objects.get(id=p_id)
 
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			full_name = form.cleaned_data['full_name']
@@ -750,8 +750,8 @@ def create_safety_net_contact(request):
 				receives_all_reminders=receives_all_reminders)
 
 			# give the safety-net contact permission to see/manage patient
-			assign_perm('view_patient_profile', target_patient, patient)
-			assign_perm('manage_patient_profile', target_patient, patient)
+			assign_perm('view_patientprofile', target_patient, patient)
+			assign_perm('manage_patientprofile', target_patient, patient)
 
 			return HttpResponse('')
 
@@ -769,7 +769,7 @@ def delete_safety_net_contact(request):
 
 			target_p_id = form.cleaned_data['target_p_id']
 
-			if not request.user.has_perm('patients.manage_patient_profile', patient):
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
 			q = SafetyNetRelationship.objects.filter(
@@ -777,8 +777,8 @@ def delete_safety_net_contact(request):
 			if q.exists():
 				q.delete()
 				target_patient = PatientProfile.objects.get(id=target_p_id)
-				remove_perm('view_patient_profile', target_patient, patient)
-				remove_perm('manage_patient_profile', target_patient, patient)
+				remove_perm('view_patientprofile', target_patient, patient)
+				remove_perm('manage_patientprofile', target_patient, patient)
 				return HttpResponse('')
 			else:
 				return HttpResponseBadRequest('This safety-net relationship does not exist')

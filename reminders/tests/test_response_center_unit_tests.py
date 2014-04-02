@@ -28,16 +28,16 @@ class ResponseCenterTest(TestCase):
 		self.drug = Drug.objects.create(name='advil')
 		self.prescription = Prescription.objects.create(prescriber=self.doctor,
 		                                                 patient=self.minqi, drug=self.drug, filled=True)
-		self.notification = Notification.objects.create(to=self.minqi, type=Notification.MEDICATION,
+		self.notification = Notification.objects.create(to=self.minqi, _type=Notification.MEDICATION,
 		                                                prescription=self.prescription, repeat=Notification.DAILY,
 		                                                send_datetime=datetime.datetime.now())
-		self.refill_notification = Notification.objects.create(to=self.minqi, type=Notification.REFILL,
+		self.refill_notification = Notification.objects.create(to=self.minqi, _type=Notification.REFILL,
 		                                                prescription=self.prescription, repeat=Notification.DAILY,
 		                                                send_datetime=datetime.datetime.now())
 
 	def test_process_medication_response_yes(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.notification)
 		message.feedbacks.add(feedback)
@@ -50,8 +50,8 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 
 	def test_process_medication_response_no(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.notification)
 		message.feedbacks.add(feedback)
@@ -60,7 +60,7 @@ class ResponseCenterTest(TestCase):
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
 		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
-		self.assertFalse(Message.objects.filter(type=Message.MEDICATION_QUESTIONNAIRE))
+		self.assertFalse(Message.objects.filter(_type=Message.MEDICATION_QUESTIONNAIRE))
 		response = self.rc.process_medication_response(self.minqi, message, 'n')
 		expected_response = "Why not? Reply:\n" \
 		                    "a - Haven't gotten the chance\n" \
@@ -72,38 +72,38 @@ class ResponseCenterTest(TestCase):
 		                    "g - Other"
 		self.assertEqual(response.content, expected_response)
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
-		self.assertTrue(Message.objects.filter(type=Message.MEDICATION_QUESTIONNAIRE))
+		self.assertTrue(Message.objects.filter(_type=Message.MEDICATION_QUESTIONNAIRE))
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_a(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
 
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
-		self.assertFalse(Notification.objects.filter(type=Notification.REPEAT_MESSAGE))
+		self.assertFalse(Notification.objects.filter(_type=Notification.REPEAT_MESSAGE))
 		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'a')
 		expected_response = "No problem. We'll send you another reminder in an hour."
 		self.assertEqual(response.content, expected_response)
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
-		self.assertTrue(Notification.objects.filter(type=Notification.REPEAT_MESSAGE))
+		self.assertTrue(Notification.objects.filter(_type=Notification.REPEAT_MESSAGE))
 
 	def test_process_medication_questionnaire_response_b(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -121,13 +121,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_c(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -145,13 +145,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_d(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -169,13 +169,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_e(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -193,13 +193,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_f(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -217,13 +217,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_questionnaire_response_unknown_response(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.MEDICATION_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.MEDICATION_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -239,8 +239,8 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_medication_response_yes(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
-		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.refill_notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.REFILL)
+		feedback = Feedback.objects.create(_type=Feedback.REFILL, notification=self.refill_notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.refill_notification)
 		message.feedbacks.add(feedback)
@@ -279,13 +279,13 @@ class ResponseCenterTest(TestCase):
 
 
 	def test_process_refill_questionnaire_response_a(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
-		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.REFILL)
+		feedback = Feedback.objects.create(_type=Feedback.REFILL, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.REFILL_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -303,13 +303,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_refill_questionnaire_response_b(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
-		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.REFILL)
+		f = Feedback.objects.create(_type=Feedback.REFILL, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
-		preceding_message.feedbacks.add(feedback)
+		preceding_message.feedbacks.add(f)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.REFILL_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -327,13 +327,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_refill_questionnaire_response_c(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
-		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.REFILL)
+		feedback = Feedback.objects.create(_type=Feedback.REFILL, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.REFILL_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -352,13 +352,13 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_process_refill_questionnaire_response_d(self):
-		preceding_message = Message.objects.create(to=self.minqi, type=Notification.REFILL)
-		feedback = Feedback.objects.create(type=Feedback.REFILL, notification=self.notification,
+		preceding_message = Message.objects.create(to=self.minqi, _type=Notification.REFILL)
+		feedback = Feedback.objects.create(_type=Feedback.REFILL, notification=self.notification,
 		                                   prescription=self.prescription)
 		preceding_message.notifications.add(self.notification)
 		preceding_message.feedbacks.add(feedback)
 		preceding_message.save()
-		message = Message.objects.create(to=preceding_message.to, type=Message.REFILL_QUESTIONNAIRE,
+		message = Message.objects.create(to=preceding_message.to, _type=Message.REFILL_QUESTIONNAIRE,
 		                                 previous_message=preceding_message)
 		for feedback in preceding_message.feedbacks.all():
 			message.feedbacks.add(feedback)
@@ -376,8 +376,8 @@ class ResponseCenterTest(TestCase):
 		self.assertIsNotNone(Message.objects.get(pk=message.pk).datetime_responded)
 
 	def test_get_app_upsell_content_with_doctor_prescriber(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.notification)
 		message.feedbacks.add(feedback)
@@ -401,11 +401,11 @@ class ResponseCenterTest(TestCase):
 	def test_get_app_upsell_content_with_self_prescriber(self):
 		self_prescription = Prescription.objects.create(prescriber=self.minqi,
 		                                                patient=self.minqi, drug=self.drug, filled=True)
-		self_prescription_notification = Notification.objects.create(to=self.minqi, type=Notification.MEDICATION,
+		self_prescription_notification = Notification.objects.create(to=self.minqi, _type=Notification.MEDICATION,
 		                                                prescription=self.prescription, repeat=Notification.DAILY,
 		                                                send_datetime=datetime.datetime.now())
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self_prescription)
 		message.notifications.add(self_prescription_notification)
 		message.feedbacks.add(feedback)
@@ -427,8 +427,8 @@ class ResponseCenterTest(TestCase):
 		self.assertIn(content, expected_responses)
 
 	def test_get_app_upsell_content_with_safety_net(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.notification)
 		message.feedbacks.add(feedback)
@@ -468,8 +468,8 @@ class ResponseCenterTest(TestCase):
 		self.assertIn(content, expected_responses)
 
 	def test_get_health_educational_content(self):
-		message = Message.objects.create(to=self.minqi, type=Notification.MEDICATION)
-		feedback = Feedback.objects.create(type=Feedback.MEDICATION, notification=self.notification,
+		message = Message.objects.create(to=self.minqi, _type=Notification.MEDICATION)
+		feedback = Feedback.objects.create(_type=Feedback.MEDICATION, notification=self.notification,
 		                                   prescription=self.prescription)
 		message.notifications.add(self.notification)
 		message.feedbacks.add(feedback)

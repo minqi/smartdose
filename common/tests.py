@@ -64,7 +64,7 @@ class TestListToQuerySet(TestCase):
 		for i in range(5):
 			send_datetime = self.now_datetime + datetime.timedelta(seconds=i*180)
 			n = Notification.objects.create(to=self.patient1,
-			                                type=Notification.WELCOME,
+			                                _type=Notification.WELCOME,
 											 repeat=Notification.DAILY,
 											 send_datetime=send_datetime)
 			test_list.append(n)

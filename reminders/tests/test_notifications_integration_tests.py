@@ -68,7 +68,7 @@ class EndToEndScenariosTest(TestCase):
 		Notification.objects.create_prescription_notifications_from_notification_schedule(to=minqi,
 																		  prescription=prescription,
 																		  notification_schedule=notification_schedule)
-		Notification.objects.create(to=minqi, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
+		Notification.objects.create(to=minqi, _type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
 		                            send_datetime=welcome_delivery_time)
 
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, welcome_delivery_time,
@@ -229,7 +229,7 @@ class EndToEndScenariosTest(TestCase):
 		Notification.objects.create_prescription_notifications_from_notification_schedule(to=minqi,
 		                                                                                  prescription=prescription,
 		                                                                                  notification_schedule=notification_schedule)
-		Notification.objects.create(to=minqi, type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
+		Notification.objects.create(to=minqi, _type=Notification.WELCOME, repeat=Notification.NO_REPEAT,
 		                            send_datetime=welcome_delivery_time, enroller=self.bob)
 
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, welcome_delivery_time,
@@ -274,8 +274,8 @@ class EndToEndScenariosTest(TestCase):
 		response = self.client.get('/textmessage_response/', {'From': minqi.primary_phone_number, 'Body':"My car broke down, so I won't be able to go for the next three days" })
 		expected_response = "Thanks for sharing. We'll pass it along to your doctor."
 		self.assertEqual(response.content, expected_response)
-		feedback = Feedback.objects.filter(prescription=prescription)
-		self.assertEqual(feedback[0].note, "My car broke down, so I won't be able to go for the next three days")
+		feedbacks = Feedback.objects.filter(prescription=prescription)
+		self.assertEqual(feedbacks[0].note, "My car broke down, so I won't be able to go for the next three days")
 
 
 

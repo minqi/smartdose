@@ -20,12 +20,12 @@ class SafetyNetCenter(object):
 		window_start and window_finish at time time. A dose is considered missed 
 		if it's gone unacknowledged for longer than timeout.
 		"""
-		feedbacks = Feedback.objects.filter(
+		feedback = Feedback.objects.filter(
 			datetime_sent__gte=window_start,
 			datetime_sent__lte=window_finish,
-			notification__type=Notification.MEDICATION).exclude(datetime_sent__gte=time - timeout)
+			notification___type=Notification.MEDICATION).exclude(datetime_sent__gte=time - timeout)
 		# Cache reminder_time for quick reminder_time__reminder_type and reminder_time__patient lookup
-		feedbacks = feedbacks.prefetch_related('notification').prefetch_related('notification__prescription')
+		feedback = feedback.prefetch_related('notification').prefetch_related('notification__prescription')
 
 		patients = PatientProfile.objects.all()
 		if patients == None:
@@ -34,8 +34,8 @@ class SafetyNetCenter(object):
 		for patient in patients:
 			dose_count = 0
 			acked_dose_count = 0
-			patient_feedbacks = feedbacks.filter(notification__to=patient)
-			for patient_reminder in patient_feedbacks:
+			patient_feedback = feedback.filter(notification__to=patient)
+			for patient_reminder in patient_feedback:
 				if patient_reminder.prescription.safety_net_on:
 					dose_count += 1
 					if patient_reminder.completed == True:
@@ -73,7 +73,7 @@ class SafetyNetCenter(object):
 					message_body = render_to_string('messages/safety_net_message_adherent.txt', dictionary)
 				else:
 					message_body = render_to_string('messages/safety_net_message_nonadherent.txt', dictionary)
-				Notification.objects.create(to=safety_net_contact, type=Notification.SAFETY_NET,
+				Notification.objects.create(to=safety_net_contact, _type=Notification.SAFETY_NET,
 				                            repeat=Notification.NO_REPEAT,
 				                            content=message_body,
 				                            adherence_rate=adherence_percentage,

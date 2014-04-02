@@ -165,7 +165,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(p.num_caregivers, 1)
 		self.assertEqual(p.status, PatientProfile.NEW)
 
-		q = Notification.objects.filter(to=p, type=Notification.WELCOME)
+		q = Notification.objects.filter(to=p, _type=Notification.WELCOME)
 		self.assertEqual(len(q), 1)
 
 	def test_create_patient_existing_unmanaged_account(self):
@@ -180,7 +180,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(p.num_caregivers, 1)
 		self.assertEqual(p.status, PatientProfile.NEW)
 
-		q = Notification.objects.filter(to=p, type=Notification.WELCOME)
+		q = Notification.objects.filter(to=p, _type=Notification.WELCOME)
 		self.assertEqual(len(q), 1)
 
 	def test_create_patient_existing_managed_account(self):
@@ -208,11 +208,11 @@ class CreatePatientTest(TestCase):
 			source_patient__id=patient.id, target_patient__id=self.client_user.id)
 		self.assertTrue(q.exists())
 
-		self.assertTrue(self.client_user.has_perm('manage_patient_profile', patient))
+		self.assertTrue(self.client_user.has_perm('manage_patientprofile', patient))
 
 		# make sure welcome message is sent
 		welcome_count = len(Notification.objects.filter(
-			to=patient, type=Notification.WELCOME))
+			to=patient, _type=Notification.WELCOME))
 		self.assertEqual(welcome_count, 1)
 
 	def test_create_existing_patient(self):
@@ -232,7 +232,7 @@ class CreatePatientTest(TestCase):
 		self.assertEqual(patient.num_caregivers, 1)
 
 		welcome_count = len(Notification.objects.filter(
-			to=patient, type=Notification.WELCOME))
+			to=patient, _type=Notification.WELCOME))
 		self.assertEqual(welcome_count, 0)
 
 
@@ -264,7 +264,7 @@ class RetrievePatientTest(TestCase):
 		self.assertEqual(response.status_code, 400)
 
 		# with permission
-		assign_perm('manage_patient_profile', self.client_user, self.patient1)
+		assign_perm('manage_patientprofile', self.client_user, self.patient1)
 		response = c.get('/fishfood/patients/', {'p_id':str(self.patient1.id)})
 		self.assertEqual(response.status_code, 200)
 
@@ -320,7 +320,7 @@ class UpdatePatientTest(TestCase):
 		self.assertEqual(response.status_code, 400)
 
 		# with permission
-		assign_perm('manage_patient_profile', self.client_user, self.patient1)
+		assign_perm('manage_patientprofile', self.client_user, self.patient1)
 		response = c.post('/fishfood/patients/update/', 
 			{'full_name':'Minch Jiang', 
 			'primary_phone_number':'555-555-5555',
@@ -352,13 +352,13 @@ class DeletePatientTest(TestCase):
 			prescriber=self.prescriber, patient=self.patient1, drug=self.drug1)
 
 		self.welcome_reminder = Notification.objects.create(
-			to=self.patient1, type=Notification.WELCOME, repeat=Notification.DAILY,
+			to=self.patient1, _type=Notification.WELCOME, repeat=Notification.DAILY,
 			send_datetime=datetime.datetime.now())
 		self.refill_reminder = Notification.objects.create(
-			to=self.patient1, type=Notification.REFILL, repeat=Notification.DAILY,
+			to=self.patient1, _type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription1, send_datetime=datetime.datetime.now())
 		self.medication_reminder = Notification.objects.create(
-			to=self.patient1, type=Notification.MEDICATION, repeat=Notification.DAILY,
+			to=self.patient1, _type=Notification.MEDICATION, repeat=Notification.DAILY,
 			prescription=self.prescription1, send_datetime=datetime.datetime.now())
 
 		self.patient2 = PatientProfile.objects.create(
@@ -368,13 +368,13 @@ class DeletePatientTest(TestCase):
 			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
 
 		self.welcome_reminder2 = Notification.objects.create(
-			to=self.patient2, type=Notification.WELCOME, repeat=Notification.DAILY,
+			to=self.patient2, _type=Notification.WELCOME, repeat=Notification.DAILY,
 			send_datetime=datetime.datetime.now())
 		self.refill_reminder2 = Notification.objects.create(
-			to=self.patient2, type=Notification.REFILL, repeat=Notification.DAILY,
+			to=self.patient2, _type=Notification.REFILL, repeat=Notification.DAILY,
 			prescription=self.prescription2, send_datetime=datetime.datetime.now())
 		self.medication_reminder2 = Notification.objects.create(
-			to=self.patient2, type=Notification.MEDICATION, repeat=Notification.DAILY,
+			to=self.patient2, _type=Notification.MEDICATION, repeat=Notification.DAILY,
 			prescription=self.prescription2, send_datetime=datetime.datetime.now())
 
 		self.patient1.add_safety_net_contact(target_patient=self.patient2, relationship='Friend')
@@ -395,7 +395,7 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(response.status_code, 400) 
 
 		# with permission
-		assign_perm('manage_patient_profile', self.client_user, self.patient1)
+		assign_perm('manage_patientprofile', self.client_user, self.patient1)
 		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient1.id})
 		self.assertEqual(response.status_code, 302) # redirected to main fishfood view
 
@@ -414,11 +414,11 @@ class DeletePatientTest(TestCase):
 		q = SafetyNetRelationship.objects.filter(
 			source_patient__id=patient.id, target_patient__id=self.client_user.id)
 		self.assertTrue(not q.exists())
-		self.assertTrue(not self.client_user.has_perm('view_patient_profile', patient))
-		self.assertTrue(not self.client_user.has_perm('manage_patient_profile', patient))
+		self.assertTrue(not self.client_user.has_perm('view_patientprofile', patient))
+		self.assertTrue(not self.client_user.has_perm('manage_patientprofile', patient))
 
 	def test_delete_existing_patient_multiple_caregivers(self):
-		assign_perm('manage_patient_profile', self.client_user, self.patient2)
+		assign_perm('manage_patientprofile', self.client_user, self.patient2)
 		response = c.post('/fishfood/patients/delete/', {'p_id':self.patient2.id})
 		self.assertEqual(response.status_code, 302)
 
@@ -433,8 +433,8 @@ class DeletePatientTest(TestCase):
 		self.assertEqual(len(Notification.objects.filter(to=self.patient2)), 3)
 		self.assertEqual(len(SafetyNetRelationship.objects.filter(
 			source_patient=self.patient2)), 1)
-		self.assertTrue(not self.client_user.has_perm('view_patient_profile', patient))
-		self.assertTrue(self.client_user.has_perm('manage_patient_profile', patient))
+		self.assertTrue(not self.client_user.has_perm('view_patientprofile', patient))
+		self.assertTrue(self.client_user.has_perm('manage_patientprofile', patient))
 
 
 # Unit tests for create reminder
@@ -457,7 +457,7 @@ class CreateReminderTest(TestCase):
 		self.prescription2 = Prescription.objects.create(
 			prescriber=self.prescriber, patient=self.patient2, drug=self.drug1)
 
-		assign_perm('manage_patient_profile', client_user, self.patient1)
+		assign_perm('manage_patientprofile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient_id	
@@ -495,7 +495,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.DAILY,
 			prescription=self.prescription1)
@@ -513,10 +513,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.DAILY))
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 
@@ -525,7 +525,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
@@ -543,10 +543,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.DAILY))
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 
@@ -556,7 +556,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.DAILY,
 			prescription=self.prescription1)
@@ -572,10 +572,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.DAILY))
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 1)
 		self.assertEqual(weekly_reminder_count, 0)
 		
@@ -584,7 +584,7 @@ class CreateReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		existing_daily_reminder = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
@@ -600,10 +600,10 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.DAILY))
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(daily_reminder_count, 0)
 		self.assertEqual(weekly_reminder_count, 1)
 
@@ -615,12 +615,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL))
+			_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 1)
 
 	def test_create_with_refill_and_prescription_filled(self):
@@ -634,12 +634,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL))
+			_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_daily_reminder_without_colliding_reminder(self):
@@ -652,12 +652,12 @@ class CreateReminderTest(TestCase):
 
 		daily_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.DAILY))
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		self.assertEqual(daily_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL))
+			_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_weekly_reminder_without_colliding_reminder(self):
@@ -668,12 +668,12 @@ class CreateReminderTest(TestCase):
 
 		weekly_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, repeat=Notification.WEEKLY))
+			_type=Notification.MEDICATION, repeat=Notification.WEEKLY))
 		self.assertEqual(weekly_reminder_count, 1)
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL))
+			_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 	def test_create_reminder_without_refill_reminder(self):
@@ -684,7 +684,7 @@ class CreateReminderTest(TestCase):
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL))
+			_type=Notification.REFILL))
 		self.assertEqual(refill_reminder_count, 0)
 
 		# if reminder created w/o refill reminder, filled should be true
@@ -721,20 +721,20 @@ class DeleteReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 0)
 		self.refill_reminder = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.REFILL,
+			_type=Notification.REFILL,
 			send_datetime = send_datetime,
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
 		self.med_reminder1 = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
 		send_datetime = next_weekday(send_datetime, 1)
 		self.med_reminder2 = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.WEEKLY,
 			prescription=self.prescription1)
@@ -742,19 +742,19 @@ class DeleteReminderTest(TestCase):
 		send_datetime = next_weekday(send_datetime, 1)
 		self.med_reminder3 = Notification.objects.create(
 			to=self.patient1, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.DAILY,
 			prescription=self.prescription1)
 
 		self.med_reminder4 = Notification.objects.create(
 			to=self.patient2, 
-			type=Notification.MEDICATION,
+			_type=Notification.MEDICATION,
 			send_datetime = send_datetime,
 			repeat=Notification.DAILY,
 			prescription=self.prescription2)
 
-		assign_perm('manage_patient_profile', client_user, self.patient1)
+		assign_perm('manage_patientprofile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient id
@@ -806,12 +806,12 @@ class DeleteReminderTest(TestCase):
 
 		remaining_med_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, prescription__drug__name='drug1'))
+			_type=Notification.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 1)
 
 		remaining_refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL, prescription__drug__name='drug1'))
+			_type=Notification.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 1)
 
 	def test_delete_existing_reminder_for_all_times(self):
@@ -827,12 +827,12 @@ class DeleteReminderTest(TestCase):
 
 		remaining_med_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.MEDICATION, prescription__drug__name='drug1'))
+			_type=Notification.MEDICATION, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_med_reminder_count, 0)
 
 		remaining_refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,
-			type=Notification.REFILL, prescription__drug__name='drug1'))
+			_type=Notification.REFILL, prescription__drug__name='drug1'))
 		self.assertEqual(remaining_refill_reminder_count, 0)
 
 	def test_delete_reminder_without_permission(self):
@@ -860,7 +860,7 @@ class CreateSafetyNetContactTest(TestCase):
 		self.patient1.add_safety_net_contact(
 			target_patient=self.patient2, relationship='friend')
 
-		assign_perm('manage_patient_profile', client_user, self.patient1)
+		assign_perm('manage_patientprofile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient id
@@ -917,8 +917,8 @@ class CreateSafetyNetContactTest(TestCase):
 
 		target_patient = PatientProfile.objects.get(full_name='Test User')
 
-		self.assertTrue(target_patient.has_perm('view_patient_profile', self.patient1))
-		self.assertTrue(target_patient.has_perm('manage_patient_profile', self.patient1))
+		self.assertTrue(target_patient.has_perm('view_patientprofile', self.patient1))
+		self.assertTrue(target_patient.has_perm('manage_patientprofile', self.patient1))
 
 	def test_create_safety_net_contact_without_permission(self):
 		response = c.post('/fishfood/patients/create_safety_net_contact/', 
@@ -948,7 +948,7 @@ class DeleteSafetyNetContactTest(TestCase):
 		self.patient2.add_safety_net_contact(
 			target_patient=self.patient1, relationship='friend')
 
-		assign_perm('manage_patient_profile', client_user, self.patient1)
+		assign_perm('manage_patientprofile', client_user, self.patient1)
 
 	def test_invalid_request(self):
 		# no patient id
@@ -980,7 +980,7 @@ class DeleteSafetyNetContactTest(TestCase):
 			source_patient=self.patient1, target_patient=self.patient2)
 		self.assertTrue(not q.exists())
 
-		self.assertTrue(not self.patient2.has_perm('view_patient_profile', self.patient1))
-		self.assertTrue(not self.patient2.has_perm('manage_patient_profile', self.patient1))
+		self.assertTrue(not self.patient2.has_perm('view_patientprofile', self.patient1))
+		self.assertTrue(not self.patient2.has_perm('manage_patientprofile', self.patient1))
 
 
