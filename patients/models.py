@@ -128,6 +128,10 @@ class PatientProfile(UserProfile):
 		self.record_quit_request()
 		self.save()
 
+	def pause(self):
+		self.status = PatientProfile.QUIT
+		self.save()
+
 	def resume(self):
 		self.status = PatientProfile.ACTIVE
 		self.save()

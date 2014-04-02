@@ -14,7 +14,10 @@ class ResponseCenter(object):
 		""" 
 		Returns true if the message is a quit message
 		"""
-		return message.lower() in ("q", "quit", "p", "pause")
+		return message.lower() in ("q", "quit")
+
+	def _is_pause(self, message):
+		return message.lower() in ("p", "pause")
 
 	def _is_resume(self, message):
 		""" 
@@ -82,6 +85,10 @@ class ResponseCenter(object):
 			sender.record_quit_request()
 			content = render_to_string('messages/response_quit_break_the_glass.txt')
 		return HttpResponse(content=content)
+
+	def process_pause_response(self, sender):
+		sender.pause()
+		content = render_to_string('messages/response_pause_is_confirmed.txt')
 
 	def process_resume_response(self, sender):
 		if sender.did_quit():
@@ -531,6 +538,8 @@ class ResponseCenter(object):
 		# Generic logic for responding to any type of message goes here
 		if self._is_quit(response):
 			return self.process_quit_response(sender)
+		elif self._is_pause(response):
+			return self.process_pause_response(sender)
 		elif sender.did_quit() and self._is_resume(response):
 			return self.process_resume_response(sender)
 
