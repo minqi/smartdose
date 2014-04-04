@@ -1,8 +1,8 @@
-Time to take your:
+Time to take your{% if prescription_name_list|length == 1 %} {{ prescription_name_list.0 }}.{% include "messages/utility/newline.txt" %}{% else %}:
 {% for drug_name in prescription_name_list %}{{ drug_name }}
-{% endfor %}
+{% endfor %}{% endif %}
 Did you take {% if prescription_name_list|length == 1 %}it{% else %}them{% endif %}?
 y - yes
 n - no
 
-To see med info reply m.
+To pause these messages, reply p.

@@ -2,4 +2,4 @@
 y - yes
 n - no
 
-To see your meds reply m.
+To pause these messages, reply p.

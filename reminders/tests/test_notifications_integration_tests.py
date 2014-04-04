@@ -466,13 +466,11 @@ class ReminderDeliveryTest(TestCase):
 		# Time is now expected_delivery_time, so make sure the message is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		expected_content = "Time to take your:\n"+\
-						   "Vitamin\n\n"+\
+		expected_content = "Time to take your Vitamin.\n\n"+\
 						   "Did you take it?\n"+\
 						   "y - yes\n"+\
 						   "n - no\n\n"+\
-						   "To see med info reply m."
-
+						   "To pause these messages, reply p."
 
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
@@ -501,12 +499,11 @@ class ReminderDeliveryTest(TestCase):
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		expected_content = "Time to take your:\n"+ \
-		                   "Vitamin\n\n"+ \
+		expected_content = "Time to take your Vitamin.\n\n"+ \
 		                   "Did you take it?\n"+ \
 		                   "y - yes\n"+ \
 		                   "n - no\n\n"+ \
-		                   "To see med info reply m."
+		                   "To pause these messages, reply p."
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		self.assertEqual(message['content'], expected_content)
