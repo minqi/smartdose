@@ -10,6 +10,7 @@ from django.test import TestCase, Client
 from common.models import Drug, RegistrationProfile
 from common.utilities import next_weekday
 from common.registration_services import create_inactive_patientprofile
+from freezegun import freeze_time
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import Prescription, Notification, Message
@@ -654,6 +655,56 @@ class CreateReminderTest(TestCase):
 			to=self.patient1,
 			_type=Notification.MEDICATION, repeat=Notification.DAILY))
 		self.assertEqual(daily_reminder_count, 1)
+
+		refill_reminder_count = len(Notification.objects.filter(
+			to=self.patient1,
+			_type=Notification.REFILL))
+		self.assertEqual(refill_reminder_count, 0)
+
+	def test_create_daily_reminder_first_reminder_next_day(self):
+		one_hour_behind = (datetime.datetime.now() - datetime.timedelta(hours=1)).hour
+		response = c.post('/fishfood/reminders/new/',
+		                  {'p_id':str(self.patient1.id), 'drug_name':'drug1',
+		                   'reminder_time':str(one_hour_behind) + ":00",
+		                   'mon':True, 'tue':True, 'wed':True,
+		                   'thu':True, 'fri':True, 'sat':True, 'sun':True})
+		self.assertEqual(response.status_code, 200)
+
+		daily_reminder_count = len(Notification.objects.filter(
+			to=self.patient1,
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
+		self.assertEqual(daily_reminder_count, 1)
+
+		notification_send_datetime_day = Notification.objects.filter(to=self.patient1,
+		                                                        _type=Notification.MEDICATION,
+		                                                        repeat=Notification.DAILY)[0].send_datetime.date()
+		self.assertNotEqual(notification_send_datetime_day, datetime.datetime.today().date())
+		self.assertEqual(notification_send_datetime_day, datetime.datetime.today().date() + datetime.timedelta(days=1))
+
+		refill_reminder_count = len(Notification.objects.filter(
+			to=self.patient1,
+			_type=Notification.REFILL))
+		self.assertEqual(refill_reminder_count, 0)
+
+	def test_create_daily_reminder_first_reminder_today(self):
+		one_hour_ahead = (datetime.datetime.now() + datetime.timedelta(hours=1)).hour
+		response = c.post('/fishfood/reminders/new/',
+		                  {'p_id':str(self.patient1.id), 'drug_name':'drug1',
+		                   'reminder_time':str(one_hour_ahead) + ":00",
+		                   'mon':True, 'tue':True, 'wed':True,
+		                   'thu':True, 'fri':True, 'sat':True, 'sun':True})
+		self.assertEqual(response.status_code, 200)
+
+		daily_reminder_count = len(Notification.objects.filter(
+			to=self.patient1,
+			_type=Notification.MEDICATION, repeat=Notification.DAILY))
+		self.assertEqual(daily_reminder_count, 1)
+
+		notification_send_datetime_day = Notification.objects.filter(to=self.patient1,
+		                                                             _type=Notification.MEDICATION,
+		                                                             repeat=Notification.DAILY)[0].send_datetime.date()
+		self.assertEqual(notification_send_datetime_day, datetime.datetime.today().date())
+		self.assertNotEqual(notification_send_datetime_day, datetime.datetime.today().date() + datetime.timedelta(days=1))
 
 		refill_reminder_count = len(Notification.objects.filter(
 			to=self.patient1,

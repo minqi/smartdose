@@ -257,7 +257,7 @@ class Notification(models.Model):
 		if self.repeat == self.DAILY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=1)
-			self.send_datetime += dt
+			# self.send_datetime += dt
 			while self.send_datetime <= now:
 				self.send_datetime += dt
 			self.save()
@@ -266,7 +266,7 @@ class Notification(models.Model):
 		if self.repeat == self.WEEKLY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=7)
-			self.send_datetime += dt
+			# self.send_datetime += dt
 			while self.send_datetime <= now:
 				self.send_datetime += dt
 			self.save()
