@@ -89,6 +89,7 @@ class ResponseCenter(object):
 	def process_pause_response(self, sender):
 		sender.pause()
 		content = render_to_string('messages/response_pause_is_confirmed.txt')
+		return HttpResponse(content=content, content_type="text/plain")
 
 	def process_resume_response(self, sender):
 		if sender.did_quit():

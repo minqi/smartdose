@@ -501,6 +501,14 @@ class ResponseCenterTest(TestCase):
 		facts = [fact1, fact2]
 		self.assertIn(content, facts)
 
+	def test_pause(self):
+		message = 'p'
+		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+		self.assertEqual(self.minqi.quit_request_datetime, None)
+		response = self.rc.process_response(self.minqi, message)
+		self.assertEqual("You have paused your Smartdose reminders. Reply \"resume\" at any time to start receiving reminders again.", response.content)
+		self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
 	def test_quit_initial_quit(self):
 		message = 'q'
 		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
