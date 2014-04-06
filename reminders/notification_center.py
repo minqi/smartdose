@@ -111,7 +111,6 @@ class NotificationCenter(object):
 		if not notifications.exists() or to.status != PatientProfile.ACTIVE:
 			return
 
-		notifications = notifications.order_by('prescription__drug__name')
 		notification_groups = self.merge_notifications(notifications)
 
 		for notification_group in notification_groups:
@@ -119,7 +118,7 @@ class NotificationCenter(object):
 			template = 'messages/refill_message.txt'
 			def get_drug_name(notification):
 				return notification.prescription.drug.name
-			prescription_names = list(itertools.imap(get_drug_name, notification_group))
+			prescription_names = sorted(list(itertools.imap(get_drug_name, notification_group)))
 			context = {'prescription_name_list': prescription_names,
 			           'times_sent': notification_group[0].times_sent}
 			self.send_text_message(to=to, notifications=notification_group, template=template, context=context)
@@ -141,7 +140,7 @@ class NotificationCenter(object):
 			template = 'messages/medication_message.txt'
 			def get_drug_name(notification):
 				return notification.prescription.drug.name.capitalize()
-			prescription_names = list(itertools.imap(get_drug_name, notification_group))
+			prescription_names = sorted(list(itertools.imap(get_drug_name, notification_group)))
 			context = {'prescription_name_list': prescription_names}
 			self.send_text_message(to=to, notifications=notification_group, template=template, context=context)
 

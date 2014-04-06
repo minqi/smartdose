@@ -281,7 +281,8 @@ class EndToEndScenariosTest(TestCase):
 
 class ReminderDeliveryTest(TestCase):
 	def setUp(self):
-		self.vitamin = Drug.objects.create(name="vitamin")
+		self.vitamin_a = Drug.objects.create(name="vitamin a")
+		self.vitamin_b = Drug.objects.create(name="vitamin b")
 		self.bob = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
 		                                        primary_phone_number="2029163381",
 		                                        username="2029163381",
@@ -308,14 +309,14 @@ class ReminderDeliveryTest(TestCase):
 	# Test that a refill reminder is delivered daily.
 	def test_daily_delivery(self):
 		# Minqi is signed up for his daily vitamin reminder. He'll receive refill reminders
-		prescription = Prescription.objects.create(prescriber=self.bob,
+		prescription_1 = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
-		                                           drug=self.vitamin,
+		                                           drug=self.vitamin_a,
 		                                           note="To make you strong")
 		expected_delivery_time = self.current_time + datetime.timedelta(hours=3)
 		notification_schedule = [[Notification.DAILY, expected_delivery_time]]
 		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
+		                                                                          prescription=prescription_1,
 		                                                                          notification_schedule=notification_schedule)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
@@ -344,11 +345,16 @@ class ReminderDeliveryTest(TestCase):
 	# Test that a prescription reminder is delivered bi-weekly.
 	def test_biweekly_delivery(self):
 		# Minqi is signed up for his biweekly vitamin reminder
-		prescription = Prescription.objects.create(prescriber=self.bob,
+		prescription_1 = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
-		                                           drug=self.vitamin,
+		                                           drug=self.vitamin_a,
 		                                           note="To make you strong",
 		                                           filled=True) # Mark as filled to receive medication reminders
+		prescription_2 = Prescription.objects.create(prescriber=self.bob,
+		                                             patient=self.minqi,
+		                                             drug=self.vitamin_b,
+		                                             note="To make you strong",
+		                                             filled=True)
 		# Mark Minqi as active so that he can receive reminders
 		self.minqi.status = PatientProfile.ACTIVE
 		self.minqi.save()
@@ -356,8 +362,11 @@ class ReminderDeliveryTest(TestCase):
 		tuesday_delivery_time = sunday_delivery_time + datetime.timedelta(days=2)
 		notification_schedule = [[Notification.WEEKLY, sunday_delivery_time], [Notification.WEEKLY, tuesday_delivery_time]]
 		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
-		                                                                          prescription=prescription,
+		                                                                          prescription=prescription_1,
 		                                                                          notification_schedule=notification_schedule)
+		Notification.objects.create_prescription_notifications_from_notification_schedule(to=self.minqi,
+		                                                                                  prescription=prescription_2,
+		                                                                                  notification_schedule=notification_schedule)
 		# Test the first weeks worth of messages
 		# Emulate the scheduler task and make sure no reminders are sent
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, sunday_delivery_time, datetime.timedelta(hours=1))
@@ -365,8 +374,16 @@ class ReminderDeliveryTest(TestCase):
 		# Time is now sunday_delivery_time, so make sure the reminder is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
+		expected_message = "Time to take your:\n"+ \
+		                   "Vitamin a\n"+ \
+		                   "Vitamin b\n\n"+ \
+		                   "Did you take them?\n"+ \
+		                   "y - yes\n"+ \
+		                   "n - no\n\n"+ \
+		                   "To pause these messages, reply p."
 		self.assertEqual(message['datetime_sent'], sunday_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
+		self.assertEqual(message['content'], expected_message)
 		# Next sunday's delivery time is a week away
 		old_delivery_time = sunday_delivery_time
 		sunday_delivery_time = sunday_delivery_time + datetime.timedelta(weeks=1)
