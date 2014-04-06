@@ -392,20 +392,20 @@ class Message(models.Model):
 	]
 
 	MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY = {
-		'a':'Haven\'t gotten the chance',
-		'b':'Need to refill',
-		'c':'Side effects',
-		'd':'Meds don\'t work',
-		'e':'Prescription changed',
-		'f':'I feel sad :(',
-		'g':'Other',
+		'A':'Haven\'t gotten the chance',
+		'B':'Need to refill',
+		'C':'Side effects',
+		'D':'Meds don\'t work',
+		'E':'Prescription changed',
+		'F':'I feel sad :(',
+		'G':'Other',
 	}
 
 	REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY = {
-		'a':'Haven\'t gotten the chance',
-		'b':'Too expensive',
-		'c':'Concerned about side effects',
-		'd':'Other',
+		'A':'Haven\'t gotten the chance',
+		'B':'Too expensive',
+		'C':'Concerned about side effects',
+		'D':'Other',
 	}
 
 	MESSAGE_TYPE_CHOICES = (                                            # Non-standard required fields:

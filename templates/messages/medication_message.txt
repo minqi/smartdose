@@ -2,7 +2,7 @@ Time to take your{% if prescription_name_list|length == 1 %} {{ prescription_nam
 {% for drug_name in prescription_name_list %}{{ drug_name }}
 {% endfor %}{% endif %}
 Did you take {% if prescription_name_list|length == 1 %}it{% else %}them{% endif %}?
-y - yes
-n - no
+Y - yes
+N - no
 
 To pause these messages, reply p.
