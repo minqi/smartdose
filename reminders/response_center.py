@@ -226,10 +226,10 @@ class ResponseCenter(object):
 
 		def process_response(return_message_type):
 			for feedback in message.feedbacks.all():
-				feedback.note = Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()]
+				feedback.note = Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.upper()]
 				feedback.save()
 			template = 'messages/medication_questionnaire_responses/' + \
-			           Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
+			           Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.upper()] + \
 			           '.txt'
 			content = render_to_string(template)
 			new_m = Message.objects.create(to=sender, _type=return_message_type, content=content, previous_message=message)
@@ -411,10 +411,10 @@ class ResponseCenter(object):
 
 		def process_response(return_message_type):
 			for feedback in message.feedbacks.all():
-				feedback.note = Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()]
+				feedback.note = Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.upper()]
 				feedback.save()
 			template = 'messages/refill_questionnaire_responses/' + \
-			           Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.lower()] + \
+			           Message.REFILL_QUESTIONNAIRE_RESPONSE_DICTIONARY[response.upper()] + \
 			           '.txt'
 			content = render_to_string(template)
 			new_m = Message.objects.create(to=sender, _type=return_message_type, content=content, previous_message=message)

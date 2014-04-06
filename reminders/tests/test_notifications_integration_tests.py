@@ -378,8 +378,8 @@ class ReminderDeliveryTest(TestCase):
 		                   "Vitamin a\n"+ \
 		                   "Vitamin b\n\n"+ \
 		                   "Did you take them?\n"+ \
-		                   "y - yes\n"+ \
-		                   "n - no\n\n"+ \
+		                   "Y - yes\n"+ \
+		                   "N - no\n\n"+ \
 		                   "To pause these messages, reply p."
 		self.assertEqual(message['datetime_sent'], sunday_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
@@ -485,8 +485,8 @@ class ReminderDeliveryTest(TestCase):
 		message = SMSLogger.getLastSentMessage()
 		expected_content = "Time to take your Vitamin a.\n\n"+\
 						   "Did you take it?\n"+\
-						   "y - yes\n"+\
-						   "n - no\n\n"+\
+						   "Y - yes\n"+\
+						   "N - no\n\n"+\
 						   "To pause these messages, reply p."
 
 		self.assertEqual(message['datetime_sent'], delivery_time)
@@ -497,13 +497,13 @@ class ReminderDeliveryTest(TestCase):
 		c = Client()
 		response = c.get('/textmessage_response/', {'From': self.minqi.primary_phone_number, 'Body': 'n'})
 		expected_content = "Why not? Reply:\n" \
-		                    "a - Haven't gotten the chance\n" \
-		                    "b - Need to refill\n" \
-		                    "c - Side effects\n" \
-		                    "d - Meds don't work\n" \
-		                    "e - Prescription changed\n" \
-		                    "f - I feel sad :(\n" \
-		                    "g - Other"
+		                    "A - Haven't gotten the chance\n" \
+		                    "B - Need to refill\n" \
+		                    "C - Side effects\n" \
+		                    "D - Meds don't work\n" \
+		                    "E - Prescription changed\n" \
+		                    "F - I feel sad :(\n" \
+		                    "G - Other"
 		self.assertEqual(response.content, expected_content)
 
 		# Send an "a" response and get back a message
@@ -518,8 +518,8 @@ class ReminderDeliveryTest(TestCase):
 		message = SMSLogger.getLastSentMessage()
 		expected_content = "Time to take your Vitamin a.\n\n"+ \
 		                   "Did you take it?\n"+ \
-		                   "y - yes\n"+ \
-		                   "n - no\n\n"+ \
+		                   "Y - yes\n"+ \
+		                   "N - no\n\n"+ \
 		                   "To pause these messages, reply p."
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)

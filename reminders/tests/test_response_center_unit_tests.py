@@ -63,13 +63,13 @@ class ResponseCenterTest(TestCase):
 		self.assertFalse(Message.objects.filter(_type=Message.MEDICATION_QUESTIONNAIRE))
 		response = self.rc.process_medication_response(self.minqi, message, 'n')
 		expected_response = "Why not? Reply:\n" \
-		                    "a - Haven't gotten the chance\n" \
-		                    "b - Need to refill\n" \
-		                    "c - Side effects\n" \
-		                    "d - Meds don't work\n" \
-		                    "e - Prescription changed\n" \
-		                    "f - I feel sad :(\n" \
-		                    "g - Other"
+		                    "A - Haven't gotten the chance\n" \
+		                    "B - Need to refill\n" \
+		                    "C - Side effects\n" \
+		                    "D - Meds don't work\n" \
+		                    "E - Prescription changed\n" \
+		                    "F - I feel sad :(\n" \
+		                    "G - Other"
 		self.assertEqual(response.content, expected_response)
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
 		self.assertTrue(Message.objects.filter(_type=Message.MEDICATION_QUESTIONNAIRE))
