@@ -426,7 +426,7 @@ class ReminderDeliveryTest(TestCase):
 		# Minqi is signed up for his daily vitamin reminder
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
-		                                           drug=self.vitamin,
+		                                           drug=self.vitamin_a,
 		                                           note="To make you strong",
 		                                           filled=True) # Mark as filled to avoid refill reminders
 		# Mark Minqi as active so that he can receive reminders
@@ -464,7 +464,7 @@ class ReminderDeliveryTest(TestCase):
 		# Minqi is signed up for his daily vitamin reminder
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
-		                                           drug=self.vitamin,
+		                                           drug=self.vitamin_a,
 		                                           filled=True,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=3)
@@ -483,7 +483,7 @@ class ReminderDeliveryTest(TestCase):
 		# Time is now expected_delivery_time, so make sure the message is sent
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		expected_content = "Time to take your Vitamin.\n\n"+\
+		expected_content = "Time to take your Vitamin a.\n\n"+\
 						   "Did you take it?\n"+\
 						   "y - yes\n"+\
 						   "n - no\n\n"+\
@@ -516,7 +516,7 @@ class ReminderDeliveryTest(TestCase):
 		TestHelper.advance_test_time_to_end_time_and_emulate_reminder_periodic_task(self, delivery_time, datetime.timedelta(hours=1))
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
-		expected_content = "Time to take your Vitamin.\n\n"+ \
+		expected_content = "Time to take your Vitamin a.\n\n"+ \
 		                   "Did you take it?\n"+ \
 		                   "y - yes\n"+ \
 		                   "n - no\n\n"+ \
@@ -536,7 +536,7 @@ class ReminderDeliveryTest(TestCase):
 
 		prescription = Prescription.objects.create(prescriber=self.bob,
 		                                           patient=self.minqi,
-		                                           drug=self.vitamin,
+		                                           drug=self.vitamin_a,
 		                                           note="To make you strong")
 		delivery_time = self.current_time + datetime.timedelta(hours=1)
 		notification_schedule = [[Notification.DAILY, delivery_time]]
