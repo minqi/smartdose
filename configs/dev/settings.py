@@ -17,7 +17,7 @@ PROJECT_ROOT = cwd[:result.end()]
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = False
+SEND_TEXT_MESSAGES = True
 MESSAGE_CUTOFF_HOURS = 24 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message

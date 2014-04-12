@@ -2,6 +2,7 @@
 *~
 .venv/
 fake_datasources/*
+!fake_datasources/drug_facts_for_ux_trial.csv
 celerybeat-schedule
 test_message_output
 message_output
