@@ -249,8 +249,9 @@ class Drug(models.Model):
 			return
 		self.name = self.name.lower()
 
+
 class DrugFact(models.Model):
-	"""Model for facts about drugs"""
-	fact = models.CharField(max_length=160)
-	drug = models.ForeignKey(Drug)
+    """Model for facts about drugs"""
+    drug = models.ForeignKey(Drug)
+    fact = models.CharField(max_length=160)
 

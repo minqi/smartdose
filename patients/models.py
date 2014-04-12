@@ -64,6 +64,7 @@ class PatientProfile(UserProfile):
 	)
 
 	# Patient specific fields
+	mrn			= models.PositiveIntegerField(default=0) 
 	age 		= models.PositiveIntegerField(default=0)
 	gender 		= models.CharField(null=False, blank=False,
 	                            max_length=1,
@@ -79,7 +80,8 @@ class PatientProfile(UserProfile):
 									default=POUNDS)
 
 	# If enroller is None it means the patient enrolled themselves
-	enroller    = models.ForeignKey(UserProfile, related_name='enroller', null=True, blank=True)
+	enroller    = models.ForeignKey(UserProfile, 
+		default=None, related_name='enroller', null=True, blank=True)
 	
 	safety_net_contacts 	= models.ManyToManyField('self', 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')

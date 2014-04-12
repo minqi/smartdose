@@ -23,7 +23,7 @@ class ResponseCenterTest(TestCase):
 		                                           address_line1="4266 Cesar Chavez",
 		                                           postal_code="94131",
 		                                           city="San Francisco", state_province="CA", country_iso_code="US")
-		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Watcher",
+		self.doctor = DoctorProfile.objects.create(first_name="Bob", last_name="Wachter",
 		                                           primary_phone_number="2029163381", birthday=datetime.date(1960, 1, 1))
 		self.drug = Drug.objects.create(name='advil')
 		self.prescription = Prescription.objects.create(prescriber=self.doctor,
@@ -113,7 +113,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'b')
-		expected_response = "We'll let your doctor's office know you need a refill."
+		expected_response = "Taking your medicine is an important step in getting better. Please refill your meds at your earliest convenience."
 		for feedback in preceding_message.feedbacks.all():
 			self.assertTrue(feedback.note)
 			self.assertEqual(feedback.completed, False)
@@ -161,7 +161,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'd')
-		expected_response = "We'll let your doctor know that you don't think your meds are having the correct effects."
+		expected_response = "Please let your doctor know that you don't think your meds are having the correct effects."
 		for feedback in preceding_message.feedbacks.all():
 			self.assertTrue(feedback.note)
 			self.assertEqual(feedback.completed, False)
@@ -233,8 +233,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_medication_questionnaire_response(self.minqi, message, 'booga booga')
-		expected_response = "We didn't understand that reply. Reply with a letter matching the options above.\n\n"+ \
-							"For more information on how to use Smartdose, you can visit www.smartdo.se"
+		expected_response = "We didn't understand that reply. Reply with a letter matching the options above."
 		self.assertEqual(response.content, expected_response)
 		self.assertIsNone(Message.objects.get(pk=message.pk).datetime_responded)
 
@@ -253,7 +252,7 @@ class ResponseCenterTest(TestCase):
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, False)
 		self.assertIsNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 8:00am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
+		expected_response = "Great. You'll receive your first reminder tomorrow at 8:00am."
 		self.assertEqual(response.content, expected_response)
 		self.assertEqual(Feedback.objects.get(pk=feedback.pk).completed, True)
 		self.assertIsNotNone(Feedback.objects.get(pk=feedback.pk).datetime_responded)
@@ -261,19 +260,19 @@ class ResponseCenterTest(TestCase):
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=7))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 7:00am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
+		expected_response = "Great. You'll receive your first reminder tomorrow at 7:00am." 
 		self.assertEqual(response.content, expected_response)
 
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today(), datetime.time(hour=14, minute=30))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder today at 2:30pm. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
+		expected_response = "Great. You'll receive your first reminder today at 2:30pm."
 		self.assertEqual(response.content, expected_response)
 
 		self.notification.send_datetime = datetime.datetime.combine(datetime.datetime.today()-datetime.timedelta(days=3), datetime.time(hour=0, minute=30))
 		self.notification.save()
 		response = self.rc.process_refill_response(self.minqi, message, 'y')
-		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am. To change the time of your reminder, visit smartdo.se/1234567890/r?c=12345"
+		expected_response = "Great. You'll receive your first reminder tomorrow at 12:30am."
 		self.assertEqual(response.content, expected_response)
 		freezer.stop()
 
@@ -319,7 +318,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'b')
-		expected_response = "Medicine only works if you can afford to take it. We'll let your doctor know and someone will be in touch to help you find the best treatment."
+		expected_response = "Medicine only works if you can afford to take it. Please let your doctor know so you can find the best treatment."
 		for feedback in preceding_message.feedbacks.all():
 			self.assertTrue(feedback.note)
 			self.assertEqual(feedback.completed, False)
@@ -343,8 +342,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'c')
-		expected_response = "Your doctor wants to help. We'll let your doc know you're concerned.\n\n"+\
-							"You can read more about what your meds do at smartdo.se/1234567890?c=12345"
+		expected_response = "Please contact your doctor immediately if you are experiencing any side-effects that bother you or do not go away."
 		for feedback in preceding_message.feedbacks.all():
 			self.assertTrue(feedback.note)
 			self.assertEqual(feedback.completed, False)
@@ -368,7 +366,7 @@ class ResponseCenterTest(TestCase):
 			self.assertFalse(feedback.note)
 			self.assertEqual(feedback.completed, False)
 		response = self.rc.process_refill_questionnaire_response(self.minqi, message, 'd')
-		expected_response = "Please tell us more. We'll pass it along to your doctor."
+		expected_response = "Please tell us more."
 		for feedback in preceding_message.feedbacks.all():
 			self.assertTrue(feedback.note)
 			self.assertEqual(feedback.completed, False)
@@ -384,18 +382,20 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
-		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
+		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+\
 							 "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
-		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+\
+		expected_response2 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+\
 							 "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
-		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response3 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
-		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response4 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
-		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+
+		expected_responses = [dummy_response, expected_response1, expected_response2, expected_response3, expected_response4]
 		self.assertIn(content, expected_responses)
 
 	def test_get_app_upsell_content_with_self_prescriber(self):
@@ -412,6 +412,8 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
+		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+
 		expected_response1 = "Your family will be happy you're taking care of your health.\n\n"+ \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
@@ -423,7 +425,8 @@ class ResponseCenterTest(TestCase):
 
 		expected_response4 = "Your family will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
-		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+
+		expected_responses = [dummy_response, expected_response1, expected_response2, expected_response3, expected_response4]
 		self.assertIn(content, expected_responses)
 
 	def test_get_app_upsell_content_with_safety_net(self):
@@ -440,16 +443,18 @@ class ResponseCenterTest(TestCase):
 			target_patient=self.minqis_safety_net, relationship='mother')
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
-		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+
+		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n" + \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
-		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response2 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
-		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response3 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
-		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response4 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
 
 		expected_response5 = "Jianna will be happy you're taking care of your health.\n\n"+ \
@@ -461,9 +466,9 @@ class ResponseCenterTest(TestCase):
 		expected_response7 = "Jianna will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
-		expected_response8 = "Jianna will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
-		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4,
+		expected_response8 = "Jianna will be happy you're taking care of your health.\n\n"
+		                     # "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
+		expected_responses = [dummy_response, expected_response1, expected_response2, expected_response3, expected_response4,
 		                      expected_response5, expected_response6, expected_response7, expected_response8]
 		self.assertIn(content, expected_responses)
 
@@ -476,18 +481,20 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		# Test when there are no facts (same behavior as get_app_upsell_content)
-		expected_response1 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		
+		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
-		expected_response2 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response2 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can view every dose you've ever taken at smartdo.se/1234567890?c=12345?"
 
-		expected_response3 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
+		expected_response3 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "Did you know you can adjust reminder times at smartdo.se/1234567890?c=12345?"
 
-		expected_response4 = "Dr. Watcher will be happy you're taking care of your health.\n\n"+ \
-		                     "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
-		expected_responses = [expected_response1, expected_response2, expected_response3, expected_response4]
+		expected_response4 = "Dr. Wachter will be happy you're taking care of your health.\n\n"
+		                     # "Did you know you can learn about your meds at smartdo.se/1234567890?c=12345?"
+		expected_responses = [dummy_response, expected_response1, expected_response2, expected_response3, expected_response4]
 		content = self.rc._get_health_educational_content(self.minqi, message)
 		self.assertIn(content, expected_responses)
 
@@ -514,7 +521,7 @@ class ResponseCenterTest(TestCase):
 		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
 		self.assertEqual(self.minqi.quit_request_datetime, None)
 		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("Are you sure you'd like to quit? You can adjust your settings and learn more about Smartdose at PLACEHOLDER_URL. Reply 'quit' to quit using Smartdose.", response.content)
+		self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
 		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
 		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
 
@@ -533,7 +540,7 @@ class ResponseCenterTest(TestCase):
 		self.minqi.quit_request_datetime = datetime.datetime.now() - datetime.timedelta(hours=2)
 		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
 		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("Are you sure you'd like to quit? You can adjust your settings and learn more about Smartdose at PLACEHOLDER_URL. Reply 'quit' to quit using Smartdose.", response.content)
+		self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
 		self.assertNotEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
 		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
 		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)

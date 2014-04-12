@@ -1,1 +1,1 @@
-We'll let your doctor know that you don't think your meds are having the correct effects.
+Please let your doctor know that you don't think your meds are having the correct effects.{# We'll let your doctor know that you don't think your meds are having the correct effects. #}

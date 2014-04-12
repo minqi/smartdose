@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from django.template.loader import render_to_string
+from django.db.models import Q
 
 from common.models import UserProfile, RegistrationProfile
 from common.utilities import sendTextMessageToNumber
@@ -45,13 +46,16 @@ def create_inactive_patientprofile(
 	Also sends a SMS to user to verify user's phone number and email to verify user's
 	email.
 	"""
-	patient = PatientProfile.objects.create(
-		full_name=full_name,
-		email=email,
+
+	patient = PatientProfile.objects.get_or_create(
 		primary_phone_number=primary_phone_number,
-		is_active=False,
-		# status=PatientProfile.PENDING, # for number validation
-	)
+		defaults={
+			'full_name':full_name,
+			'email':email,
+			'is_active':False,
+			'enroller':None
+		}
+	)[0]
 
 	patient.num_caregivers += 1
 	assign_perm('manage_patientprofile', patient, patient)

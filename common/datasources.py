@@ -2,7 +2,7 @@ import os, datetime, random, csv
 
 from configs.dev.settings import PROJECT_ROOT
 from common.utilities import convert_to_e164
-from common.models import Drug
+from common.models import Drug, DrugFact
 from reminders.models import Prescription, Notification
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
@@ -20,6 +20,7 @@ def get_fake_datasources_path(dirname="fake_datasources"):
 		os.makedirs(fake_datasources_path)
 
 	return fake_datasources_path
+
 
 def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"):
 	"""
@@ -90,6 +91,7 @@ def make_fake_csv_patient_data(num=DEFAULT_NUM, filename="fake_patient_data.csv"
 	f_out.close()
 	return f_out_path
 
+
 def make_fake_ncpdp_patient_data(num=DEFAULT_NUM):
 	"""
 	Generates fake patient and prescription data in NCPDP XML format.
@@ -140,6 +142,7 @@ def load_fake_csv_patient_data(filename="fake_patient_data.csv"):
 		# add reminder time scheduling
 	f_in.close()
 
+
 def load_fake_ncpdp_patient_data(filename):
 	"""
 	Populates models with fake patient and prescription data 
@@ -147,11 +150,13 @@ def load_fake_ncpdp_patient_data(filename):
 	"""
 	pass
 
+
 def load_clarity_patient_data():
 	"""
 	Populate models from clarity report data sources
 	"""
 	pass
+
 
 # master patient data-loader
 def load_patient_data(source='fake_csv'):
@@ -160,3 +165,21 @@ def load_patient_data(source='fake_csv'):
 		load_function = globals()[load_function_name]()
 	except KeyError:
 		return
+
+
+def load_drug_facts_data(filename='drug_facts_for_ux_trial.csv'):
+	fake_datasources_path = get_fake_datasources_path()
+	f_in_path = os.path.join(fake_datasources_path, filename)
+	if not os.path.exists(f_in_path):
+		return
+	
+	f_in = open(f_in_path, 'rb')
+	csv_reader = csv.DictReader(f_in)
+
+	for row in csv_reader:
+		drug = Drug.objects.get_or_create(name=row['drug_name'])[0]
+		drug_fact = DrugFact.objects.get_or_create(drug=drug)[0]
+		drug_fact.fact = row['drug_fact']
+		drug_fact.save()
+
+	f_in.close()

@@ -272,11 +272,25 @@ def user_registration(request):
 			primary_phone_number = form.cleaned_data['primary_phone_number']
 			password = form.cleaned_data['password1']
 
-			if PatientProfile.objects.filter(email=email).exists():
-				return HttpResponseBadRequest('This email is already in use')
+			# is this email in use?
+			try:
+				patient_with_email = \
+					PatientProfile.objects.get(email=email)
+			except PatientProfile.DoesNotExist:
+				pass
+			else: 
+				if not patient_with_email.enroller:
+					return HttpResponseBadRequest('This email is already in use')
 
-			if PatientProfile.objects.filter(primary_phone_number=primary_phone_number).exists():
-				return HttpResponseBadRequest('This number is already in use')
+			# is this phonenumber in use?
+			try:
+				patient_with_phonenumber = \
+					PatientProfile.objects.get(primary_phone_number=primary_phone_number)
+			except PatientProfile.DoesNotExist:
+				pass
+			else:
+				if not patient_with_phonenumber.enroller:
+					return HttpResponseBadRequest('This phone number is already in use')
 
 			(reg_profile, patient) = create_inactive_patientprofile(
 				full_name=full_name, 
@@ -428,7 +442,7 @@ def create_patient(request, *args, **kwargs):
 				# create patient profile
 				(patient, created) = PatientProfile.objects.get_or_create(
 					primary_phone_number=primary_phone_number,
-					defaults={'full_name':full_name}
+					defaults={'full_name':full_name, 'enroller':request.user.userprofile_ptr}
 				)
 				patient.full_name = full_name
 
@@ -742,7 +756,7 @@ def create_safety_net_contact(request):
 
 			target_patient = PatientProfile.objects.get_or_create(
 				primary_phone_number=primary_phone_number,
-				defaults={'full_name':full_name}
+				defaults={'full_name':full_name, 'enroller':request.user.userprofile_ptr}
 			)[0]
 			patient.add_safety_net_contact(
 				target_patient=target_patient,

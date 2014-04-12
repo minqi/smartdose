@@ -126,8 +126,7 @@ class NotificationCenterTest(TestCase):
 		self.assertEqual(messages.count(), 2)
 		expected_message_1 = "Hi, Minqi! You signed up for Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+\
-							 "For more info, you can visit www.smartdo.se"
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_welcome_notification_enrolled_by_safety_net(self):
@@ -142,8 +141,7 @@ class NotificationCenterTest(TestCase):
 		self.assertEqual(messages.count(), 2)
 		expected_message_1 = "Hi, Minqi! Matt Gaba is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+ \
-		                     "For more info, you can visit www.smartdo.se"
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_welcome_notification_enrolled_by_doctor(self):
@@ -156,8 +154,7 @@ class NotificationCenterTest(TestCase):
 		self.assertEqual(messages.count(), 2)
 		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.\n\n"+ \
-		                     "For more info, you can visit www.smartdo.se"
+		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_refill_notifications(self):

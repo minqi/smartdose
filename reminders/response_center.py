@@ -119,7 +119,7 @@ class ResponseCenter(object):
 		prescriber = acked_message.feedbacks.all()[0].prescription.prescriber
 		if hasattr(prescriber, "doctorprofile"):
 			happy_people.append("Dr. " + prescriber.last_name)
-		elif prescriber.pk == sender.pk:
+		else:
 			happy_people.append("Your family")
 		happy_person = random.choice(happy_people)
 
