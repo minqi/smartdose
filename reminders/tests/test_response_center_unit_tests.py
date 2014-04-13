@@ -382,7 +382,7 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
-		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		dummy_response = "Dr. Wachter will be happy you're taking care of your health.\n\n"
 		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+\
 							 "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
 
@@ -412,7 +412,7 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
-		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		dummy_response = "Your family will be happy you're taking care of your health.\n\n"
 
 		expected_response1 = "Your family will be happy you're taking care of your health.\n\n"+ \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
@@ -443,7 +443,7 @@ class ResponseCenterTest(TestCase):
 			target_patient=self.minqis_safety_net, relationship='mother')
 
 		content = self.rc._get_app_upsell_content(self.minqi, message)
-		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		dummy_response = "Dr. Wachter will be happy you're taking care of your health.\n\n"
 
 		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n" + \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
@@ -481,7 +481,7 @@ class ResponseCenterTest(TestCase):
 		message.save()
 
 		# Test when there are no facts (same behavior as get_app_upsell_content)
-		dummy_response = "Dr. Wachter will be happy you're taking careof your health.\n"
+		dummy_response = "Dr. Wachter will be happy you're taking care of your health.\n\n"
 		
 		expected_response1 = "Dr. Wachter will be happy you're taking care of your health.\n\n"+ \
 		                     "You can add or remove safety net members at smartdo.se/1234567890?c=12345."
@@ -509,41 +509,41 @@ class ResponseCenterTest(TestCase):
 		self.assertIn(content, facts)
 
 	def test_pause(self):
-		message = 'p'
-		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
-		self.assertEqual(self.minqi.quit_request_datetime, None)
-		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("You have paused your Smartdose reminders. Reply \"resume\" at any time to start receiving reminders again.", response.content)
-		self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
-
-	def test_quit_initial_quit(self):
 		message = 'q'
 		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
 		self.assertEqual(self.minqi.quit_request_datetime, None)
 		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
-		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
-		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
-
-	def test_quit_confirm_quit(self):
-		message = 'q'
-		self.minqi.quit_request_datetime = datetime.datetime.now()
-		self.minqi.save()
-		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
-		self.assertNotEqual(self.minqi.quit_request_datetime, None)
-		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
+		self.assertEqual('You have quit Smartdose and will stop receiving reminders. Reply "r" or "resume" at any time to start receiving reminders again.', response.content)
 		self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
 
-	def test_quit_long_after_initial_quit(self):
-		message = 'q'
-		self.minqi.quit_request_datetime = datetime.datetime.now() - datetime.timedelta(hours=2)
-		self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
-		response = self.rc.process_response(self.minqi, message)
-		self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
-		self.assertNotEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
-		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
-		self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+	# def test_quit_initial_quit(self):
+	# 	message = 'q'
+	# 	self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+	# 	self.assertEqual(self.minqi.quit_request_datetime, None)
+	# 	response = self.rc.process_response(self.minqi, message)
+	# 	self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
+	# 	self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
+	# 	self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
+	# def test_quit_confirm_quit(self):
+	# 	message = 'q'
+	# 	self.minqi.quit_request_datetime = datetime.datetime.now()
+	# 	self.minqi.save()
+	# 	self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+	# 	self.assertNotEqual(self.minqi.quit_request_datetime, None)
+	# 	response = self.rc.process_response(self.minqi, message)
+	# 	self.assertEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
+	# 	self.assertEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
+
+	# def test_quit_long_after_initial_quit(self):
+	# 	message = 'q'
+	# 	self.minqi.quit_request_datetime = datetime.datetime.now() - datetime.timedelta(hours=2)
+	# 	self.assertNotEqual(self.minqi.status, PatientProfile.QUIT)
+	# 	response = self.rc.process_response(self.minqi, message)
+	# 	self.assertEqual("Are you sure you'd like to quit? Reply 'quit' to quit using Smartdose.", response.content)
+	# 	self.assertNotEqual("You have been unenrolled from Smartdose. You can reply \"resume\" at any time to resume using the Smartdose service.", response.content)
+	# 	self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).quit_request_datetime, None)
+	# 	self.assertNotEqual(PatientProfile.objects.get(pk=self.minqi.pk).status, PatientProfile.QUIT)
 
 	def test_resume_for_quit_patient(self):
 		message = 'resume'

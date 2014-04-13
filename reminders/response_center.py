@@ -23,7 +23,7 @@ class ResponseCenter(object):
 		""" 
 		Returns true if the message is a resume
 		"""
-		return message.lower() == "resume"
+		return message.lower() in ("r", "resume")
 
 	def is_yes(self, response):
 		return response.lower() in ['y', 'yes']
@@ -109,6 +109,7 @@ class ResponseCenter(object):
 		remove_preceding_content = "templates/"
 		upsell_content	= random.choice(upsell_content_choices)
 		upsell_content = upsell_content[remove_preceding_content.__len__():]
+		upsell_content = 'messages/medication_responses/yes_responses/app_upsell/dummy.txt'
 
 		# Find the happy person in string <happy_person> will be happy you're taking care of your health.
 		happy_people = []
@@ -123,6 +124,7 @@ class ResponseCenter(object):
 			happy_people.append("Your family")
 		happy_person = random.choice(happy_people)
 
+		# upsell_content = ''
 		dict = {'app_upsell_content' : upsell_content,
 		        'happy_person' : happy_person}
 		# TODO: Make this template so that if it gets too long it will choose the shorter name
@@ -537,9 +539,9 @@ class ResponseCenter(object):
 			return self.process_invalid_response()
 
 		# Generic logic for responding to any type of message goes here
+		# if self._is_quit(response):
+		# 	return self.process_quit_response(sender)
 		if self._is_quit(response):
-			return self.process_quit_response(sender)
-		elif self._is_pause(response):
 			return self.process_pause_response(sender)
 		elif sender.did_quit() and self._is_resume(response):
 			return self.process_resume_response(sender)

@@ -1,1 +1,1 @@
-You have paused your Smartdose reminders. Reply "resume" at any time to start receiving reminders again.
+You have quit Smartdose and will stop receiving reminders. Reply "r" or "resume" at any time to start receiving reminders again.
