@@ -185,6 +185,7 @@ INSTALLED_APPS = (
     'django_nose',
     'lockdown',
     'pipeline',
+    'south',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
