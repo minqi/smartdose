@@ -5,4 +5,4 @@ Did you take {% if prescription_name_list|length == 1 %}it{% else %}them{% endif
 Y - yes
 N - no
 
-To pause these messages, reply p.
+To quit receiving these messages, reply q.
