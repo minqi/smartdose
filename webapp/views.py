@@ -657,7 +657,8 @@ def create_reminder(request, *args, **kwargs):
 					repeat=Notification.DAILY,
 					prescription=prescription)[0]
 				new_reminders.append(med_reminder)
-				med_reminder.update_to_next_send_time()
+				if datetime.datetime.now().time() > reminder_time:
+					med_reminder.update_to_next_send_time()
 				med_reminder.day_of_week = 8
 				med_reminder.save()
 

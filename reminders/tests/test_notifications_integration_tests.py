@@ -380,7 +380,7 @@ class ReminderDeliveryTest(TestCase):
 		                   "Did you take them?\n"+ \
 		                   "Y - yes\n"+ \
 		                   "N - no\n\n"+ \
-		                   "To pause these messages, reply p."
+		                   "To stop these messages, reply q."
 		self.assertEqual(message['datetime_sent'], sunday_delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		self.assertEqual(message['content'], expected_message)
@@ -487,7 +487,7 @@ class ReminderDeliveryTest(TestCase):
 						   "Did you take it?\n"+\
 						   "Y - yes\n"+\
 						   "N - no\n\n"+\
-						   "To pause these messages, reply p."
+						   "To stop these messages, reply q."
 
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
@@ -520,7 +520,7 @@ class ReminderDeliveryTest(TestCase):
 		                   "Did you take it?\n"+ \
 		                   "Y - yes\n"+ \
 		                   "N - no\n\n"+ \
-		                   "To pause these messages, reply p."
+		                   "To stop these messages, reply q."
 		self.assertEqual(message['datetime_sent'], delivery_time)
 		self.assertEqual(message['to'], self.minqi.primary_phone_number)
 		self.assertEqual(message['content'], expected_content)
