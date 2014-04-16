@@ -1,4 +1,4 @@
-(function(env) { 
+	(function(env) { 
 	
 	// pass the jQuery object as parameter
 	env(window.jQuery, window, document);
@@ -458,6 +458,7 @@
 		}
 		main_col.on("click", ".patient-view-nav-tab", switch_patient_view_sections);
 
+
 		// load dashboard button handler
 		function load_dashboard_view(e){
 			$.ajax({
@@ -467,9 +468,116 @@
 					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
 					update_main_header_text("Dashboard");
+					load_med_response_histogram();
 				}
 			});
 		};
 		left_col.on("click", "#dashboard-button", load_dashboard_view);
+
+
+		// load medication responses histogram (dashboard demo)
+		// function load_med_response_histogram(e) {
+		// 	var data = [1, 2, 3, 4, 5];
+		// 	var data_labels = [
+		// 		"Haven't gotten the chance",
+		// 		"Need to refill",
+		// 		"Side effects",
+		// 		"Meds don't work", 
+		// 		"Prescription changed",
+		// 		"I feel sad",
+		// 		"Other",
+		// 	];
+		// 	$.ajax({
+		// 		url  : "/fishfood/patients/medication_response_counts/",
+		// 		type : "get",
+		// 		success : function(json_data, request) {
+		// 			data = $.parseJSON(json_data);
+
+		// 			// set up histogram
+		// 			var width = 500,
+		// 			    barHeight = 35, 
+		// 			    offset = 150;
+
+		// 			var x = d3.scale.linear()
+		// 			    .domain([0, d3.max(data)])
+		// 			    .range([0, width - offset]);
+
+		// 			var chart = d3.select("#med-responses-histogram")
+		// 			    .attr("width", width)
+		// 			    .attr("height", barHeight * data.length);
+
+		// 			var bar = chart.selectAll("g")
+		// 			    .data(data)
+		// 			  	.enter().append("g")
+		// 			    .attr("transform", function(d, i) { return "translate(" + offset + "," + i * barHeight + ")"; });
+
+		// 			bar.append("rect")
+		// 			    .attr("width", x)
+		// 			    .attr("height", barHeight - 1);
+
+		// 			bar.append("text")
+		// 			    .attr("x", function(d) { return -8; })
+		// 			    .attr("y", barHeight / 2)
+		// 			    .attr("dy", ".35em")
+		// 			    .text(function(d, i) { return data_labels[i]; });
+
+		// 			bar.append("text")
+		// 			    .attr("x", function(d) { return Math.max(x(d) - 5, 15); })
+		// 			    .attr("y", barHeight / 2)
+		// 			    .attr("dy", ".35em")
+		// 			    .attr("color", "white")
+		// 			    .text(function(d, i) { return d });
+		// 		}
+		// 	});
+		// };
+
+		(function poll(){
+		   setTimeout(function(){
+		      $.ajax({ 
+		      		url: "/fishfood/patients/medication_response_counts/",
+		      		type : "get", 
+		      		success: function(data){
+		      			data = $.parseJSON(data);
+						// set up histogram
+						var width = 500,
+						    barHeight = 35, 
+						    offset = 150;
+
+						var x = d3.scale.linear()
+						    .domain([0, d3.max(data)])
+						    .range([0, width - offset]);
+
+						var chart = d3.select("#med-responses-histogram")
+						    .attr("width", width)
+						    .attr("height", barHeight * data.length);
+
+						var bar = chart.selectAll("g")
+						    .data(data)
+						  	.enter().append("g")
+						    .attr("transform", 
+						    	function(d, i) { return "translate(" + offset + "," + i * barHeight + ")"; });
+
+						bar.append("rect")
+						    .attr("width", x)
+						    .attr("height", barHeight - 1);
+
+						bar.append("text")
+						    .attr("x", function(d) { return -8; })
+						    .attr("y", barHeight / 2)
+						    .attr("dy", ".35em")
+						    .text(function(d, i) { return data_labels[i]; });
+
+						bar.append("text")
+						    .attr("x", function(d) { return Math.max(x(d) - 5, 15); })
+						    .attr("y", barHeight / 2)
+						    .attr("dy", ".35em")
+						    .attr("color", "white")
+						    .text(function(d, i) { return d });
+			        	poll();
+				}, dataType: "json"});
+		  }, 2000);
+		})();
+
+		// poll();
 	});
 }));

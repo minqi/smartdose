@@ -23,6 +23,7 @@ urlpatterns = patterns('',
     url(r'^fishfood/patients/create_safety_net_contact/$', 'webapp.views.create_safety_net_contact'),
     url(r'^fishfood/patients/delete_safety_net_contact/$', 'webapp.views.delete_safety_net_contact'),
     url(r'^fishfood/patients/adherence_history_csv/$', 'reminders.views.adherence_history_csv'),
+    url(r'^fishfood/patients/medication_response_counts/$', 'reminders.views.medication_response_counts'),
 
     # for YC
     url(r'^fishfood/signup_yconly_11111011110/$', 'webapp.views.user_registration'),
