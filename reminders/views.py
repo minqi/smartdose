@@ -47,9 +47,13 @@ def adherence_history_csv(request):
 def medication_response_counts(request):
 	if request.method == 'GET':
 		counts = []
-		for response in ('A', 'B', 'C', 'D', 'E'):
+		for response in ('A', 'B', 'C', 'D', 'E', 'F', 'G'):
 			counts.append(Feedback.objects.filter(note__iexact=response).count())
-		counts = [25, 25, 25, 25, 25]
-		gain = [int(15*random.random()) for i in xrange(5)]
+
+		# COMMENT FOR PROD
+		counts = [25, 25, 25, 25, 25, 25, 25]
+		gain = [int(15*random.random()) for i in xrange(7)]
 		counts = [x + y for x, y in zip(counts, gain)]
+		# END COMMENT FOR PROD
+
 		return HttpResponse(json.dumps(counts))

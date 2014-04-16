@@ -476,7 +476,7 @@
 
 		// poll for med histogram
 		(function poll_for_med_histogram(){
-			var data = [1, 2, 3, 4, 5];
+			var data = [1, 2, 3, 4, 5, 6, 7];
 			var data_labels = [
 				"Haven't gotten the chance",
 				"Need to refill",
@@ -492,9 +492,7 @@
 		      		type : "get", 
 		      		success: function(data){
 		      			var chart = d3.select("#med-responses-histogram").selectAll("g").remove();
-
 		      			data = $.parseJSON(data);
-		      			console.log(data);
 
 						// set up histogram
 						var width = 500,
