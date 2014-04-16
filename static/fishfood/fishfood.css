@@ -775,6 +775,7 @@ body {
 }
 
 #med-responses-histogram-container {
+	height: 175px;
 }
 
 #med-responses-histogram {
@@ -794,8 +795,6 @@ body {
 #dashboard-alerts-container {
 	height: 250px;
 }
-
-#
 
 #dashboard-alerts-content {
 	margin-top: 91px;

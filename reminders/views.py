@@ -49,5 +49,7 @@ def medication_response_counts(request):
 		counts = []
 		for response in ('A', 'B', 'C', 'D', 'E'):
 			counts.append(Feedback.objects.filter(note__iexact=response).count())
-		counts = [int(100*random.random()) for i in xrange(5)]
+		counts = [25, 25, 25, 25, 25]
+		gain = [int(15*random.random()) for i in xrange(5)]
+		counts = [x + y for x, y in zip(counts, gain)]
 		return HttpResponse(json.dumps(counts))
