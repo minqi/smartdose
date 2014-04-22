@@ -2,4 +2,4 @@
 Y - yes
 N - no
 
-To quit receiving these messages, reply q.
+To stop these messages, reply q.

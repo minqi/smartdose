@@ -751,6 +751,7 @@ body {
 	width: 650px;
 	margin: auto;
 }
+
 #dashboard > div {
 	width: 100%;
 	background: #c1d9e7;
@@ -762,6 +763,34 @@ body {
 	margin-bottom: 15px;
 	overflow: hidden;
 }
+
+#dashboard > div#med-responses-histogram-container {
+	background: #fff;
+	margin-bottom: 15px;
+}
+
+#dashboard > div.chart-title {
+	background: #fff;
+	color: #555;
+}
+
+#med-responses-histogram-container {
+	height: 245px;
+}
+
+#med-responses-histogram {
+	float: left;
+}
+
+#med-responses-histogram rect {
+  fill: #c1d9e7;
+}
+#med-responses-histogram  text {
+  fill: #000;
+  font: 12px sans-serif;
+  text-anchor: end;
+}
+
 
 #dashboard-alerts-container {
 	height: 250px;

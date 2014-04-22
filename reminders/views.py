@@ -1,8 +1,10 @@
-import csv, random, datetime
+import csv, random, datetime, json
 
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 
 from patients.models import PatientProfile
+from reminders.models import Feedback
 from reminders.response_center import ResponseCenter
 
 def handle_text(request):
@@ -13,9 +15,9 @@ def handle_text(request):
 	rc = ResponseCenter()
 	return rc.process_response(patient, request.GET['Body'])
 
-
+@login_required
 def adherence_history_csv(request):
-	if request.GET:
+	if request.method == 'GET':
 		AVG_RATE = .60
 		headers = [
 			'date',
@@ -40,3 +42,18 @@ def adherence_history_csv(request):
 		response.content = response.content.strip('\r\n')
 
 		return response
+
+@login_required
+def medication_response_counts(request):
+	if request.method == 'GET':
+		counts = []
+		for response in ('A', 'B', 'C', 'D', 'E', 'F', 'G'):
+			counts.append(Feedback.objects.filter(note__iexact=response).count())
+
+		# COMMENT FOR PROD
+		counts = [25, 25, 25, 25, 25, 25, 25]
+		gain = [int(15*random.random()) for i in xrange(7)]
+		counts = [x + y for x, y in zip(counts, gain)]
+		# END COMMENT FOR PROD
+
+		return HttpResponse(json.dumps(counts))

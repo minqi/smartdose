@@ -185,6 +185,7 @@ INSTALLED_APPS = (
     'django_nose',
     'lockdown',
     'pipeline',
+    'south',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -333,3 +334,7 @@ PIPELINE_JS = {
     },
 }
 
+SOUTH_MIGRATION_MODULES = {
+    'djcelery':'ignore',
+    'guardian':'ignore',
+}

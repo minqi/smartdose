@@ -226,12 +226,12 @@ class Notification(models.Model):
 	# update send_time to next send_time based on notification period
 	def update_to_next_send_time(self):
 		update_periodic_send_time = {
-		self.NO_REPEAT: self.__update_one_shot_send_time,
-		self.DAILY:    self.__update_daily_send_time,
-		self.WEEKLY:   self.__update_weekly_send_time,
-		self.MONTHLY:  self.__update_monthly_send_time,
-		self.YEARLY:   self.__update_yearly_send_time,
-		self.CUSTOM:   self.__update_custom_send_time,
+			self.NO_REPEAT: self.__update_one_shot_send_time,
+			self.DAILY:    self.__update_daily_send_time,
+			self.WEEKLY:   self.__update_weekly_send_time,
+			self.MONTHLY:  self.__update_monthly_send_time,
+			self.YEARLY:   self.__update_yearly_send_time,
+			self.CUSTOM:   self.__update_custom_send_time,
 		}
 		self.times_sent += 1
 		update_periodic_send_time[self.repeat]()
@@ -247,7 +247,6 @@ class Notification(models.Model):
 			self.send_datetime = datetime.datetime.now()
 		pass
 
-
 	def __update_one_shot_send_time(self):
 		if self.repeat == self.NO_REPEAT:
 			self.active = False
@@ -257,7 +256,7 @@ class Notification(models.Model):
 		if self.repeat == self.DAILY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=1)
-			# self.send_datetime += dt
+			self.send_datetime += dt
 			while self.send_datetime <= now:
 				self.send_datetime += dt
 			self.save()
@@ -266,7 +265,7 @@ class Notification(models.Model):
 		if self.repeat == self.WEEKLY:
 			now = datetime.datetime.now()
 			dt = datetime.timedelta(days=7)
-			# self.send_datetime += dt
+			self.send_datetime += dt
 			while self.send_datetime <= now:
 				self.send_datetime += dt
 			self.save()
