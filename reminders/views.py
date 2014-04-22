@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 
 from patients.models import PatientProfile
-from reminders.models import Feedback
+from reminders.models import Feedback, Message
 from reminders.response_center import ResponseCenter
 
 def handle_text(request):
@@ -46,9 +46,11 @@ def adherence_history_csv(request):
 @login_required
 def medication_response_counts(request):
 	if request.method == 'GET':
+		# Sort medication questionnaire responses to be in the order the user sees them
+		sorted_keys = sorted(Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY, key=lambda key: key)
 		counts = []
-		for response in ('A', 'B', 'C', 'D', 'E', 'F', 'G'):
-			counts.append(Feedback.objects.filter(note__iexact=response).count())
+		for key in sorted_keys:
+			counts.append(Feedback.objects.filter(note__iexact=Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[key]).count())
 
 		# COMMENT FOR PROD
 		# counts = [25, 25, 25, 25, 25, 25, 25]
