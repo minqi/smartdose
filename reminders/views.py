@@ -51,9 +51,9 @@ def medication_response_counts(request):
 			counts.append(Feedback.objects.filter(note__iexact=response).count())
 
 		# COMMENT FOR PROD
-		counts = [25, 25, 25, 25, 25, 25, 25]
-		gain = [int(15*random.random()) for i in xrange(7)]
-		counts = [x + y for x, y in zip(counts, gain)]
+		# counts = [25, 25, 25, 25, 25, 25, 25]
+		# gain = [int(15*random.random()) for i in xrange(7)]
+		# counts = [x + y for x, y in zip(counts, gain)]
 		# END COMMENT FOR PROD
 
 		return HttpResponse(json.dumps(counts))
