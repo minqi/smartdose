@@ -1,5 +1,6 @@
 # Django settings for smartdose project.
 from __future__ import absolute_import
+import sys
 
 import djcelery
 import os, re
@@ -14,10 +15,13 @@ cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
+# Determine if we're in a TEST environment. Adapted from solution at http://www.thebitguru.com/blog/view/246-Using%20custom%20settings%20in%20django%20tests
+TEST = 'test' == sys.argv[1]
+
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = True
+SEND_TEXT_MESSAGES = True if not TEST else False
 MESSAGE_CUTOFF_HOURS = 24 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
@@ -338,3 +342,5 @@ SOUTH_MIGRATION_MODULES = {
     'djcelery':'ignore',
     'guardian':'ignore',
 }
+
+SOUTH_TESTS_MIGRATE = False
