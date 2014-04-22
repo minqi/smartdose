@@ -564,7 +564,7 @@ def send_reminder(request, *args, **kwargs):
 			if not request.user.has_perm('patients.manage_patientprofile', patient):
 				return HttpResponseBadRequest("You don't have access to this user's profile")
 
-			next_notification = Notification.objects.filter(send_datetime__gte=datetime.datetime.now()).order_by('send_datetime')
+			next_notification = Notification.objects.filter(send_datetime__gte=datetime.datetime.now(), active=True).order_by('send_datetime')
 			if next_notification is None:
 				return HttpResponseBadRequest("This user has no upcoming notifications")
 			next_notification_time = next_notification[0].send_datetime
