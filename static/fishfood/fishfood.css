@@ -313,7 +313,7 @@ body {
 
 #patientProfileHeader .patientListItemInfo {
 	float:left;
-	width:400px;
+	width:360px;
 }
 
 #patient-view-nav {
@@ -370,7 +370,8 @@ body {
 #addPatientCancel, #addReminderCancel,
 #addReminderSubmit,
 .deletePatientButton, .deletePatientConfirmYes,
-.deletePatientConfirmNo, 
+.deletePatientConfirmNo,
+.sendReminderButton, .sendReminderConfirm,
 #add-caregiver-submit,
 #add-caregiver-cancel, 
 #addPatientSubmit {
@@ -390,6 +391,7 @@ body {
 #addReminderSubmit:hover,
 .deletePatientButton:hover, .deletePatientConfirmYes:hover,
 .deletePatientConfirmNo:hover,
+.sendReminderButton:hover,
 #add-caregiver-submit:hover,
 #add-caregiver-cancel:hover,
 #addPatientSubmit:hover {
@@ -617,6 +619,16 @@ body {
 	margin-left: 5px;
 	cursor:pointer;
 	border-radius: 8px;
+}
+
+.sendReminderConfirm {
+    border:1px solid #fff
+}
+
+.sendReminderConfirm, .sendReminderButton {
+    float:right;
+    width:120px;
+    margin-right:7px;
 }
 
 .remindersListItemDay {

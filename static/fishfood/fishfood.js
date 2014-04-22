@@ -213,6 +213,25 @@
 		$("#mainContentView").on("submit", "#addPatientForm", submit_new_patient_form);
 
 
+        // delete button handler for new patient form
+        function send_reminder_button_clicked(e) {
+            $(e.target).hide();
+            $(e.target).delay(820);
+            $(".sendReminderConfirm").fadeIn(200);
+            $(".sendReminderConfirm").delay(400);
+            $(".sendReminderConfirm").fadeOut(200);
+            $(e.target).fadeIn();
+            csrfmiddlewaretoken = $("input[name='csrfmiddlewaretoken']")[0].value;
+            var dynamicData = {'csrfmiddlewaretoken':csrfmiddlewaretoken};
+            dynamicData['p_id'] = $("#patientView").attr("data-id");
+            $.ajax({
+                url: "/fishfood/reminders/send/",
+                type: "post",
+                data: dynamicData,
+            });
+        }
+        main_col.on("click", ".sendReminderButton", send_reminder_button_clicked);
+
 		// delete button handler for new patient form
 		function delete_patient_button_clicked(e) {
 			$(e.target).hide();
