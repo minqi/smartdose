@@ -563,15 +563,18 @@
                         data = $.parseJSON(data);
                         new_items = [];
                         $.each($(data), function(key, value) {
-                            if (previous_activity_feed_items[0] == value.id) {
+                            if (previous_activity_feed_items[0] != undefined && previous_activity_feed_items[0].id == value.id) {
                                 return false;
                             }
-                            $("#activity-feed").append("<div id='activity-item'>"+
-                                                        "<div id='activity-number'>"+value.number+"</div>"+
-                                                        "<div id='activity-string'>"+value.activity_string+"</div>"+
-                                                        "<div id='activity-date'>"+value.datetime+"</div>"+
-                                                        "<\div>");
-                            new_items = new_items.concat(value.id);
+                            new_items = new_items.concat(value);
+                        });
+                        reversed_new_items = new_items.reverse()
+                        $.each($(reversed_new_items), function(key,value) {
+                            $("#activity-feed").prepend("<div id='activity-item'>"+
+                                "<div id='activity-number'>"+value.number+"</div>"+
+                                "<div id='activity-string'>"+value.activity_string+"</div>"+
+                                "<div id='activity-date'>"+value.datetime+"</div>"+
+                                "<\div>");
                         });
                         previous_activity_feed_items = new_items.concat(previous_activity_feed_items);
                         poll_for_activity_feed();
