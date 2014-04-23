@@ -68,7 +68,7 @@ def new_activity_for_activity_feed(request):
 	if request.method == 'GET':
 		activity = []
 		messages = Message.objects.filter(Q(_type=Message.MEDICATION_QUESTIONNAIRE) | Q(_type=Message.REFILL_QUESTIONNAIRE)).\
-			           exclude(datetime_responded=None).order_by("datetime_responded")[:5]
+			           exclude(datetime_responded=None).order_by("-datetime_responded")[:5]
 		for message in messages:
 			if message.feedbacks.all()[0].note == "I feel sad :(":
 				reason = "feeling sad"
