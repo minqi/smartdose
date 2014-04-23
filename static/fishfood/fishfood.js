@@ -478,6 +478,7 @@
 		main_col.on("click", ".patient-view-nav-tab", switch_patient_view_sections);
 
 
+        previous_activity_feed_items = [];
 		// load dashboard button handler
 		function load_dashboard_view(e){
 			$.ajax({
@@ -487,7 +488,7 @@
 					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
 					update_main_header_text("Dashboard");
-					load_med_response_histogram();
+                    previous_activity_feed_items = [];
 				}
 			});
 		};
@@ -553,7 +554,6 @@
 				}});
 		  }, 1000);
 		})();
-        previous_activity_feed_items = [];
         (function poll_for_activity_feed(){
             setTimeout(function(){
                 $.ajax({
@@ -563,7 +563,6 @@
                         data = $.parseJSON(data);
                         new_items = [];
                         $.each($(data), function(key, value) {
-                            console.log(value.activity_string)
                             if (previous_activity_feed_items[0] == value.id) {
                                 return false;
                             }
