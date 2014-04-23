@@ -89,9 +89,13 @@ def new_activity_for_activity_feed(request):
 			context = {'number': message.to.primary_phone_number}
 			fancy_phone_number = render_to_string('fishfood/activity_feed_messages/phone_number_in_activity_feed.txt',
 			                                   context)
+			context = {'datetime':message.datetime_responded}
+			formatted_date = render_to_string('fishfood/activity_feed_messages/date_in_activity_feed.txt',
+			                                   context)
 			activity_item = {'id':message.id,
 			                 'number':fancy_phone_number,
-			                 'activity_string':activity_string}
+			                 'activity_string':activity_string,
+			                 'datetime':formatted_date}
 			activity.append(activity_item)
 		return HttpResponse(json.dumps(activity))
 

@@ -569,6 +569,7 @@
                             $("#activity-feed").append("<div id='activity-item'>"+
                                                         "<div id='activity-number'>"+value.number+"</div>"+
                                                         "<div id='activity-string'>"+value.activity_string+"</div>"+
+                                                        "<div id='activity-date'>"+value.datetime+"</div>"+
                                                         "<\div>");
                             new_items = new_items.concat(value.id);
                         });
