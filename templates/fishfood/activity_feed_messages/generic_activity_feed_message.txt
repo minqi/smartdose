@@ -1,0 +1,1 @@
+{{ patient_first_name }} {{ patient_last_name }} reported {{ reason }} for {% for feedback in feedback_list %}{% if forloop.first %}{{ feedback.prescription.drug.name }}{% elif forloop.last %} and {{ feedback.prescription.drug.name }}{% else %}, {{ feedback.prescription.drug.name }}{% endif %}{% endfor %}.

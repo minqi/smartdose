@@ -506,16 +506,16 @@
 				"Other",
 			];
 		   setTimeout(function(){
-		      $.ajax({ 
+		      $.ajax({
 		      		url: "/fishfood/patients/medication_response_counts/",
-		      		type : "get", 
+		      		type : "get",
 		      		success: function(data){
 		      			var chart = d3.select("#med-responses-histogram").selectAll("g").remove();
 		      			data = $.parseJSON(data);
 
 						// set up histogram
 						var width = 500,
-						    barHeight = 35, 
+						    barHeight = 35,
 						    offset = 150;
 
 						var x = d3.scale.linear()
@@ -529,7 +529,7 @@
 						var bar = chart.selectAll("g")
 						    .data(data)
 						  	.enter().append("g")
-						    .attr("transform", 
+						    .attr("transform",
 						    	function(d, i) { return "translate(" + offset + "," + i * barHeight + ")"; });
 
 						bar.append("rect")
@@ -551,7 +551,32 @@
 
 			        	poll_for_med_histogram();
 				}});
-		  }, 500);
+		  }, 1000);
 		})();
+        previous_activity_feed_items = [];
+        (function poll_for_activity_feed(){
+            setTimeout(function(){
+                $.ajax({
+                    url: "/fishfood/reminders/new_activity/",
+                    type : "get",
+                    success: function(data){
+                        data = $.parseJSON(data);
+                        new_items = [];
+                        $.each($(data), function(key, value) {
+                            console.log(value.activity_string)
+                            if (previous_activity_feed_items[0] == value.id) {
+                                return false;
+                            }
+                            $("#activity-feed").append("<div id='activity-item'>"+
+                                                        "<div id='activity-number'>"+value.number+"</div>"+
+                                                        "<div id='activity-string'>"+value.activity_string+"</div>"+
+                                                        "<\div>");
+                            new_items = new_items.concat(value.id);
+                        });
+                        previous_activity_feed_items = new_items.concat(previous_activity_feed_items);
+                        poll_for_activity_feed();
+                    }});
+            }, 1000);
+        })();
 	});
 }));

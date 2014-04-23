@@ -776,6 +776,30 @@ body {
 	overflow: hidden;
 }
 
+#activity-feed > div {
+    width: 100%;
+    background: #c1d9e7;
+    border-radius: 3px;
+    text-align:left;
+    font-family: 'HelveticaNeue-Thin';
+    font-size: 16px;
+    color: #fff;
+    margin-bottom: 15px;
+    overflow: hidden;
+    padding:8px;
+}
+
+#activity-item > div#activity-number {
+    font-size: 12px;
+    float:right;
+    margin-right:16px;
+    margin-left:15px;
+}
+
+#dashboard > div#activity-feed {
+    background: #fff;
+    color: #000;
+}
 #dashboard > div#med-responses-histogram-container {
 	background: #fff;
 	margin-bottom: 15px;

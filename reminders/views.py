@@ -1,7 +1,9 @@
 import csv, random, datetime, json
+from django.db.models import Q
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
 
 from patients.models import PatientProfile
 from reminders.models import Feedback, Message
@@ -59,3 +61,37 @@ def medication_response_counts(request):
 		# END COMMENT FOR PROD
 
 		return HttpResponse(json.dumps(counts))
+
+@login_required
+#TODO(mgaba): Clean up this function after YC
+def new_activity_for_activity_feed(request):
+	if request.method == 'GET':
+		activity = []
+		messages = Message.objects.filter(Q(_type=Message.MEDICATION_QUESTIONNAIRE) | Q(_type=Message.REFILL_QUESTIONNAIRE)).\
+			           exclude(datetime_responded=None).order_by("datetime_responded")[:5]
+		for message in messages:
+			if message.feedbacks.all()[0].note == "I feel sad :(":
+				reason = "feeling sad"
+			elif message.feedbacks.all()[0].note == "Need to refill":
+				reason = "needing to refill"
+			elif message.feedbacks.all()[0].note == "Side effects":
+				reason = "side effects"
+			elif message.feedbacks.all()[0].note == "Meds don't work":
+				reason = "meds aren't working correctly"
+			elif message.feedbacks.all()[0].note == "Prescription changed":
+				reason = "prescription changed"
+			context = {'patient_first_name': message.to.first_name,
+			           'patient_last_name': message.to.last_name,
+			           'feedback_list': message.feedbacks.all(),
+			           'reason': reason}
+			activity_string = render_to_string('fishfood/activity_feed_messages/generic_activity_feed_message.txt',
+			                                   context)
+			context = {'number': message.to.primary_phone_number}
+			fancy_phone_number = render_to_string('fishfood/activity_feed_messages/phone_number_in_activity_feed.txt',
+			                                   context)
+			activity_item = {'id':message.id,
+			                 'number':fancy_phone_number,
+			                 'activity_string':activity_string}
+			activity.append(activity_item)
+		return HttpResponse(json.dumps(activity))
+
