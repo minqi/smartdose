@@ -547,7 +547,7 @@ class ResponseCenter(object):
 			return self.process_resume_response(sender)
 
 		last_sent_message = Message.objects.get_last_sent_message_requiring_response(to=sender)
-
+		print last_sent_message._type
 		if not last_sent_message:
 			return self.process_no_recent_message_response(sender, response)
 
