@@ -567,11 +567,13 @@
                                 "<div id='activity-string'>"+value.activity_string+"</div>"+
                                 "<div id='activity-date'>"+value.datetime+"</div>"+
                                 "<\div>");
-                            latest_activity_feed_item = value.id
+                            if (value.id > latest_activity_feed_item) {
+                                latest_activity_feed_item = value.id
+                            }
                         });
                         poll_for_activity_feed();
                     }});
-            }, 3000);
+            }, 1500);
         })();
 	});
 }));

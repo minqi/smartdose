@@ -1,65 +1,52 @@
+import random
 from doctors.models import DoctorProfile
 from patients.models import PatientProfile
-from reminders.models import Prescription, MedicationNotification
 from common.models import Country, Drug
-from datetime import datetime, date, time, timedelta
+import datetime
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from reminders.models import Prescription, Notification, Message, Feedback
 
-def get_unique_username(obj):
-	original_username = str(hash(obj.first_name+obj.last_name))
-	username = original_username
-	for i in range(0, 10000): #aribtrarily choose max range to be 10000 on the assumption that there will not be more than 10,000 collisions.
-		try:
-			User.objects.get(username=username)
-			username = original_username+str(i) # If there's a collision, add another integeter and begin incrementing
-		except User.DoesNotExist:
-			return username
-	raise UsernameCollisionError
+# Get all patients
+# For each patient
+	# Add prescriptions for the patient
+	# Simulate sent messages to patient
+	# Simulate responses to the messages
 
-@receiver(pre_save)
-def my_callback(sender, **kwargs):
-	if not issubclass(sender, User):
-		return
-	obj = kwargs['instance'] 
-	if not obj.id:
-   		username = get_unique_username(obj)
-   		obj.username = username
-   		print username
+drugs = []
+drugs.append(Drug.objects.get_or_create(name='advil'))
+drugs.append(Drug.objects.get_or_create(name='lipitor'))
+drugs.append(Drug.objects.get_or_create(name='beta blocker'))
+drugs.append(Drug.objects.get_or_create(name='aspirin'))
+drugs.append(Drug.objects.get_or_create(name='vitamin b'))
+drugs.append(Drug.objects.get_or_create(name='vitamin c'))
+drugs.append(Drug.objects.get_or_create(name='vitamin d'))
+drugs.append(Drug.objects.get_or_create(name='clopidogrel'))
+drugs.append(Drug.objects.get_or_create(name='warfarin'))
+drugs.append(Drug.objects.get_or_create(name='ace inhibitor'))
+drugs.append(Drug.objects.get_or_create(name='ticagrelor'))
+drugs.append(Drug.objects.get_or_create(name='prasugrel'))
+drugs.append(Drug.objects.get_or_create(name='abilify'))
+drugs.append(Drug.objects.get_or_create(name='oleptro'))
 
-# Create a doctor and patients
-bob = DoctorProfile.objects.get_or_create(primary_phone_number="+12029163381", first_name="Robert", last_name="Wachter", birthday="1960-1-1")[0]
-matt = PatientProfile.objects.get_or_create(primary_phone_number="+12147094720", first_name="Matthew", last_name="Gaba", birthday="1989-10-13")[0]
-minqi = PatientProfile.objects.get_or_create(primary_phone_number="+18569067308", first_name="Minqi", last_name="Jiang", birthday="1990-8-7")[0]
-
-# schedule reminders
-now = datetime.now()
-for i in range(12):
-	drug_name1 = 'vitamin B' + str(i)
-	drug_name2 = 'vitamin C' + str(i)
-	drug1 = Drug.objects.get_or_create(name=drug_name1)[0]
-	drug2 = Drug.objects.get_or_create(name=drug_name2)[0]
-	prescription_minqi1 = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=drug1, filled=True)[0]
-	prescription_minqi2 = Prescription.objects.get_or_create(prescriber=bob, patient=minqi, drug=drug2, filled=True)[0]
-	prescription_matt1 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug1, filled=True)[0]
-	prescription_matt2 = Prescription.objects.get_or_create(prescriber=bob, patient=matt, drug=drug2, filled=True)[0]
-	MedicationNotification.objects.get_or_create(
-		to=minqi, 
-		prescription=prescription_minqi1, 
-		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1))
-	MedicationNotification.objects.get_or_create(
-		to=minqi, 
-		prescription=prescription_minqi2, 
-		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1))
-	MedicationNotification.objects.get_or_create(to=matt,
-		prescription=prescription_matt1, 
-		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1))
-	MedicationNotification.objects.get_or_create(to=matt,
-		prescription=prescription_matt2, 
-		repeat=Notification.DAILY,
-		send_time=now + i*timedelta(hours=1))
+patients = PatientProfile.objects.all()
+for patient in patients:
+	num_drugs = random.randint(1,3)
+	for x in range(0, num_drugs):
+		prescription = Prescription.objects.create(prescriber=patient,
+													 patient=patient, drug=random.choice(drugs)[0])
+		notification = Notification.objects.create(to=patient, _type=Notification.MEDICATION, prescription=prescription,
+		                            repeat=Notification.DAILY, send_datetime=datetime.datetime.now() + datetime.timedelta(weeks=50))
+		now = datetime.datetime.now()
+		five_hours_ago = now - datetime.timedelta(hours=5)
+		while five_hours_ago < now:
+			if random.randint(0,3) > 2:
+				first_message = Message.objects.create(to=patient, _type=Message.MEDICATION, datetime_responded=five_hours_ago)
+				response_message = Message.objects.create(to=patient, _type=Message.MEDICATION_QUESTIONNAIRE, datetime_responded=five_hours_ago, previous_message=first_message)
+				feedback_choices = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+				feedback = Feedback.objects.create(_type=Message.MEDICATION, notification=notification, prescription=prescription, datetime_responded=five_hours_ago, completed=False, note=Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[random.choice(feedback_choices)] )
+				first_message.feedbacks.add(feedback)
+				response_message.feedbacks.add(feedback)
+			five_hours_ago = five_hours_ago + datetime.timedelta(hours=1)
 
