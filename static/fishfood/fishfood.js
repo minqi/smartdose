@@ -478,7 +478,7 @@
 		main_col.on("click", ".patient-view-nav-tab", switch_patient_view_sections);
 
 
-        previous_activity_feed_items = [];
+        latest_activity_feed_item = -1;
 		// load dashboard button handler
 		function load_dashboard_view(e){
 			$.ajax({
@@ -488,7 +488,7 @@
 					$("#mainContentView").html(data).show();
 					$("#addPatientView").hide();
 					update_main_header_text("Dashboard");
-                    previous_activity_feed_items = [];
+                    latest_activity_feed_item = -1;
 				}
 			});
 		};
@@ -557,29 +557,21 @@
         (function poll_for_activity_feed(){
             setTimeout(function(){
                 $.ajax({
-                    url: "/fishfood/reminders/new_activity/",
+                    url: "/fishfood/reminders/new_activity?latest_activity_feed_item="+latest_activity_feed_item,
                     type : "get",
                     success: function(data){
                         data = $.parseJSON(data);
-                        new_items = [];
                         $.each($(data), function(key, value) {
-                            if (previous_activity_feed_items[0] != undefined && previous_activity_feed_items[0].id == value.id) {
-                                return false;
-                            }
-                            new_items = new_items.concat(value);
-                        });
-                        reversed_new_items = new_items.reverse()
-                        $.each($(reversed_new_items), function(key,value) {
                             $("#activity-feed").prepend("<div id='activity-item'>"+
                                 "<div id='activity-number'>"+value.number+"</div>"+
                                 "<div id='activity-string'>"+value.activity_string+"</div>"+
                                 "<div id='activity-date'>"+value.datetime+"</div>"+
                                 "<\div>");
+                            latest_activity_feed_item = value.id
                         });
-                        previous_activity_feed_items = new_items.concat(previous_activity_feed_items);
                         poll_for_activity_feed();
                     }});
-            }, 1000);
+            }, 3000);
         })();
 	});
 }));
