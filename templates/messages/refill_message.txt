@@ -1,5 +1,5 @@
 {# {% if times_sent == 1 %}Hello again. {% elif times_sent == 2 %}We haven't forgotten about you. {% endif %}Have you picked up your new meds from the pharmacy? Reply: #}You were prescribed{% if prescription_name_list|length == 1 %} {{ prescription_name_list.0 }}.{% include "messages/utility/newline.txt" %}{% else %} these meds:
-{% for drug_name in prescription_name_list %}{{ drug_name }}
+{% for drug_name in prescription_name_list %}{{ drug_name|capfirst }}
 {% endfor %}{% endif %}
 Have you picked {% if prescription_name_list|length == 1 %}it{% else %}them{% endif %} up from the pharmacy?
 Y - yes
