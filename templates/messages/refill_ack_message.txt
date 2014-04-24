@@ -1,1 +1,1 @@
-Great. You'll receive your first reminder {{ day }} at {{ hour }}:{{ minute|stringformat:"02d" }}{{ ampm }}.
+Great! To support your new routine, you'll receive a simple med reminder daily at {{ hour }}:{{ minute|stringformat:"02d" }}{{ ampm }}. To adjust the time, visit www.smartdo.se/time?c=12345.

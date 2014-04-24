@@ -159,7 +159,9 @@ class NotificationCenter(object):
 		elif hasattr(to.enroller, "doctorprofile"):
 			enroller = "Dr. " + to.enroller.last_name
 		else:
-			enroller = to.enroller.first_name + " " + to.enroller.last_name
+			enroller = "Dr. " + to.enroller.last_name
+		#else:
+		#	enroller = to.enroller.first_name + " " + to.enroller.last_name
 		context = {'patient_first_name':to.first_name,
 		           'enroller':enroller}
 		template = 'messages/welcome_message_1.txt'

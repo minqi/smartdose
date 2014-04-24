@@ -1,1 +1,1 @@
-Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time.{# For more info, you can visit www.smartdo.se #}
+{{ enroller }} hopes you're enjoying your first morning out of the hospital. To learn more about Smartdose, visit www.smartdo.se.
