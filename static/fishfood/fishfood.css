@@ -52,7 +52,7 @@ body {
 	width: 738px;
 	margin: 0;
 	padding: 0;
-	background: #169fda;
+	background: #5997B8;
 	border-radius: 3px;
 	border-bottom-left-radius: 0px;
 	border-bottom-right-radius: 0px;
@@ -181,10 +181,10 @@ body {
 	text-align: left;
 	font-size: 28px;
 	color: white;
-	margin-top: 10px;
-	margin-left: 10px;
-	margin-bottom: 2px;
-	color: #777;
+	margin-top: 7px;
+	margin-left: 9px;
+	margin-bottom: 7px;
+	color: #575757;
 	cursor: pointer;
 /*	width:100px;
 	height:60px;
@@ -778,15 +778,16 @@ body {
 
 #activity-feed > div {
     width: 100%;
-    background: #c1d9e7;
+    background: #ffffff;
     border-radius: 3px;
     text-align:left;
     font-family: 'HelveticaNeue-Thin';
     font-size: 16px;
-    color: #fff;
-    margin-bottom: 25px;
+    color: #333;
+    margin-bottom: 40px;
     overflow: hidden;
     padding:8px;
+    border-bottom: 1px solid #eee;
 }
 
 #activity-item > div#activity-number {
