@@ -52,7 +52,7 @@ def medication_response_counts(request):
 		sorted_keys = sorted(Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY, key=lambda key: key)
 		counts = []
 		for key in sorted_keys:
-			counts.append(Feedback.objects.filter(note__iexact=Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[key]).count())
+			counts.append(Feedback.objects.filter(note__iexact=Message.MEDICATION_QUESTIONNAIRE_RESPONSE_DICTIONARY[key]).distinct("message").count())
 
 		# COMMENT FOR PROD
 		# counts = [25, 25, 25, 25, 25, 25, 25]
