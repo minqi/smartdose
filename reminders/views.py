@@ -106,6 +106,5 @@ def new_activity_for_activity_feed(request):
 			                 'activity_string':activity_string,
 			                 'datetime':formatted_date}
 			activity.append(activity_item)
-		print activity.__len__()
 		return HttpResponse(json.dumps(activity))
 
