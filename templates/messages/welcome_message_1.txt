@@ -1,1 +1,1 @@
-Hi, {{ patient_first_name }}! {% if not enroller %}You signed up for Smartdose{% else %}{{ enroller }} is giving you Smartdose{% endif %}, a simply text message app, to help support your health. To quit, you can reply 'q' at any time.
+Hi, {{ patient_first_name }}! {% if not enroller %}You signed up for Smartdose{% else %}{{ enroller }} is giving you Smartdose{% endif %}, a simple text message app, to help support your health. To quit, you can reply 'q' at any time.
