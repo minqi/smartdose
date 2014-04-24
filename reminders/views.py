@@ -73,8 +73,8 @@ def new_activity_for_activity_feed(request):
 		for message in messages:
 			if not message.feedbacks.all():
 				continue
-			if message.feedbacks.all()[0].note == "I feel sad :(":
-				reason = "feeling sad"
+			if message.feedbacks.all()[0].note == "Haven't gotten the chance":
+				reason = "not getting the chance"
 			elif message.feedbacks.all()[0].note == "Need to refill":
 				reason = "needing to refill"
 			elif message.feedbacks.all()[0].note == "Side effects":
@@ -83,6 +83,10 @@ def new_activity_for_activity_feed(request):
 				reason = "meds aren't working correctly"
 			elif message.feedbacks.all()[0].note == "Prescription changed":
 				reason = "prescription changed"
+			elif message.feedbacks.all()[0].note == "I feel sad :(":
+				reason = "feeling sad"
+			elif message.feedbacks.all()[0].note == "Other":
+				reason = "other"
 			context = {'patient_first_name': message.to.first_name,
 			           'patient_last_name': message.to.last_name,
 			           'feedback_list': message.feedbacks.all(),
