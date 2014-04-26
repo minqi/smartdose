@@ -6,3 +6,4 @@ fake_datasources/*
 celerybeat-schedule
 test_message_output
 message_output
+*/migrations/
