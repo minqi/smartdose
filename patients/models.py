@@ -24,7 +24,7 @@ class SafetyNetRelationship(models.Model):
 			choices=InterpersonalRelationship.RELATIONSHIP_CHOICES)
 
 	receives_all_reminders = models.BooleanField(default=False)
-	opt_out	               = models.BooleanField(default=False)
+	opt_out	               = models.BooleanField(default=False) 
 
 	class Meta:
 		unique_together = (('source_patient', 'target_patient'),)
@@ -63,7 +63,7 @@ class PatientProfile(UserProfile):
 		(POUNDS, 'pounds'),
 	)
 
-	# Patient specific fields
+# ************ ENCRYPTION START ************ 
 	mrn			= models.PositiveIntegerField(default=0) 
 	age 		= models.PositiveIntegerField(default=0)
 	gender 		= models.CharField(null=False, blank=False,
@@ -79,17 +79,18 @@ class PatientProfile(UserProfile):
 									choices=HEIGHT_UNIT_CHOICES,
 									default=POUNDS)
 
+	# need to have this separately in patient and doctor so patient/doctor accounts can 
+	# use same phone number
+	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
+	email 					= models.EmailField(blank=True, null=True, unique=True)
+# ************ ENCRYPTION END ************** 
+
 	# If enroller is None it means the patient enrolled themselves
 	enroller    = models.ForeignKey(UserProfile, 
 		default=None, related_name='enroller', null=True, blank=True)
 	
 	safety_net_contacts 	= models.ManyToManyField('self', 
 		through='SafetyNetRelationship', symmetrical=False, related_name='safety_net')
-
-	# need to have this separately in patient and doctor so patient/doctor accounts can 
-	# use same phone number
-	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
-	email 					= models.EmailField(blank=True, null=True, unique=True)
 	
 	# number of people with access to the patient's profile
 	num_caregivers			= models.IntegerField(default=0)

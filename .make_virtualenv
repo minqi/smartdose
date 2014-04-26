@@ -6,4 +6,5 @@ source .venv/bin/activate
 pip install -r .requirements.pip
 chmod 755 "$(pwd)/configs/dev/manage.py"
 alias manage="python $(pwd)/configs/dev/manage.py"
+alias keyczart=".venv/bin/keyczart"
 export DJANGO_SETTINGS_MODULE='configs.dev.settings'

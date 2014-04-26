@@ -62,14 +62,24 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
     status = models.CharField(max_length=2,
                           choices=STATUS_CHOICES,
                           default=NEW)
-    username                = models.CharField(max_length=40, unique=True)
-    first_name              = models.CharField(max_length=40, null=False, blank=False)
-    last_name               = models.CharField(max_length=40, null=False, blank=False)
-    full_name               = models.CharField(max_length=80, null=False, blank=False)
-    birthday                = models.DateField(blank=True, null=True)
     is_admin                = models.BooleanField(default=False)
     join_datetime           = models.DateTimeField(auto_now_add=True)
     is_active               = models.BooleanField(default=True)
+
+# ************ ENCRYPTION START ************
+    # biographic info
+    username            = models.CharField(max_length=40, unique=True)
+    first_name          = models.CharField(max_length=40, null=False, blank=False)
+    last_name           = models.CharField(max_length=40, null=False, blank=False)
+    full_name           = models.CharField(max_length=80, null=False, blank=False)
+    birthday            = models.DateField(blank=True, null=True)
+    address_line1       = models.CharField(max_length=64)
+    address_line2       = models.CharField(max_length=64)
+    postal_code         = models.CharField(max_length=10)
+    city                = models.CharField(max_length=64)
+    state_province      = models.CharField(max_length=64)
+    country_iso_code    = models.CharField(max_length=2)
+# ************ ENCRYPTION END **************
 
     # Formula for computing probability that at least one of N users accounts with password of CHAR_SPACE are compromised in T minutes. 
     # 1 - ((1-1/CHAR_SPACE^AUTH_TOKEN_LENGTH)^(AUTH_TOKEN_MAX_LOGIN_ATTEMPTS*T/AUTH_TOKEN_WAIT_PERIOD))^N
@@ -97,13 +107,6 @@ class UserProfile(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
 
-    # Address fields
-    address_line1       = models.CharField(max_length=64)
-    address_line2       = models.CharField(max_length=64)
-    postal_code         = models.CharField(max_length=10)
-    city                = models.CharField(max_length=64)
-    state_province      = models.CharField(max_length=64)
-    country_iso_code    = models.CharField(max_length=2)
     objects             = UserProfileManager()
 
     def get_full_name(self):
@@ -240,8 +243,10 @@ class RegistrationProfile(models.Model):
 
 class Drug(models.Model):
 	"""Model for all FDA approved drugs and medication"""
+# ************ ENCRYPTION START ************
 	name = models.CharField(max_length=64, blank=False, unique=True)
 	# AI(minqi): add appropriate fields
+# ************ ENCRYPTION END **************
 
 	def __init__(self, *args, **kwargs):
 		super(Drug, self).__init__(*args, **kwargs)
@@ -253,5 +258,8 @@ class Drug(models.Model):
 class DrugFact(models.Model):
     """Model for facts about drugs"""
     drug = models.ForeignKey(Drug)
+
+# ************ ENCRYPTION START ************
     fact = models.CharField(max_length=160)
+# ************ ENCRYPTION END **************
 
