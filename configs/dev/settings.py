@@ -1,5 +1,6 @@
 # Django settings for smartdose project.
 from __future__ import absolute_import
+import sys
 
 import djcelery
 import os, re
@@ -14,10 +15,13 @@ cwd = os.getcwd()
 result = re.search(m, cwd)
 PROJECT_ROOT = cwd[:result.end()]
 
+# Determine if we're in a TEST environment. Adapted from solution at http://www.thebitguru.com/blog/view/246-Using%20custom%20settings%20in%20django%20tests
+TEST = 'test' == sys.argv[1]
+
 # Reminder system parameters
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-SEND_TEXT_MESSAGES = False
+SEND_TEXT_MESSAGES = True if not TEST else False
 MESSAGE_CUTOFF_HOURS = 24 # hours
 REMINDER_MERGE_INTERVAL = 3600 # seconds
 DOCTOR_INITIATED_WELCOME_SEND_TIME = datetime.time(hour=10) # The time when a patient gets their welcome message
@@ -197,9 +201,9 @@ SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 # TWILIO_NUMBER =  "+18563243138"
 
 # Matt's account
-# TWILIO_ACCOUNT_SID = "AC3b090d87359f36ab115b22f0d04bf2f1"
-# TWILIO_AUTH_TOKEN = "6ad1adfc81d066f496434389f0024a80"
-# TWILIO_NUMBER = "+14697891059"
+TWILIO_ACCOUNT_SID = "AC3b090d87359f36ab115b22f0d04bf2f1"
+TWILIO_AUTH_TOKEN = "6ad1adfc81d066f496434389f0024a80"
+TWILIO_NUMBER = "+14697891059"
 
 # Corp prod account
 # TWILIO_ACCOUNT_SID = "AC39e0bfb48abba5b063eced0660b50bb1"
@@ -207,9 +211,9 @@ SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 # TWILIO_NUMBER =  "+14153602341"
 
 # Corp test account
-TWILIO_ACCOUNT_SID = "AC39e0bfb48abba5b063eced0660b50bb1"
-TWILIO_AUTH_TOKEN = "0b95b6377c8ce0866b0a14a7419d57f7"
-TWILIO_NUMBER =  "+14154297277"
+# TWILIO_ACCOUNT_SID = "AC39e0bfb48abba5b063eced0660b50bb1"
+# TWILIO_AUTH_TOKEN = "0b95b6377c8ce0866b0a14a7419d57f7"
+# TWILIO_NUMBER =  "+14154297277"
 
 TWILIO_MAX_SMS_LEN = 160
 
@@ -338,3 +342,5 @@ SOUTH_MIGRATION_MODULES = {
     'djcelery':'ignore',
     'guardian':'ignore',
 }
+
+SOUTH_TESTS_MIGRATE = False

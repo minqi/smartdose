@@ -23,6 +23,7 @@ from common.models import RegistrationProfile, Drug
 from patients.models import PatientProfile, SafetyNetRelationship
 from doctors.models import DoctorProfile
 from reminders.models import Notification, Prescription, Message
+from reminders.tasks import sendRemindersAtDatetime
 from webapp.models import EarlySignup
 
 from guardian.shortcuts import assign_perm, remove_perm, get_objects_for_user
@@ -106,6 +107,15 @@ class UpdatePatientForm(CreatePatientForm):
 
 
 class DeletePatientForm(forms.Form):
+	p_id = forms.IntegerField()
+
+	def clean_p_id(self):
+		p_id = self.cleaned_data['p_id']
+		if not PatientProfile.objects.filter(id=p_id).exists():
+			raise ValidationError('Patient does not exist')
+		return p_id
+
+class SendReminderForm(forms.Form):
 	p_id = forms.IntegerField()
 
 	def clean_p_id(self):
@@ -543,6 +553,25 @@ def update_patient(request, *args, **kwargs):
 			return HttpResponse(json.dumps(result), content_type='application/json')
 	return HttpResponseBadRequest('Something went wrong')
 
+@login_required
+def send_reminder(request, *args, **kwargs):
+	if request.POST:
+		form = SendReminderForm(request.POST)
+		if form.is_valid():
+			p_id = form.cleaned_data['p_id']
+			patient = PatientProfile.objects.get(id=p_id)
+
+			if not request.user.has_perm('patients.manage_patientprofile', patient):
+				return HttpResponseBadRequest("You don't have access to this user's profile")
+
+			next_notification = Notification.objects.filter(send_datetime__gte=datetime.datetime.now()).order_by('send_datetime')
+			if next_notification is None:
+				return HttpResponseBadRequest("This user has no upcoming notifications")
+			next_notification_time = next_notification[0].send_datetime
+			sendRemindersAtDatetime(next_notification_time, patient)
+			return HttpResponse('')
+
+	return HttpResponseBadRequest('Something went wrong')
 
 @login_required
 def delete_patient(request, *args, **kwargs):

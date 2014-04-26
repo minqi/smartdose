@@ -30,14 +30,16 @@ def fetch_new_patient_records(source="fake_csv"):
 		print "Fetched new patient records"
 
 
-@shared_task()
-def sendRemindersForNow():
+def sendRemindersAtDatetime(datetime, patient=None):
 	"""
-	Called from scheduler. 
-	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
+	Called from scheduler.
+	Sends reminders to users who have a reminder between this time and this time - REMINDER_INTERVAL
+	If patient is not None, only send reminders to that patient
 	"""
-	now = datetime.datetime.now()
-	reminders_for_now = Notification.objects.notifications_at_time(now)
+	reminders_for_now = Notification.objects.notifications_at_time(datetime)
+
+	if patient is not None:
+		reminders_for_now = reminders_for_now.filter(to=patient)
 	# Get reminders that are distinct by patients
 	distinct_reminders = reminders_for_now.distinct('to')
 
@@ -55,6 +57,14 @@ def sendRemindersForNow():
 		# 	print "To: ", p_reminder.to
 		nc.send_notifications(to=p, notifications=p_reminders)
 
+@shared_task()
+def sendRemindersForNow():
+	"""
+	Called from scheduler. 
+	Sends reminders to all users who have a reminder between this time and this time - REMINDER_INTERVAL
+	"""
+	now = datetime.datetime.now()
+	sendRemindersAtDatetime(now)
 
 @shared_task()
 def schedule_safety_net_messages():
