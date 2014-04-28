@@ -375,8 +375,8 @@ class ReminderDeliveryTest(TestCase):
 		reminder_tasks.sendRemindersForNow()
 		message = SMSLogger.getLastSentMessage()
 		expected_message = "Time to take your:\n"+ \
-		                   "Vitamin a\n"+ \
-		                   "Vitamin b\n\n"+ \
+		                   "-Vitamin a\n"+ \
+		                   "-Vitamin b\n\n"+ \
 		                   "Did you take them?\n"+ \
 		                   "Y - yes\n"+ \
 		                   "N - no\n\n"+ \

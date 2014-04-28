@@ -124,9 +124,9 @@ class NotificationCenterTest(TestCase):
 
 		messages = Message.objects.filter(to=self.patient1)
 		self.assertEqual(messages.count(), 2)
-		expected_message_1 = "Hi, Minqi! You signed up for Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		expected_message_1 = "Hi, Minqi! You signed up for Smartdose, a simple text message app, to help support your health. To quit, you can reply 'q' at any time."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
+		expected_message_2 = "To learn more about Smartdose, visit www.smartdo.se."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_welcome_notification_enrolled_by_safety_net(self):
@@ -139,9 +139,9 @@ class NotificationCenterTest(TestCase):
 
 		messages = Message.objects.filter(to=self.patient1)
 		self.assertEqual(messages.count(), 2)
-		expected_message_1 = "Hi, Minqi! Matt Gaba is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		expected_message_1 = "Hi, Minqi! Matt Gaba is giving you Smartdose, a simple text message app, to help support your health. To quit, you can reply 'q' at any time."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
+		expected_message_2 = "Matt Gaba hopes you're enjoying your first morning out of the hospital. To learn more about Smartdose, visit www.smartdo.se."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_welcome_notification_enrolled_by_doctor(self):
@@ -152,9 +152,9 @@ class NotificationCenterTest(TestCase):
 
 		messages = Message.objects.filter(to=self.patient1)
 		self.assertEqual(messages.count(), 2)
-		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose to improve your medication experience. You can reply 'q' at any time to quit."
+		expected_message_1 = "Hi, Minqi! Dr. Watcher is giving you Smartdose, a simple text message app, to help support your health. To quit, you can reply 'q' at any time."
 		self.assertEqual(messages[1].content, expected_message_1)
-		expected_message_2 = "Smartdose sends you simple medicine reminders, making it easy to take the right dose at the right time."
+		expected_message_2 = "Dr. Watcher hopes you're enjoying your first morning out of the hospital. To learn more about Smartdose, visit www.smartdo.se."
 		self.assertEqual(messages[0].content, expected_message_2)
 
 	def test_send_refill_notifications(self):

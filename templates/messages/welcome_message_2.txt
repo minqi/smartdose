@@ -1,1 +1,1 @@
-{{ enroller }} hopes you're enjoying your first morning out of the hospital. To learn more about Smartdose, visit www.smartdo.se.
+{% if enroller != None %}{{ enroller }} hopes you're enjoying your first morning out of the hospital. {% endif %}To learn more about Smartdose, visit www.smartdo.se.
