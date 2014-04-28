@@ -14,8 +14,11 @@ class DoctorProfile(UserProfile):
 
 	# Manager fields
 	objects = DoctorProfileManager()
+
+# ************ ENCRYPTION START ************
 	primary_phone_number 	= models.CharField(max_length=32, blank=True, null=True, unique=True)
 	email 					= models.EmailField(blank=False, null=False, unique=True)
+# ************ ENCRYPTION END **************
 
 	def __init__(self, *args, **kwargs):
 		super(DoctorProfile, self).__init__(*args, **kwargs)

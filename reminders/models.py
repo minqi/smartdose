@@ -15,9 +15,11 @@ class Prescription(models.Model):
 	"""
 	patient        				= models.ForeignKey(PatientProfile, blank=False, related_name='prescriptions_received')
 	prescriber     				= models.ForeignKey(UserProfile, blank=False, related_name='prescriptions_given')
+
 	safety_net_on				= models.BooleanField(default=False)
 	last_contacted_safety_net 	= models.DateTimeField(null=True)
 
+# ************ ENCRYPTION START ************ 
 	drug           				= models.ForeignKey(Drug, blank=False)
 	with_food      				= models.BooleanField(default=False)
 	with_water     				= models.BooleanField(default=False)
@@ -26,7 +28,7 @@ class Prescription(models.Model):
 	filled						= models.BooleanField(default=False)
 
 	last_edited    				= models.DateTimeField(auto_now=True)
-
+# ************ ENCRYPTION END ************** 
 
 #==============NOTIFICATION RELATED CLASSES=======================
 
@@ -151,8 +153,8 @@ class Notification(models.Model):
 		(CUSTOM,   'custom'),
 	)	
 
-	_type            	   = models.CharField(max_length=4, choices=NOTIFICATION_TYPE_CHOICES, null=False, blank=False)
 	to       			   = models.ForeignKey(PatientProfile, null=False, blank=False)
+	_type            	   = models.CharField(max_length=4, choices=NOTIFICATION_TYPE_CHOICES, null=False, blank=False)
 	repeat 				   = models.CharField(max_length=2,
 	                                         choices=REPEAT_CHOICES, null=False, blank=False)
 	send_datetime		   = models.DateTimeField(null=False, blank=False)
@@ -160,17 +162,20 @@ class Notification(models.Model):
 	day_of_week            = models.PositiveSmallIntegerField(null=True, blank=True)
 	times_sent             = models.PositiveIntegerField(default=0)
 
+# ************ ENCRYPTION START ************ 
+	# Required for STATIC_ONE_OFF
+	content                = models.CharField(max_length=160, null=True, blank=True)
+	
+	# Required for SAFETY_NET
+	# TODO: move into prescription
+	adherence_rate         = models.PositiveSmallIntegerField(null=True, blank=True)
+# ************ ENCRYPTION END **************
+
 	# Required for REFILL, MEDICATION
 	prescription           = models.ForeignKey(Prescription, null=True, blank=True)
 
-	# Required for STATIC_ONE_OFF
-	content                = models.CharField(max_length=160, null=True, blank=True) #Required type: STATIC_ONE_OFF
-
 	# Required for SAFETY_NET, SAFETY_NET_WELCOME
 	patient_of_safety_net  = models.ForeignKey(PatientProfile, related_name="patient_of_safety_net", null=True, blank=True)
-
-	# Required for SAFETY_NET
-	adherence_rate         = models.PositiveSmallIntegerField(null=True, blank=True)
 
 	# Required for REPEAT_MESSAGE
 	message                = models.ForeignKey('Message', null=True, blank=True, related_name="repeat_message")
@@ -434,8 +439,13 @@ class Message(models.Model):
 
 	datetime_responded  = models.DateTimeField(blank=True, null=True)
 	datetime_sent       = models.DateTimeField(auto_now_add=True)
-
+# ************ ENCRYPTION START ************ 
 	content             = models.CharField(max_length=160)
+# ************ ENCRYPTION END ************** 
+
+	# Required for MEDICATION
+	nth_message_of_day_of_type = models.PositiveSmallIntegerField(blank=True, null=True)
+
 
 	# Required for MEDICATION, REFILL, NON_ADHERENT, SAFETY_NET
 	notifications       = models.ManyToManyField(Notification, blank=True, null=True, related_name='messages')
@@ -446,9 +456,6 @@ class Message(models.Model):
 
 	# Required for RESPONSE_MESSAGES
 	previous_message    = models.ForeignKey('Message', blank=True, null=True)
-
-	# Required for MEDICATION
-	nth_message_of_day_of_type = models.PositiveSmallIntegerField(blank=True, null=True)
 
 	objects		        = MessageManager()
 
@@ -485,15 +492,19 @@ class Feedback(models.Model):
 				return True
 		return False
 
-	_type              = models.CharField(max_length=4, choices=FEEDBACK_TYPE_CHOICES)
-	notification       = models.ForeignKey(Notification)
-	prescription       = models.ForeignKey(Prescription)
 
+	_type              = models.CharField(max_length=4, choices=FEEDBACK_TYPE_CHOICES)
+# ************ ENCRYPTION START ************ 
 	note               = models.CharField(max_length=320)
 	completed          = models.BooleanField(default=False)
+# ************ ENCRYPTION END ************** 
 
 	datetime_sent      = models.DateTimeField(auto_now_add=True)
 	datetime_responded = models.DateTimeField(blank=True, null=True)
+
+
+	notification       = models.ForeignKey(Notification)
+	prescription       = models.ForeignKey(Prescription)
 
 	class Meta:
 		get_latest_by = 'datetime_sent'
